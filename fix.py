@@ -1,4 +1,7 @@
-name: Mac Build
+import os
+
+# GitHub'in hatasiz okuyacagi temiz YAML icerigi
+yaml_icerigi = """name: Mac Build
 on: [push, workflow_dispatch]
 
 jobs:
@@ -26,3 +29,15 @@ jobs:
         with:
           name: macos-app
           path: dist/
+"""
+
+# Klasor yollarini garantile
+klasor_yolu = os.path.join(".github", "workflows")
+os.makedirs(klasor_yolu, exist_ok=True)
+
+# Dosyayi temiz bir sekilde yaz
+dosya_yolu = os.path.join(klasor_yolu, "mac_build.yml")
+with open(dosya_yolu, "w", encoding="utf-8") as f:
+    f.write(yaml_icerigi)
+
+print("Basarili! mac_build.yml dosyasi sifirdan ve hatasiz olarak olusturuldu.")
