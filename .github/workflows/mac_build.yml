@@ -1,0 +1,33 @@
+name: Mac Build
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Depoyu Kontrol Et
+      uses: actions/checkout@v3
+
+    - name: Python Kurulumu
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Kutuphaneleri Yukle
+      run: |
+        pip install pyinstaller
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Derleme Islemi (PyInstaller)
+      # ASAGIDAKI main.py YERINE KENDI DOSYA ADINI YAZ
+      run: pyinstaller --onefile --windowed main.py
+
+    - name: Sonucu Paketle
+      uses: actions/upload-artifact@v3
+      with:
+        name: macos-uygulamasi
+        path: dist/
