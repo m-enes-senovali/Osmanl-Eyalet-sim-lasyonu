@@ -1,14 +1,13 @@
-name: Mac Build
-on: [push, workflow_dispatch]
+name: MacDerleme
+on: [push]
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Kodlari Cek
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Python Kur
+      - name: Python Yukle
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
@@ -18,11 +17,11 @@ jobs:
           pip install pyinstaller
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Derleme
+      - name: Derleme Basliyor
         run: pyinstaller --onefile --windowed main.py
 
-      - name: Kaydetme
+      - name: Sonucu Kaydet
         uses: actions/upload-artifact@v3
         with:
-          name: macos-app
+          name: MacUygulamasi
           path: dist/
