@@ -1,0 +1,34 @@
+# -*- coding: utf-8 -*-
+"""
+Osmanlı Eyalet Yönetim Simülasyonu - Ekranlar Modülü
+"""
+
+from ui.screens.main_menu import MainMenuScreen
+from ui.screens.province_view import ProvinceViewScreen
+from ui.screens.economy_screen import EconomyScreen
+from ui.screens.military_screen import MilitaryScreen
+from ui.screens.construction_screen import ConstructionScreen
+from ui.screens.diplomacy_screen import DiplomacyScreen
+from ui.screens.population_screen import PopulationScreen
+from ui.screens.event_popup import EventPopupScreen
+from ui.screens.save_load_screen import SaveLoadScreen
+from ui.screens.workers_screen import WorkersScreen
+from ui.screens.map_screen import MapScreen
+from ui.screens.warfare_screen import WarfareScreen
+from ui.screens.trade_screen import TradeScreen
+
+__all__ = [
+    'MainMenuScreen',
+    'ProvinceViewScreen',
+    'EconomyScreen',
+    'MilitaryScreen',
+    'ConstructionScreen',
+    'DiplomacyScreen',
+    'PopulationScreen',
+    'EventPopupScreen',
+    'SaveLoadScreen',
+    'WorkersScreen',
+    'MapScreen',
+    'WarfareScreen',
+    'TradeScreen'
+]

@@ -1,0 +1,628 @@
+# -*- coding: utf-8 -*-
+"""
+Osmanlı Eyalet Yönetim Simülasyonu - Oyun Yöneticisi
+Tüm sistemleri koordine eden ana sınıf.
+"""
+
+import json
+import os
+import sys
+from typing import Dict, Optional
+from dataclasses import dataclass
+from audio.audio_manager import get_audio_manager
+from game.systems.economy import EconomySystem
+from game.systems.military import MilitarySystem
+from game.systems.population import PopulationSystem
+from game.systems.construction import ConstructionSystem, BuildingType
+from game.systems.diplomacy import DiplomacySystem
+from game.systems.events import EventSystem
+from game.systems.workers import WorkerSystem
+from game.systems.warfare import WarfareSystem
+from game.systems.trade import TradeSystem
+from game.systems.naval import NavalSystem
+from game.systems.artillery import ArtillerySystem
+
+
+def get_base_path():
+    """
+    EXE veya Python script olarak çalışırken doğru temel yolu döndür.
+    PyInstaller ile paketlendiğinde sys.executable'ın dizinini kullanır.
+    """
+    if getattr(sys, 'frozen', False):
+        # PyInstaller ile paketlenmiş EXE
+        return os.path.dirname(sys.executable)
+    else:
+        # Normal Python script
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+@dataclass
+class ProvinceInfo:
+    """Eyalet bilgileri"""
+    name: str = "Rum Eyaleti"
+    capital: str = "Sivas"
+    region: str = "Anadolu"
+    is_coastal: bool = False  # Kıyı şehri mi? (Tersane için gerekli)
+
+
+# Kıyı eyaletleri listesi
+COASTAL_PROVINCES = [
+    "İstanbul", "İzmir", "Trabzon", "Antalya", "Sinop",
+    "Ege Eyaleti", "Karadeniz Eyaleti", "Akdeniz Eyaleti",
+    "Cezayir", "Kırım", "Girit", "Rodos", "Kıbrıs"
+]
+
+# Mevsim isimleri
+SEASONS = {
+    1: "Kış", 2: "Kış", 3: "İlkbahar",
+    4: "İlkbahar", 5: "İlkbahar", 6: "Yaz", 
+    7: "Yaz", 8: "Yaz", 9: "Sonbahar",
+    10: "Sonbahar", 11: "Sonbahar", 12: "Kış"
+}
+
+
+class GameManager:
+    """Ana oyun yöneticisi"""
+    
+    def __init__(self):
+        # Eyalet bilgisi
+        self.province = ProvinceInfo()
+        
+        # Oyun kimliği (aynı oyunun aynı yuvaya kaydı için)
+        self.game_id = None
+        self.save_slot = None  # 1, 2, 3
+        
+        # Zaman (1 tur = 1 gün)
+        self.current_year = 1520
+        self.current_month = 1  # 1-12
+        self.current_day = 1    # 1-31
+        self.turn_count = 0
+        
+        # Oyun durumu
+        self.is_running = True
+        self.is_paused = False
+        self.game_over = False
+        self.game_over_reason = ""
+        
+        # Sistemler
+        self.economy = EconomySystem()
+        self.military = MilitarySystem()
+        self.population = PopulationSystem()
+        self.construction = ConstructionSystem()
+        self.diplomacy = DiplomacySystem()
+        self.events = EventSystem()
+        self.workers = WorkerSystem()
+        self.warfare = WarfareSystem()  # Savaş sistemi
+        self.trade = TradeSystem()  # Ticaret sistemi
+        self.naval = NavalSystem()  # Deniz kuvvetleri
+        self.artillery = ArtillerySystem()  # Topçu ocağı
+        
+        # Ses yöneticisi
+        self.audio = get_audio_manager()
+    
+    def new_game(self, province_name: str = None):
+        """Yeni oyun başlat"""
+        import uuid
+        
+        if province_name:
+            self.province.name = province_name
+        
+        # Yeni benzersiz oyun ID'si oluştur
+        self.game_id = str(uuid.uuid4())[:8]
+        self.save_slot = None  # Henüz kaydedilmedi
+        
+        # Sistemleri sıfırla
+        self.economy = EconomySystem()
+        self.military = MilitarySystem()
+        self.population = PopulationSystem()
+        self.construction = ConstructionSystem()
+        self.diplomacy = DiplomacySystem()
+        self.events = EventSystem()
+        
+        # Zaman sıfırla (1 tur = 1 gün)
+        self.current_year = 1520
+        self.current_month = 1
+        self.current_day = 1
+        self.turn_count = 0
+        
+        # Durum
+        self.is_running = True
+        self.game_over = False
+        
+        self.audio.announce_screen_change(f"{self.province.name} Valiliği")
+        self.audio.speak(f"1 {self._get_month_name(self.current_month)} {self.current_year}. Padişah Kanuni Sultan Süleyman döneminde, başkent Konstantiniye'den yönetilen Osmanlı İmparatorluğu'nda eyalet valisi olarak göreve başladınız.", interrupt=False)
+    
+    def _get_month_name(self, month: int) -> str:
+        """Ay numarasından Türkçe ay ismi döndür"""
+        month_names = ["", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                      "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+        return month_names[month] if 1 <= month <= 12 else ""
+    
+    def process_turn(self):
+        """
+        Tur işleme - tüm sistemleri güncelle (1 tur = 1 gün)
+        """
+        self.turn_count += 1
+        
+        # Günü ilerlet
+        self.current_day += 1
+        
+        # Ay geçişi (her ayda farklı gün sayısı)
+        days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        if self.current_day > days_in_month[self.current_month - 1]:
+            self.current_day = 1
+            self.current_month += 1
+            
+            # Ay başı bildirimi
+            month_names = ["", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                          "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+            if self.current_month <= 12:
+                self.audio.announce(f"{month_names[self.current_month]} ayı başladı")
+        
+        if self.current_month > 12:
+            self.current_month = 1
+            self.current_year += 1
+            self.events.reset_yearly()
+            self.audio.announce(f"Yeni Yıl: {self.current_year}")
+        
+        # === SİSTEMLERİ GÜNCELLE ===
+        
+        # İşçi kapasitesini nüfusa göre güncelle
+        self.workers.update_max_workers_from_population(self.economy.population)
+        
+        # Mevsim belirle ve modifierleri uygula
+        current_season = self.get_season()
+        seasonal_food_mod = 1.0
+        seasonal_trade_mod = 1.0
+        
+        if current_season == "Kış":
+            seasonal_food_mod = 0.75  # Kışta üretim %25 azalır
+            seasonal_trade_mod = 0.8  # Ticaret de biraz azalır
+        elif current_season == "İlkbahar":
+            seasonal_food_mod = 1.2  # Ekim dönemi
+        elif current_season == "Yaz":
+            seasonal_trade_mod = 1.2  # Ticaret canlanır
+        elif current_season == "Sonbahar":
+            seasonal_food_mod = 1.5  # Hasat dönemi
+        
+        # 1. Ekonomi
+        building_maintenance = self.construction.get_total_maintenance()
+        military_maintenance = self.military.get_maintenance_cost()
+        
+        # Ticaret bonusu uygula (mevsimsel modifier ile)
+        # Bonus daha dengeli hesaplama: /500 ile azalan getiri
+        trade_bonus = self.construction.get_total_trade_bonus()
+        self.economy.trade_modifier = (1.0 + (trade_bonus / 500)) * seasonal_trade_mod
+        
+        net_income = self.economy.process_turn(
+            population=self.population.population.total,
+            military_count=self.military.get_total_soldiers(),
+            building_maintenance=building_maintenance + military_maintenance
+        )
+        
+        # 2. Üretim (çiftlik, kereste ocağı, maden) - mevsimsel modifier
+        food_production = int(self.construction.get_food_production() * seasonal_food_mod)
+        wood_production = self.construction.get_wood_production()
+        iron_production = self.construction.get_iron_production()
+        self.economy.add_resources(
+            food=food_production,
+            wood=wood_production,
+            iron=iron_production
+        )
+        
+        # 3. Nüfus
+        has_mosque = self.construction.has_building(BuildingType.MOSQUE)
+        has_hospital = self.construction.has_building(BuildingType.HOSPITAL)
+        military_power = self.military.get_total_power()
+        
+        # Han bonusu nüfus artışına ekle
+        pop_growth_bonus = self.construction.get_population_growth_bonus()
+        self.population.growth_rate = 0.02 + pop_growth_bonus
+        
+        pop_result = self.population.process_turn(
+            food_available=self.economy.resources.food,
+            tax_rate=self.economy.tax_rate,
+            has_mosque=has_mosque,
+            has_hospital=has_hospital,
+            military_power=military_power
+        )
+        
+        # Yiyecek tüketimi
+        self.economy.resources.food -= self.population.food_consumption
+        if self.economy.resources.food < 0:
+            self.economy.resources.food = 0
+        
+        # 4. İnşaat
+        self.construction.process_turn()
+        
+        # 5. İşçiler
+        worker_result = self.workers.process_turn()
+        # İşçi üretimini ekle
+        self.economy.add_resources(
+            food=worker_result['production']['food'],
+            wood=worker_result['production']['wood'],
+            iron=worker_result['production']['iron']
+        )
+        # İşçi bonuslarını uygula
+        trade_bonus = worker_result['bonuses'].get('trade_bonus', 0)
+        if trade_bonus > 0:
+            self.economy.trade_modifier += trade_bonus
+        
+        # 6. Askeri
+        self.military.process_turn()
+        
+        # 7. Diplomasi
+        self.diplomacy.process_turn()
+        
+        # Görev sürelerini kontrol et
+        for i, mission in enumerate(self.diplomacy.active_missions[:]):
+            mission['turns_remaining'] -= 1
+            if mission['turns_remaining'] <= 0:
+                self.diplomacy.fail_mission(i)
+        
+        # 8. Savaşlar
+        battle_results = self.warfare.process_battles(self.military)
+        for result in battle_results:
+            self.diplomacy.sultan_loyalty = max(0, min(100, 
+                self.diplomacy.sultan_loyalty + result.loyalty_change))
+            if result.loot_gold > 0:
+                self.economy.add_resources(gold=result.loot_gold)
+        
+        # 9. Ticaret
+        # Liman durumunu güncelle (Tersane binası)
+        has_shipyard = self.construction.has_building(BuildingType.SHIPYARD)
+        shipyard_level = 0
+        if has_shipyard:
+            shipyard_level = self.construction.buildings[BuildingType.SHIPYARD].level
+        self.trade.update_port_status(has_shipyard, shipyard_level)
+        
+        # Ticaret işle
+        trade_result = self.trade.process_turn(self.economy)
+        
+        # 10. Deniz Kuvvetleri
+        self.naval.process_construction()
+        
+        # 11. Topçu Üretimi
+        self.artillery.process_production()
+        
+        # 12. Olaylar
+        game_state = {
+            'happiness': self.population.happiness,
+            'at_war': len(self.warfare.active_battles) > 0,
+            'loyalty': self.diplomacy.sultan_loyalty
+        }
+        
+        event = self.events.check_for_event(self.current_year, game_state)
+        if event:
+            self.events.announce_event()
+        
+        # === OYUN SONU KONTROL ===
+        self._check_game_over()
+        
+        # Tur sonu özeti
+        self._announce_turn_summary(net_income, pop_result)
+        
+        return {
+            'year': self.current_year,
+            'month': self.current_month,
+            'turn': self.turn_count,
+            'net_income': net_income,
+            'population_change': pop_result['population_change'],
+            'event': event is not None
+        }
+    
+    def _check_game_over(self):
+        """Oyun sonu koşullarını kontrol et"""
+        # Padişah sadakati çok düşük
+        if self.diplomacy.sultan_loyalty <= 0:
+            self.game_over = True
+            self.game_over_reason = "Padişah sizi hain ilan etti ve idam ettirdi!"
+            self.audio.announce(self.game_over_reason)
+        
+        # Halk isyanı çok uzun sürdü
+        if self.population.active_revolt and self.population.unrest >= 100:
+            self.game_over = True
+            self.game_over_reason = "Halk ayaklanması kontrol altına alınamadı. Eyalet kaybedildi!"
+            self.audio.announce(self.game_over_reason)
+        
+        # İflas
+        if self.economy.resources.gold < -5000:
+            self.game_over = True
+            self.game_over_reason = "Hazine iflas etti. Görevden alındınız!"
+            self.audio.announce(self.game_over_reason)
+    
+    def _announce_turn_summary(self, net_income: int, pop_result: dict):
+        """Tur özeti duyur"""
+        # Her 3 turda bir özet
+        if self.turn_count % 3 == 0:
+            self.audio.announce_value("Yıl", str(self.current_year))
+            self.audio.announce_value("Altın", str(self.economy.resources.gold))
+            
+            if net_income >= 0:
+                self.audio.speak(f"Gelir fazlası: {net_income}")
+            else:
+                self.audio.speak(f"Zarar: {net_income}")
+    
+    def apply_event_effects(self, effects: Dict[str, int]):
+        """Olay etkilerini uygula"""
+        for effect, value in effects.items():
+            if effect == 'gold':
+                self.economy.resources.gold += value
+            elif effect == 'food':
+                self.economy.resources.food += value
+            elif effect == 'wood':
+                self.economy.resources.wood += value
+            elif effect == 'iron':
+                self.economy.resources.iron += value
+            elif effect == 'happiness':
+                self.population.add_happiness_modifier('event', value)
+            elif effect == 'loyalty':
+                self.diplomacy.sultan_loyalty += value
+            elif effect == 'favor':
+                self.diplomacy.sultan_favor += value
+            elif effect == 'morale':
+                self.military.morale += value
+            elif effect == 'population_loss':
+                self.population.population.farmers -= value
+            elif effect == 'military_loss':
+                # Azap'lardan kayıp
+                from game.systems.military import UnitType
+                loss = min(value, self.military.units[UnitType.AZAP])
+                self.military.units[UnitType.AZAP] -= loss
+            elif effect == 'trade_modifier':
+                self.economy.trade_modifier += value / 100
+            elif effect == 'tax_modifier':
+                self.economy.tax_modifier += value / 100
+            elif effect == 'unrest':
+                self.population.unrest += value
+            elif effect == 'neighbor_relation':
+                # İlk komşuya etkile
+                if self.diplomacy.neighbors:
+                    first = list(self.diplomacy.neighbors.keys())[0]
+                    self.diplomacy.neighbors[first].value += value
+                    self.diplomacy.neighbors[first].update_type()
+    
+    def get_season(self) -> str:
+        """Mevcut mevsimi döndür"""
+        return SEASONS.get(self.current_month, "Yaz")
+    
+    def get_summary(self) -> Dict:
+        """Oyun durumu özeti"""
+        return {
+            'province': self.province.name,
+            'year': self.current_year,
+            'month': self.current_month,
+            'season': self.get_season(),
+            'turn': self.turn_count,
+            'gold': self.economy.resources.gold,
+            'food': self.economy.resources.food,
+            'population': self.population.population.total,
+            'happiness': self.population.happiness,
+            'military_power': self.military.get_total_power(),
+            'sultan_loyalty': self.diplomacy.sultan_loyalty,
+            'buildings': len(self.construction.buildings),
+            'game_over': self.game_over,
+            'is_coastal': self.province.is_coastal
+        }
+    
+    def get_pending_raid_report(self):
+        """Bekleyen akın raporu var mı?"""
+        return self.warfare.pending_raid_report
+    
+    def consume_pending_raid_report(self):
+        """Bekleyen akın raporunu al ve temizle"""
+        report = self.warfare.pending_raid_report
+        self.warfare.pending_raid_report = None
+        return report
+    
+    def get_pending_siege_battle(self):
+        """Bekleyen kuşatma savaşı var mı?"""
+        return self.warfare.pending_siege_battle
+    
+    def consume_pending_siege_battle(self):
+        """Bekleyen kuşatma savaşını al ve temizle"""
+        battle = self.warfare.pending_siege_battle
+        self.warfare.pending_siege_battle = None
+        return battle
+    
+    def save_game(self, slot: int = None) -> bool:
+        """
+        Oyunu kaydet
+        slot: 1, 2, veya 3. None ise mevcut slot veya otomatik atama.
+        """
+        # Slot belirleme
+        if slot is None:
+            if self.save_slot:
+                slot = self.save_slot
+            else:
+                # Boş slot bul veya ilk slotu kullan
+                slot = self._find_empty_slot() or 1
+        
+        self.save_slot = slot
+        
+        filepath = os.path.join(
+            get_base_path(),
+            'saves',
+            f'slot_{slot}.json'
+        )
+        
+        # Saves klasörünü oluştur
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
+        save_data = {
+            'version': '1.0',
+            'game_id': self.game_id,
+            'save_slot': slot,
+            'province': {
+                'name': self.province.name,
+                'capital': self.province.capital,
+                'region': self.province.region
+            },
+            'time': {
+                'year': self.current_year,
+                'month': self.current_month,
+                'turn': self.turn_count
+            },
+            'economy': self.economy.to_dict(),
+            'military': self.military.to_dict(),
+            'population': self.population.to_dict(),
+            'construction': self.construction.to_dict(),
+            'diplomacy': self.diplomacy.to_dict(),
+            'events': self.events.to_dict(),
+            'warfare': self.warfare.to_dict(),
+            'trade': self.trade.to_dict(),
+            'workers': self.workers.to_dict(),
+            'naval': self.naval.to_dict(),
+            'artillery': self.artillery.to_dict()
+        }
+        
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(save_data, f, ensure_ascii=False, indent=2)
+            
+            self.audio.speak(f"Oyun Yuva {slot}'e kaydedildi.", interrupt=True)
+            return True
+        except Exception as e:
+            self.audio.announce_action_result("Oyun kaydetme", False, str(e))
+            return False
+    
+    def _find_empty_slot(self) -> int:
+        """Boş kayıt yuvası bul"""
+        for slot in [1, 2, 3]:
+            filepath = os.path.join(
+                get_base_path(),
+                'saves',
+                f'slot_{slot}.json'
+            )
+            if not os.path.exists(filepath):
+                return slot
+        return None
+    
+    def load_game(self, slot: int = None) -> bool:
+        """
+        Oyunu yükle
+        slot: 1, 2, veya 3.
+        """
+        if slot is None:
+            slot = 1
+        
+        filepath = os.path.join(
+            get_base_path(),
+            'saves',
+            f'slot_{slot}.json'
+        )
+        
+        if not os.path.exists(filepath):
+            self.audio.speak(f"Yuva {slot}'de kayıt bulunamadı.", interrupt=True)
+            return False
+        
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                save_data = json.load(f)
+            
+            # Verileri yükle
+            self.game_id = save_data.get('game_id', str(hash(filepath))[:8])
+            self.save_slot = save_data.get('save_slot', slot)
+            
+            self.province.name = save_data['province']['name']
+            self.province.capital = save_data['province']['capital']
+            self.province.region = save_data['province']['region']
+            
+            self.current_year = save_data['time']['year']
+            self.current_month = save_data['time']['month']
+            self.turn_count = save_data['time']['turn']
+            
+            self.economy = EconomySystem.from_dict(save_data['economy'])
+            self.military = MilitarySystem.from_dict(save_data['military'])
+            self.population = PopulationSystem.from_dict(save_data['population'])
+            self.construction = ConstructionSystem.from_dict(save_data['construction'])
+            self.diplomacy = DiplomacySystem.from_dict(save_data['diplomacy'])
+            self.events = EventSystem.from_dict(save_data['events'])
+            
+            # Yeni sistemler (geriye uyumluluk için kontrol)
+            if 'warfare' in save_data:
+                self.warfare = WarfareSystem.from_dict(save_data['warfare'])
+            if 'trade' in save_data:
+                self.trade = TradeSystem.from_dict(save_data['trade'])
+            if 'workers' in save_data:
+                self.workers = WorkerSystem.from_dict(save_data['workers'])
+            if 'naval' in save_data:
+                self.naval = NavalSystem.from_dict(save_data['naval'])
+            if 'artillery' in save_data:
+                self.artillery = ArtillerySystem.from_dict(save_data['artillery'])
+            
+            self.audio.speak(
+                f"Yuva {slot} yüklendi. {self.province.name}, Yıl {self.current_year}.",
+                interrupt=True
+            )
+            return True
+            
+        except Exception as e:
+            self.audio.announce_action_result("Oyun yükleme", False, str(e))
+            return False
+    
+    def get_save_slots_info(self) -> list:
+        """Tüm kayıt yuvalarının bilgilerini al"""
+        slots = []
+        for slot in [1, 2, 3]:
+            filepath = os.path.join(
+                get_base_path(),
+                'saves',
+                f'slot_{slot}.json'
+            )
+            
+            if os.path.exists(filepath):
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    
+                    slots.append({
+                        'slot': slot,
+                        'empty': False,
+                        'province': data['province']['name'],
+                        'year': data['time']['year'],
+                        'turn': data['time']['turn'],
+                        'game_id': data.get('game_id', 'unknown')
+                    })
+                except:
+                    slots.append({'slot': slot, 'empty': True})
+            else:
+                slots.append({'slot': slot, 'empty': True})
+        
+        return slots
+    
+    def delete_save(self, slot: int) -> bool:
+        """
+        Kayıt yuvasını sil
+        slot: 1, 2, veya 3
+        Returns: True if deleted, False otherwise
+        """
+        if slot not in [1, 2, 3]:
+            return False
+        
+        filepath = os.path.join(
+            get_base_path(),
+            'saves',
+            f'slot_{slot}.json'
+        )
+        
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+                self.audio.announce_action_result(f"Yuva {slot} silme", True, "Kayıt silindi")
+                return True
+            except Exception as e:
+                self.audio.announce_action_result(f"Yuva {slot} silme", False, str(e))
+                return False
+        else:
+            self.audio.speak(f"Yuva {slot} zaten boş.", interrupt=True)
+            return False
+    
+    def announce_full_status(self):
+        """Tam durum duyurusu"""
+        self.audio.speak(f"{self.province.name}, Yıl {self.current_year}", interrupt=True)
+        self.economy.announce_summary()
+        self.population.announce_status()
+        self.military.announce_army()
+        self.construction.announce_buildings()
+        self.diplomacy.announce_status()

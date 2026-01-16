@@ -1,0 +1,569 @@
+# -*- coding: utf-8 -*-
+"""
+Osmanlı Eyalet Yönetim Simülasyonu - UI Bileşenleri
+Erişilebilirlik destekli butonlar, paneller ve diğer UI öğeleri.
+"""
+
+import pygame
+from config import COLORS, FONTS, ACCESSIBILITY
+from audio.audio_manager import get_audio_manager
+
+
+class Button:
+    """Erişilebilir buton bileşeni"""
+    
+    def __init__(self, x: int, y: int, width: int, height: int, 
+                 text: str, shortcut: str = None, callback=None,
+                 enabled: bool = True):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = text
+        self.shortcut = shortcut
+        self.callback = callback
+        self.enabled = enabled
+        
+        # Durumlar
+        self.hovered = False
+        self.pressed = False
+        self.focused = False
+        
+        # Önbellek
+        self._font = None
+        self._last_announced = False
+    
+    def get_font(self):
+        if self._font is None:
+            self._font = pygame.font.Font(None, FONTS['body'])
+        return self._font
+    
+    def handle_event(self, event) -> bool:
+        """Olayları işle, True dönerse tıklandı demek"""
+        if not self.enabled:
+            return False
+        
+        audio = get_audio_manager()
+        
+        if event.type == pygame.MOUSEMOTION:
+            was_hovered = self.hovered
+            self.hovered = self.rect.collidepoint(event.pos)
+            
+            # Hover duyurusu
+            if self.hovered and not was_hovered:
+                if ACCESSIBILITY['announce_hover']:
+                    audio.announce_button(self.text, self.shortcut)
+                audio.play_ui_sound('hover')
+        
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.hovered:
+                self.pressed = True
+                audio.play_ui_sound('click')
+        
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if self.pressed and self.hovered:
+                self.pressed = False
+                if self.callback:
+                    self.callback()
+                return True
+            self.pressed = False
+        
+        elif event.type == pygame.KEYDOWN:
+            # Enter tuşu ile tetikleme (odaklandığında)
+            if self.focused and event.key == pygame.K_RETURN:
+                audio.play_ui_sound('click')
+                if self.callback:
+                    self.callback()
+                return True
+            
+            # Kısayol tuşu
+            if self.shortcut:
+                # Özel tuşlar için eşleme
+                special_keys = {
+                    'backspace': pygame.K_BACKSPACE,
+                    'escape': pygame.K_ESCAPE,
+                    'space': pygame.K_SPACE,
+                    'return': pygame.K_RETURN,
+                    'enter': pygame.K_RETURN,
+                    'tab': pygame.K_TAB,
+                    'f1': pygame.K_F1,
+                    'f2': pygame.K_F2,
+                    'f3': pygame.K_F3,
+                    'f4': pygame.K_F4,
+                    'f5': pygame.K_F5,
+                    'f6': pygame.K_F6,
+                    'f7': pygame.K_F7,
+                    'f8': pygame.K_F8,
+                    'f9': pygame.K_F9,
+                    'f10': pygame.K_F10,
+                    'f11': pygame.K_F11,
+                    'f12': pygame.K_F12,
+                }
+                
+                shortcut_lower = self.shortcut.lower()
+                if shortcut_lower in special_keys:
+                    shortcut_key = special_keys[shortcut_lower]
+                else:
+                    shortcut_key = getattr(pygame, f'K_{shortcut_lower}', None)
+                
+                if shortcut_key and event.key == shortcut_key:
+                    audio.play_ui_sound('click')
+                    if self.callback:
+                        self.callback()
+                    return True
+        
+        return False
+    
+    def set_focus(self, focused: bool):
+        """Odak durumunu ayarla"""
+        if self.focused != focused:
+            self.focused = focused
+            if focused and ACCESSIBILITY['announce_focus_change']:
+                audio = get_audio_manager()
+                audio.announce_button(self.text, self.shortcut)
+    
+    def draw(self, surface: pygame.Surface):
+        """Butonu çiz"""
+        # Renk seçimi
+        if not self.enabled:
+            bg_color = COLORS['button_disabled']
+            text_color = (100, 100, 100)
+        elif self.pressed:
+            bg_color = COLORS['button_pressed']
+            text_color = COLORS['text']
+        elif self.hovered or self.focused:
+            bg_color = COLORS['button_hover']
+            text_color = COLORS['gold']
+        else:
+            bg_color = COLORS['button_normal']
+            text_color = COLORS['text']
+        
+        # Arka plan
+        pygame.draw.rect(surface, bg_color, self.rect, border_radius=8)
+        
+        # Kenarlık
+        border_color = COLORS['gold'] if (self.focused or self.hovered) else COLORS['panel_border']
+        pygame.draw.rect(surface, border_color, self.rect, width=2, border_radius=8)
+        
+        # Metin
+        font = self.get_font()
+        text_surface = font.render(self.text, True, text_color)
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        surface.blit(text_surface, text_rect)
+        
+        # Kısayol göstergesi
+        if self.shortcut and self.enabled:
+            shortcut_font = pygame.font.Font(None, FONTS['small'])
+            shortcut_text = f"[{self.shortcut.upper()}]"
+            shortcut_surface = shortcut_font.render(shortcut_text, True, COLORS['gold'])
+            shortcut_rect = shortcut_surface.get_rect(
+                right=self.rect.right - 8,
+                bottom=self.rect.bottom - 4
+            )
+            surface.blit(shortcut_surface, shortcut_rect)
+
+
+class Panel:
+    """Bilgi paneli bileşeni"""
+    
+    def __init__(self, x: int, y: int, width: int, height: int, 
+                 title: str = None):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.title = title
+        self.content_items = []
+        self._title_font = None
+        self._content_font = None
+    
+    def get_title_font(self):
+        if self._title_font is None:
+            self._title_font = pygame.font.Font(None, FONTS['subheader'])
+        return self._title_font
+    
+    def get_content_font(self):
+        if self._content_font is None:
+            self._content_font = pygame.font.Font(None, FONTS['body'])
+        return self._content_font
+    
+    def set_content(self, items: list):
+        """Panel içeriğini ayarla [(label, value), ...]"""
+        self.content_items = items
+    
+    def add_item(self, label: str, value: str):
+        """İçerik öğesi ekle"""
+        self.content_items.append((label, value))
+    
+    def clear(self):
+        """İçeriği temizle"""
+        self.content_items = []
+    
+    def announce_content(self):
+        """Panel içeriğini ekran okuyucuya duyur"""
+        audio = get_audio_manager()
+        if self.title:
+            audio.speak(self.title, interrupt=True)
+        
+        for label, value in self.content_items:
+            audio.announce_value(label, str(value))
+    
+    def draw(self, surface: pygame.Surface):
+        """Paneli çiz"""
+        # Arka plan
+        pygame.draw.rect(surface, COLORS['panel_bg'], self.rect, border_radius=10)
+        
+        # Kenarlık
+        pygame.draw.rect(surface, COLORS['panel_border'], self.rect, width=2, border_radius=10)
+        
+        y_offset = 15
+        
+        # Başlık
+        if self.title:
+            title_font = self.get_title_font()
+            title_surface = title_font.render(self.title, True, COLORS['gold'])
+            title_rect = title_surface.get_rect(
+                centerx=self.rect.centerx,
+                top=self.rect.top + y_offset
+            )
+            surface.blit(title_surface, title_rect)
+            
+            # Ayırıcı çizgi
+            y_offset += 35
+            pygame.draw.line(
+                surface, COLORS['panel_border'],
+                (self.rect.left + 20, self.rect.top + y_offset),
+                (self.rect.right - 20, self.rect.top + y_offset),
+                2
+            )
+            y_offset += 15
+        
+        # İçerik
+        content_font = self.get_content_font()
+        for label, value in self.content_items:
+            # Label
+            label_surface = content_font.render(f"{label}:", True, COLORS['text'])
+            surface.blit(label_surface, (self.rect.left + 20, self.rect.top + y_offset))
+            
+            # Value
+            value_surface = content_font.render(str(value), True, COLORS['gold'])
+            value_rect = value_surface.get_rect(
+                right=self.rect.right - 20,
+                top=self.rect.top + y_offset
+            )
+            surface.blit(value_surface, value_rect)
+            
+            y_offset += 28
+
+
+class ProgressBar:
+    """İlerleme çubuğu bileşeni"""
+    
+    def __init__(self, x: int, y: int, width: int, height: int,
+                 label: str = None, max_value: float = 100,
+                 color: tuple = None):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.label = label
+        self.max_value = max_value
+        self.current_value = 0
+        self.color = color or COLORS['success']
+        self._font = None
+    
+    def get_font(self):
+        if self._font is None:
+            self._font = pygame.font.Font(None, FONTS['small'])
+        return self._font
+    
+    def set_value(self, value: float):
+        """Değeri ayarla"""
+        self.current_value = max(0, min(self.max_value, value))
+    
+    def get_percentage(self) -> float:
+        """Yüzde değerini al"""
+        if self.max_value == 0:
+            return 0
+        return (self.current_value / self.max_value) * 100
+    
+    def announce(self):
+        """Değeri ekran okuyucuya duyur"""
+        audio = get_audio_manager()
+        percentage = int(self.get_percentage())
+        if self.label:
+            audio.announce_value(self.label, f"%{percentage}")
+        else:
+            audio.speak(f"Yüzde {percentage}")
+    
+    def draw(self, surface: pygame.Surface):
+        """Çubuğu çiz"""
+        # Arka plan
+        pygame.draw.rect(surface, COLORS['panel_bg'], self.rect, border_radius=5)
+        
+        # Dolu kısım
+        if self.current_value > 0:
+            fill_width = int((self.current_value / self.max_value) * self.rect.width)
+            fill_rect = pygame.Rect(
+                self.rect.x, self.rect.y,
+                fill_width, self.rect.height
+            )
+            pygame.draw.rect(surface, self.color, fill_rect, border_radius=5)
+        
+        # Kenarlık
+        pygame.draw.rect(surface, COLORS['panel_border'], self.rect, width=2, border_radius=5)
+        
+        # Yüzde metni
+        font = self.get_font()
+        percentage = int(self.get_percentage())
+        text = f"{percentage}%"
+        if self.label:
+            text = f"{self.label}: {percentage}%"
+        text_surface = font.render(text, True, COLORS['text'])
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        surface.blit(text_surface, text_rect)
+
+
+class MenuList:
+    """Klavye ile gezinilebilir menü listesi"""
+    
+    def __init__(self, x: int, y: int, width: int, item_height: int = 50):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.item_height = item_height
+        self.items = []  # [(text, callback, shortcut), ...]
+        self.selected_index = 0
+        self._font = None
+    
+    def get_font(self):
+        if self._font is None:
+            self._font = pygame.font.Font(None, FONTS['body'])
+        return self._font
+    
+    def add_item(self, text: str, callback=None, shortcut: str = None):
+        """Menü öğesi ekle"""
+        self.items.append((text, callback, shortcut))
+    
+    def clear(self):
+        """Menüyü temizle"""
+        self.items = []
+        self.selected_index = 0
+    
+    def _is_separator(self, index: int) -> bool:
+        """Öğenin boş ayırıcı olup olmadığını kontrol et"""
+        if 0 <= index < len(self.items):
+            text, callback, _ = self.items[index]
+            return text.strip() == "" and callback is None
+        return False
+    
+    def _find_next_valid(self, start: int, direction: int) -> int:
+        """Bir sonraki geçerli (boş olmayan) öğeyi bul"""
+        if not self.items:
+            return 0
+        
+        current = start
+        attempts = 0
+        while attempts < len(self.items):
+            current = (current + direction) % len(self.items)
+            if not self._is_separator(current):
+                return current
+            attempts += 1
+        
+        # Tüm öğeler boşsa ilk öğeye dön
+        return 0
+    
+    def select_next(self):
+        """Sonraki öğeyi seç (boş ayırıcıları atla)"""
+        if self.items:
+            self.selected_index = self._find_next_valid(self.selected_index, 1)
+            self._announce_current()
+    
+    def select_prev(self):
+        """Önceki öğeyi seç (boş ayırıcıları atla)"""
+        if self.items:
+            self.selected_index = self._find_next_valid(self.selected_index, -1)
+            self._announce_current()
+    
+    def _announce_current(self):
+        """Seçili öğeyi duyur (boş öğeleri atlayarak)"""
+        if self.items:
+            text, _, shortcut = self.items[self.selected_index]
+            # Boş öğeleri duyurma
+            if text.strip() == "":
+                return
+            
+            audio = get_audio_manager()
+            # Toplam sayıda boş öğeleri sayma
+            valid_count = sum(1 for t, c, _ in self.items if t.strip() != "" or c is not None)
+            valid_index = sum(1 for i, (t, c, _) in enumerate(self.items[:self.selected_index + 1]) if t.strip() != "" or c is not None)
+            audio.announce_menu_item(
+                text, 
+                valid_index, 
+                valid_count
+            )
+    
+    def activate_selected(self) -> bool:
+        """Seçili öğeyi etkinleştir"""
+        if self.items:
+            text, callback, _ = self.items[self.selected_index]
+            if callback:
+                audio = get_audio_manager()
+                audio.play_ui_sound('click')
+                callback()
+                return True
+        return False
+    
+    def handle_event(self, event) -> bool:
+        """Olayları işle"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.select_prev()
+                return True
+            elif event.key == pygame.K_DOWN:
+                self.select_next()
+                return True
+            elif event.key == pygame.K_HOME:
+                # İlk öğeye git
+                self.selected_index = self._find_next_valid(-1, 1)
+                self._announce_current()
+                return True
+            elif event.key == pygame.K_END:
+                # Son öğeye git
+                self.selected_index = self._find_next_valid(len(self.items), -1)
+                self._announce_current()
+                return True
+            elif event.key == pygame.K_RETURN:
+                return self.activate_selected()
+            else:
+                # Kısayol kontrolü
+                for i, (text, callback, shortcut) in enumerate(self.items):
+                    if shortcut:
+                        key = getattr(pygame, f'K_{shortcut.lower()}', None)
+                        if key and event.key == key:
+                            self.selected_index = i
+                            audio = get_audio_manager()
+                            audio.play_ui_sound('click')
+                            if callback:
+                                callback()
+                            return True
+        
+        elif event.type == pygame.MOUSEMOTION:
+            for i, _ in enumerate(self.items):
+                item_rect = pygame.Rect(
+                    self.x, self.y + i * self.item_height,
+                    self.width, self.item_height
+                )
+                if item_rect.collidepoint(event.pos):
+                    if self.selected_index != i:
+                        self.selected_index = i
+                        self._announce_current()
+                    break
+        
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for i, (text, callback, _) in enumerate(self.items):
+                item_rect = pygame.Rect(
+                    self.x, self.y + i * self.item_height,
+                    self.width, self.item_height
+                )
+                if item_rect.collidepoint(event.pos):
+                    self.selected_index = i
+                    audio = get_audio_manager()
+                    audio.play_ui_sound('click')
+                    if callback:
+                        callback()
+                    return True
+        
+        return False
+    
+    def draw(self, surface: pygame.Surface):
+        """Menüyü çiz"""
+        font = self.get_font()
+        
+        for i, (text, _, shortcut) in enumerate(self.items):
+            item_rect = pygame.Rect(
+                self.x, self.y + i * self.item_height,
+                self.width, self.item_height
+            )
+            
+            # Seçili öğe arka planı
+            is_selected = (i == self.selected_index)
+            if is_selected:
+                pygame.draw.rect(surface, COLORS['button_hover'], item_rect, border_radius=8)
+                pygame.draw.rect(surface, COLORS['gold'], item_rect, width=2, border_radius=8)
+                text_color = COLORS['gold']
+            else:
+                pygame.draw.rect(surface, COLORS['button_normal'], item_rect, border_radius=8)
+                pygame.draw.rect(surface, COLORS['panel_border'], item_rect, width=1, border_radius=8)
+                text_color = COLORS['text']
+            
+            # Metin
+            text_surface = font.render(text, True, text_color)
+            text_rect = text_surface.get_rect(
+                left=item_rect.left + 20,
+                centery=item_rect.centery
+            )
+            surface.blit(text_surface, text_rect)
+            
+            # Kısayol
+            if shortcut:
+                shortcut_font = pygame.font.Font(None, FONTS['small'])
+                shortcut_text = f"[{shortcut.upper()}]"
+                shortcut_surface = shortcut_font.render(shortcut_text, True, COLORS['gold'])
+                shortcut_rect = shortcut_surface.get_rect(
+                    right=item_rect.right - 15,
+                    centery=item_rect.centery
+                )
+                surface.blit(shortcut_surface, shortcut_rect)
+
+
+class Tooltip:
+    """Araç ipucu bileşeni"""
+    
+    def __init__(self):
+        self.text = None
+        self.position = (0, 0)
+        self.visible = False
+        self._font = None
+    
+    def get_font(self):
+        if self._font is None:
+            self._font = pygame.font.Font(None, FONTS['tooltip'])
+        return self._font
+    
+    def show(self, text: str, position: tuple):
+        """Tooltip göster"""
+        self.text = text
+        self.position = position
+        self.visible = True
+    
+    def hide(self):
+        """Tooltip gizle"""
+        self.visible = False
+    
+    def draw(self, surface: pygame.Surface):
+        """Tooltip çiz"""
+        if not self.visible or not self.text:
+            return
+        
+        font = self.get_font()
+        
+        # Padding
+        padding = 10
+        
+        # Metin boyutu
+        text_surface = font.render(self.text, True, COLORS['text'])
+        text_rect = text_surface.get_rect()
+        
+        # Arka plan dikdörtgeni
+        bg_rect = pygame.Rect(
+            self.position[0], self.position[1],
+            text_rect.width + padding * 2,
+            text_rect.height + padding * 2
+        )
+        
+        # Ekran sınırları kontrolü
+        screen_width, screen_height = surface.get_size()
+        if bg_rect.right > screen_width:
+            bg_rect.right = screen_width - 5
+        if bg_rect.bottom > screen_height:
+            bg_rect.bottom = screen_height - 5
+        
+        # Arka plan
+        pygame.draw.rect(surface, COLORS['panel_bg'], bg_rect, border_radius=5)
+        pygame.draw.rect(surface, COLORS['gold'], bg_rect, width=1, border_radius=5)
+        
+        # Metin
+        text_rect.topleft = (bg_rect.left + padding, bg_rect.top + padding)
+        surface.blit(text_surface, text_rect)
