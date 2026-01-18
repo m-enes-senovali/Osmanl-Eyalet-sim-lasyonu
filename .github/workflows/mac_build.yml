@@ -1,27 +1,24 @@
-name: MacDerleme
+name: Build macOS App
+
 on: [push]
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Python Yukle
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Yuklemeler
-        run: |
-          pip install pyinstaller
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Derleme Basliyor
-        run: pyinstaller --onefile --windowed main.py
-
-      - name: Sonucu Kaydet
-        uses: actions/upload-artifact@v3
-        with:
-          name: MacUygulamasi
-          path: dist/
+    - uses: actions/checkout@v4
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install deps
+      run: |
+        pip install pyinstaller pygame
+    - name: Build
+      run: |
+        pyinstaller --windowed --onefile main.py
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mac-app
+        path: dist/
