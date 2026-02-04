@@ -33,5 +33,5 @@ jobs:
         with:
           name: MacOyunu
           # Sadece olusan uygulamayi alir, gereksizleri almaz
-          path: dist/OsmanliEyaletSimulasyonu.app
+          path: dist/
           compression-level: 0
