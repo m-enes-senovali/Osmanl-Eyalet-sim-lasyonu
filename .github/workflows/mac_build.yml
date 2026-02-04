@@ -1,24 +1,37 @@
-name: Build macOS App
-
-on: [push]
+name: MacBuild Final
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install deps
-      run: |
-        pip install pyinstaller pygame
-    - name: Build
-      run: |
-        pyinstaller --windowed --onefile main.py
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: mac-app
-        path: dist/main.app
+      - name: Kodlari Cek
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Gereksinimleri Yukle
+        # accessible_output2 kütüphanesini buraya ekledik, yoksa oyun konusamaz
+        run: pip install pyinstaller pygame accessible_output2
+
+      - name: Uygulamayi Derle
+        # Mac icin dosya ayiraci (:) kullandik. Windows'taki (;) ile karistirma.
+        run: |
+          pyinstaller --onefile --windowed --name OsmanliEyaletSimulasyonu \
+            --add-data "audio/sounds:audio/sounds" \
+            --add-data "config.py:." \
+            --hidden-import pygame \
+            --hidden-import accessible_output2 \
+            --hidden-import accessible_output2.outputs.auto \
+            main.py
+
+      - name: Sonucu Yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: MacOyunu
+          # Sadece olusan uygulamayi alir, gereksizleri almaz
+          path: dist/OsmanliEyaletSimulasyonu.app
+          compression-level: 0
