@@ -28,6 +28,56 @@ class CaravanStatus(Enum):
     LOST = "lost"             # Kayboldu
 
 
+class TradeGood(Enum):
+    """Ticari mal türleri"""
+    SILK = "ipek"          # Yüksek kar, uzun mesafe
+    SPICE = "baharat"      # Orta kar, orta mesafe
+    CLOTH = "kumaş"        # Düşük kar, kısa mesafe
+    IRON = "demir"         # Savaş malzemesi
+    WOOD = "kereste"       # İnşaat malzemesi
+    SALT = "tuz"           # Günlük tüketim
+    GRAIN = "tahıl"        # Temel gıda
+    JEWELS = "mücevher"    # Lüks
+
+
+# Temel mal fiyatları
+BASE_PRICES = {
+    TradeGood.SILK: 100,
+    TradeGood.SPICE: 80,
+    TradeGood.CLOTH: 30,
+    TradeGood.IRON: 50,
+    TradeGood.WOOD: 20,
+    TradeGood.SALT: 25,
+    TradeGood.GRAIN: 15,
+    TradeGood.JEWELS: 150,
+}
+
+
+@dataclass
+class MarketPrice:
+    """Pazar fiyatı - dinamik değişen"""
+    good: TradeGood
+    base_price: int
+    current_multiplier: float = 1.0  # 0.5 - 2.0 arası
+    trend: float = 0.0  # -0.1 ile +0.1 arası (fiyat trendi)
+    
+    def get_current_price(self) -> int:
+        """Güncel fiyatı hesapla"""
+        return int(self.base_price * self.current_multiplier)
+    
+    def update_price(self, supply_change: float = 0.0, demand_change: float = 0.0):
+        """Fiyatı güncelle (arz/talep değişimine göre)"""
+        # Arz artarsa fiyat düşer, talep artarsa fiyat artar
+        change = demand_change - supply_change + self.trend
+        self.current_multiplier += change
+        
+        # Sınırlar içinde tut
+        self.current_multiplier = max(0.5, min(2.0, self.current_multiplier))
+        
+        # Trend zamanla sıfıra yaklaşır
+        self.trend *= 0.9
+
+
 @dataclass
 class TradeRoute:
     """Ticaret yolu"""
@@ -63,14 +113,14 @@ class Caravan:
         return min(0.95, base_chance + protection_bonus)
 
 
-# Varsayılan ticaret yolları
+# Varsayılan ticaret yolları (1520 dönemi)
 DEFAULT_ROUTES = [
     TradeRoute(
         route_id="silk_road",
         name="İpek Yolu",
         route_type=RouteType.SILK,
-        start_region="Anadolu",
-        end_region="Çin Sınırı",
+        start_region="Bursa",  # Osmanlı ipek merkezi
+        end_region="Semerkand",  # Özbek Hanlığı - İpek Yolu kavşağı
         base_income=800,
         travel_time=4,
         risk_factor=0.25
@@ -78,9 +128,9 @@ DEFAULT_ROUTES = [
     TradeRoute(
         route_id="spice_route",
         name="Baharat Yolu",
-        route_type=RouteType.LAND,
-        start_region="Halep",
-        end_region="Hindistan",
+        route_type=RouteType.SEA,  # 1520'de deniz yolu artık önemli
+        start_region="İskenderiye",  # Osmanlı Mısır'ı
+        end_region="Cidde",  # Kızıldeniz limanı
         base_income=600,
         travel_time=3,
         risk_factor=0.20
@@ -100,17 +150,17 @@ DEFAULT_ROUTES = [
         name="Karadeniz Yolu",
         route_type=RouteType.SEA,
         start_region="Trabzon",
-        end_region="Kırım",
+        end_region="Kefe",  # Kırım'daki Osmanlı limanı (Feodosya)
         base_income=500,
         travel_time=2,
         risk_factor=0.15
     ),
     TradeRoute(
         route_id="balkan_road",
-        name="Balkan Yolu",
+        name="Rumeli Yolu",  # Daha dönemsel isim
         route_type=RouteType.LAND,
         start_region="Edirne",
-        end_region="Belgrad",
+        end_region="Ragusa",  # Dubrovnik - önemli ticaret ortağı
         base_income=400,
         travel_time=2,
         risk_factor=0.10
@@ -133,6 +183,28 @@ class TradeSystem:
         # Liman durumu (tersane binası gerektirir)
         self.has_port = False
         self.port_level = 0
+        
+        # YENİ: Pazar fiyatları (dinamik)
+        self.market_prices: Dict[TradeGood, MarketPrice] = {}
+        for good, base_price in BASE_PRICES.items():
+            self.market_prices[good] = MarketPrice(good, base_price)
+        
+        # YENİ: Tüccar ilişkileri (0-100, yüksek = iyi)
+        # 1520 tarihi gerçekliğine uygun:
+        # - Memlükler 1517'de fethedildi (artık Osmanlı parçası)
+        # - Moğol İmparatorluğu 1368'de dağıldı
+        self.merchant_relations: Dict[str, int] = {
+            'venedik': 50,      # Venedik Cumhuriyeti - önemli ticaret ortağı
+            'ceneviz': 45,      # Ceneviz Cumhuriyeti - rakip ama ticaret var
+            'safevi': 30,       # Safevi Devleti - gerilimli ama ticaret var
+            'ozbek': 40,        # Özbek Hanlığı - İpek Yolu ticareti
+            'gucerat': 45,      # Gücerat Sultanlığı (Hint deniz ticareti)
+            'ragusa': 55,       # Dubrovnik - Osmanlı'ya bağlı ticaret şehri
+            'portekiz': 25,     # Portekiz - Hint Okyanusu'nda rakip
+        }
+        
+        # YENİ: Mal deposu (envanter)
+        self.inventory: Dict[TradeGood, int] = {good: 0 for good in TradeGood}
     
     def update_port_status(self, has_shipyard: bool, shipyard_level: int = 0):
         """Liman durumunu güncelle"""
@@ -153,6 +225,129 @@ class TradeSystem:
             available.append(route)
         
         return available
+    
+    def buy_good(self, good: TradeGood, quantity: int, economy, merchant: str = None) -> bool:
+        """Mal satın al"""
+        audio = get_audio_manager()
+        
+        if good not in self.market_prices:
+            return False
+        
+        price = self.market_prices[good].get_current_price()
+        
+        # Tüccar ilişkisi indirimi
+        if merchant and merchant in self.merchant_relations:
+            relation = self.merchant_relations[merchant]
+            discount = (relation - 50) / 200  # 50 ilişki = %0, 100 ilişki = %25 indirim
+            price = int(price * (1 - discount))
+        
+        total_cost = price * quantity
+        
+        if not economy.can_afford(gold=total_cost):
+            audio.announce_action_result("Mal alımı", False, "Yetersiz altın")
+            return False
+        
+        economy.spend(gold=total_cost)
+        self.inventory[good] += quantity
+        
+        # Talep arttı -> fiyat artışı
+        self.market_prices[good].update_price(demand_change=0.02 * quantity)
+        
+        audio.announce_action_result(
+            f"{quantity} {good.value} alındı",
+            True,
+            f"Toplam: {total_cost} altın"
+        )
+        return True
+    
+    def sell_good(self, good: TradeGood, quantity: int, economy, merchant: str = None) -> bool:
+        """Mal sat"""
+        audio = get_audio_manager()
+        
+        if good not in self.inventory or self.inventory[good] < quantity:
+            audio.announce_action_result("Mal satışı", False, "Yetersiz mal")
+            return False
+        
+        price = self.market_prices[good].get_current_price()
+        
+        # Tüccar ilişkisi primi
+        if merchant and merchant in self.merchant_relations:
+            relation = self.merchant_relations[merchant]
+            bonus = (relation - 50) / 200  # 50 ilişki = %0, 100 ilişki = %25 prim
+            price = int(price * (1 + bonus))
+        
+        total_income = price * quantity
+        
+        economy.add_resources(gold=total_income)
+        self.inventory[good] -= quantity
+        
+        # Arz arttı -> fiyat düşüşü
+        self.market_prices[good].update_price(supply_change=0.02 * quantity)
+        
+        audio.announce_action_result(
+            f"{quantity} {good.value} satıldı",
+            True,
+            f"Kazanç: {total_income} altın"
+        )
+        return True
+    
+    def update_market(self, season: str = None, events: List[str] = None):
+        """Pazar fiyatlarını güncelle (mevsim ve olaylara göre)"""
+        # Mevsimsel etkiler
+        if season:
+            if season == "winter":
+                self.market_prices[TradeGood.SALT].trend = 0.05  # Kışın tuz artar
+                self.market_prices[TradeGood.GRAIN].trend = 0.03
+                self.market_prices[TradeGood.CLOTH].trend = 0.04
+            elif season == "summer":
+                self.market_prices[TradeGood.SILK].trend = 0.03  # Yazın ipek artar
+                self.market_prices[TradeGood.SPICE].trend = -0.02
+            elif season == "spring":
+                self.market_prices[TradeGood.GRAIN].trend = -0.05  # İlkbaharda hasat
+        
+        # Olay etkileri
+        if events:
+            for event in events:
+                if "savaş" in event.lower() or "war" in event.lower():
+                    self.market_prices[TradeGood.IRON].trend = 0.1
+                    self.market_prices[TradeGood.WOOD].trend = 0.05
+                if "kıtlık" in event.lower() or "famine" in event.lower():
+                    self.market_prices[TradeGood.GRAIN].trend = 0.15
+                if "veba" in event.lower() or "plague" in event.lower():
+                    self.market_prices[TradeGood.SPICE].trend = 0.1  # İlaç olarak
+        
+        # Tüm fiyatları güncelle
+        for price in self.market_prices.values():
+            price.update_price()
+    
+    def get_price_info(self, good: TradeGood) -> Dict:
+        """Mal fiyat bilgisi"""
+        if good not in self.market_prices:
+            return {}
+        
+        mp = self.market_prices[good]
+        trend_text = "Yükseliyor" if mp.trend > 0.01 else "Düşüyor" if mp.trend < -0.01 else "Sabit"
+        
+        return {
+            'name': good.value,
+            'base_price': mp.base_price,
+            'current_price': mp.get_current_price(),
+            'multiplier': mp.current_multiplier,
+            'trend': trend_text,
+            'stock': self.inventory[good]
+        }
+    
+    def announce_market_prices(self):
+        """Pazar fiyatlarını duyur"""
+        audio = get_audio_manager()
+        audio.speak("Pazar Fiyatları:", interrupt=True)
+        
+        for good in TradeGood:
+            info = self.get_price_info(good)
+            audio.speak(
+                f"{info['name']}: {info['current_price']} altın ({info['trend']}), Stok: {info['stock']}",
+                interrupt=False
+            )
     
     def send_caravan(self, route_id: str, economy, protection: int = 0) -> Optional[Caravan]:
         """Kervan gönder"""
@@ -330,6 +525,17 @@ class TradeSystem:
     
     def to_dict(self) -> Dict:
         """Kayıt için dictionary'e dönüştür"""
+        # Market prices'ı serileştir
+        market_data = {}
+        for good, mp in self.market_prices.items():
+            market_data[good.value] = {
+                'multiplier': mp.current_multiplier,
+                'trend': mp.trend
+            }
+        
+        # Inventory'i serileştir
+        inventory_data = {good.value: qty for good, qty in self.inventory.items()}
+        
         return {
             'trade_agreements': self.trade_agreements,
             'total_trade_income': self.total_trade_income,
@@ -338,6 +544,9 @@ class TradeSystem:
             'caravan_counter': self.caravan_counter,
             'has_port': self.has_port,
             'port_level': self.port_level,
+            'market_prices': market_data,  # YENİ
+            'merchant_relations': self.merchant_relations,  # YENİ
+            'inventory': inventory_data,  # YENİ
             'active_caravans': [
                 {
                     'route_id': c.route.route_id,
@@ -360,6 +569,25 @@ class TradeSystem:
         system.caravan_counter = data.get('caravan_counter', 0)
         system.has_port = data.get('has_port', False)
         system.port_level = data.get('port_level', 0)
+        
+        # YENİ: Market prices yükle
+        for good_name, mp_data in data.get('market_prices', {}).items():
+            for good in TradeGood:
+                if good.value == good_name:
+                    system.market_prices[good].current_multiplier = mp_data.get('multiplier', 1.0)
+                    system.market_prices[good].trend = mp_data.get('trend', 0.0)
+                    break
+        
+        # YENİ: Merchant relations yükle
+        saved_relations = data.get('merchant_relations', {})
+        system.merchant_relations.update(saved_relations)
+        
+        # YENİ: Inventory yükle
+        for good_name, qty in data.get('inventory', {}).items():
+            for good in TradeGood:
+                if good.value == good_name:
+                    system.inventory[good] = qty
+                    break
         
         # Aktif kervanları yükle
         for c_data in data.get('active_caravans', []):

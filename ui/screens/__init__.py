@@ -16,6 +16,12 @@ from ui.screens.workers_screen import WorkersScreen
 from ui.screens.map_screen import MapScreen
 from ui.screens.warfare_screen import WarfareScreen
 from ui.screens.trade_screen import TradeScreen
+from ui.screens.settings_screen import SettingsScreen
+from ui.screens.negotiation_screen import NegotiationScreen
+from ui.screens.espionage_screen import EspionageScreen  # YENİ
+from ui.screens.religion_screen import ReligionScreen    # YENİ
+from ui.screens.achievement_screen import AchievementScreen  # YENİ
+from ui.screens.tutorial_screen import TutorialScreen  # YENİ
 
 __all__ = [
     'MainMenuScreen',
@@ -30,5 +36,12 @@ __all__ = [
     'WorkersScreen',
     'MapScreen',
     'WarfareScreen',
-    'TradeScreen'
+    'TradeScreen',
+    'SettingsScreen',
+    'NegotiationScreen',
+    'EspionageScreen',  # YENİ
+    'ReligionScreen',   # YENİ
+    'AchievementScreen',  # YENİ
+    'TutorialScreen',  # YENİ
 ]
+

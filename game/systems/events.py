@@ -65,6 +65,39 @@ class Event:
     max_year: int = 9999
     min_turn: int = 0  # Minimum tur (erken oyun koruması)
     condition_func: Optional[Callable] = None
+    
+    # Cinsiyet filtresi (YENİ)
+    # None = herkes, "male" = sadece erkek, "female" = sadece kadın
+    gender_filter: Optional[str] = None
+    
+    # Zincir olay desteği
+    chain_id: str = None  # Bu olay hangi zincire ait
+    triggers_event: str = None  # Bu olay hangi olayı tetikler
+    trigger_delay: int = 0  # Kaç tur sonra tetikler
+    required_memory: Dict[str, any] = None  # Gerekli hafıza koşulları
+
+
+@dataclass
+class ChainTrigger:
+    """Bekleyen zincir olay tetikleyicisi"""
+    event_id: str  # Tetiklenecek olay ID'si
+    turns_remaining: int  # Kaç tur kaldı
+    source_event_id: str  # Tetikleyen olay
+    choice_made: str  # Yapılan seçim
+    memory_updates: Dict[str, any] = None  # Hafıza güncellemeleri
+
+
+@dataclass
+class EventChain:
+    """Olay zinciri - birbiriyle bağlantılı olaylar"""
+    chain_id: str
+    name: str
+    description: str
+    events: List[str]  # Zincirdeki olay ID'leri
+    total_stages: int
+    current_stage: int = 0
+    completed: bool = False
+    started_turn: int = 0
 
 
 # Olay tanımlamaları
@@ -534,7 +567,716 @@ EVENT_POOL = [
             )
         ]
     ),
+    
+    # ========== ZİNCİR OLAY 1: BÜYÜK VEBA SALGINI (5 aşama) ==========
+    Event(
+        id="plague_chain_1_signs",
+        title="Veba Belirtileri",
+        description="Birkaç köyde şüpheli hastalık vakaları görüldü. İnsanlar endişeli.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.MODERATE,
+        chain_id="plague_chain",
+        min_turn=20,
+        choices=[
+            EventChoice(
+                text="Karantina uygula",
+                effects={'gold': -500, 'happiness': -10, 'trade_modifier': -5},
+                description="Köyler karantinaya alındı. Ticaret yavaşladı."
+            ),
+            EventChoice(
+                text="Hekimler gönder",
+                effects={'gold': -800, 'happiness': 5},
+                description="Hekimler hastalığı incelemeye başladı."
+            ),
+            EventChoice(
+                text="Bekle ve gözle",
+                effects={},
+                description="Durum izleniyor..."
+            )
+        ]
+    ),
+    Event(
+        id="plague_chain_2_spread",
+        title="Veba Yayılıyor!",
+        description="Hastalık hızla yayılıyor! Köyler panik içinde. Acil karar gerekli.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.CRITICAL,
+        chain_id="plague_chain",
+        required_memory={'plague_started': True, 'plague_quarantine': False},
+        choices=[
+            EventChoice(
+                text="Sert karantina uygula",
+                effects={'gold': -1000, 'happiness': -20, 'trade_modifier': -15, 'population_loss': 200},
+                description="Geç kaldık ama karantina başladı. Kayıplar var."
+            ),
+            EventChoice(
+                text="Usta hekimler getirt",
+                effects={'gold': -2000, 'population_loss': 100},
+                description="Doğudan usta hekimler geldi."
+            ),
+            EventChoice(
+                text="Dua ve oruç ilan et",
+                effects={'happiness': 5, 'population_loss': 500},
+                description="Halk dua etti ama kayıplar çok."
+            )
+        ]
+    ),
+    Event(
+        id="plague_chain_2_contained",
+        title="Karantina Sıkıntısı",
+        description="Karantina işe yarıyor ama halk sıkıntıda. Yiyecek azalıyor.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.MAJOR,
+        chain_id="plague_chain",
+        required_memory={'plague_started': True, 'plague_quarantine': True},
+        choices=[
+            EventChoice(
+                text="Yiyecek dağıt",
+                effects={'gold': -600, 'food': -300, 'happiness': 10},
+                description="Halka yiyecek dağıtıldı, moral yükseldi."
+            ),
+            EventChoice(
+                text="Karantinayı sıkılaştır",
+                effects={'happiness': -15, 'population_loss': 50},
+                description="Karantina sertleşti, bazıları kaçmaya çalıştı."
+            ),
+            EventChoice(
+                text="Karantinayı gevşet",
+                effects={'happiness': 5, 'trade_modifier': 5},
+                description="Karantina gevşetildi, risk var ama halk rahatladı."
+            )
+        ]
+    ),
+    Event(
+        id="plague_chain_3_peak",
+        title="Veba Doruk Noktasında",
+        description="Hastalık en yoğun döneminde. Her gün cenazeler kaldırılıyor.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.CRITICAL,
+        chain_id="plague_chain",
+        required_memory={'plague_started': True},
+        choices=[
+            EventChoice(
+                text="Toplu mezarlar kaz",
+                effects={'gold': -300, 'happiness': -20, 'population_loss': 300},
+                description="Cenazeler defnedildi ama halk çok üzgün."
+            ),
+            EventChoice(
+                text="Şifalı otlar dağıt",
+                effects={'gold': -500, 'population_loss': 200, 'happiness': 5},
+                description="Ot tedavisi biraz işe yaradı."
+            ),
+            EventChoice(
+                text="Padişahtan yardım iste",
+                effects={'loyalty': -10, 'gold': 1000, 'population_loss': 250},
+                description="Padişah yardım gönderdi ama zayıflığınızı gördü."
+            )
+        ]
+    ),
+    Event(
+        id="plague_chain_4_end",
+        title="Veba Sonu",
+        description="Hastalık nihayet azalıyor. Ağır bir dönem geçirdik.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.MAJOR,
+        chain_id="plague_chain",
+        required_memory={'plague_started': True},
+        choices=[
+            EventChoice(
+                text="Şükür şenliği düzenle",
+                effects={'gold': -400, 'happiness': 25, 'loyalty': 5},
+                description="Büyük şenlik! Halk mutlu, padişah memnun."
+            ),
+            EventChoice(
+                text="Yeniden inşa odaklan",
+                effects={'gold': -800, 'wood': -200, 'happiness': 10},
+                description="Hasar gören yerler onarılıyor."
+            ),
+            EventChoice(
+                text="Normal hayata dön",
+                effects={'happiness': 5},
+                description="Yavaş yavaş normale dönülüyor."
+            )
+        ]
+    ),
+    
+    # ========== ZİNCİR OLAY 2: YENİÇERİ İSYANI (4 aşama) ==========
+    Event(
+        id="janissary_chain_1_demand",
+        title="Yeniçeri Maaş Talebi",
+        description="Yeniçeriler toplanıp maaş artışı talep ediyor. Tehditkar tavırları var.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MAJOR,
+        chain_id="janissary_chain",
+        min_turn=25,
+        choices=[
+            EventChoice(
+                text="Maaşları artır",
+                effects={'gold': -2000, 'morale': 30},
+                description="Yeniçeriler memnun oldu."
+            ),
+            EventChoice(
+                text="Söz ver, sonra görüşelim",
+                effects={'morale': -5},
+                description="Geçici bir sakinlik sağlandı..."
+            ),
+            EventChoice(
+                text="Reddet ve tehdit et",
+                effects={'morale': -20},
+                description="Yeniçeriler öfkelendi!"
+            )
+        ]
+    ),
+    Event(
+        id="janissary_chain_2_unrest",
+        title="Yeniçeri Kazan Kaldırma",
+        description="Yeniçeriler kazanlarını kaldırdı! Bu geleneksel isyan işareti!",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.CRITICAL,
+        chain_id="janissary_chain",
+        required_memory={'janissary_angry': True},
+        choices=[
+            EventChoice(
+                text="Hemen maaş artır",
+                effects={'gold': -3000, 'morale': 20, 'loyalty': -5},
+                description="Geç kalmış bir uzlaşma. İtibar zedelendi."
+            ),
+            EventChoice(
+                text="Sadık birlikleri topla",
+                effects={'gold': -500, 'soldiers': -30},
+                description="Sadık askerler hazırlanıyor..."
+            ),
+            EventChoice(
+                text="Kaç",
+                effects={'loyalty': -30, 'happiness': -20},
+                description="Vali geçici olarak kaçtı. Büyük utanç!"
+            )
+        ]
+    ),
+    Event(
+        id="janissary_chain_3_revolt",
+        title="Yeniçeri İsyanı Patladı!",
+        description="Yeniçeriler isyan etti! Sokak savaşları var. Saray tehlikede!",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.CRITICAL,
+        chain_id="janissary_chain",
+        required_memory={'janissary_revolt': True},
+        choices=[
+            EventChoice(
+                text="Savaş - bastır",
+                effects={'soldiers': -100, 'morale': 20, 'gold': -1000},
+                description="Kanlı çatışma! Kayıplar ağır ama isyan bastırıldı."
+            ),
+            EventChoice(
+                text="Müzakere et",
+                effects={'gold': -4000, 'morale': -10, 'loyalty': -10},
+                description="Ağır bedel ödendi ama kan dökülmedi."
+            ),
+            EventChoice(
+                text="Liderlerini suikastle öldür",
+                effects={'gold': -800, 'morale': -30, 'happiness': -10},
+                description="Liderler gizlice öldürüldü. İsyan dağıldı ama güven sarsıldı."
+            )
+        ]
+    ),
+    Event(
+        id="janissary_chain_4_aftermath",
+        title="İsyan Sonrası",
+        description="İsyan bitti. Şimdi sonuçlarla yüzleşme zamanı.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MAJOR,
+        chain_id="janissary_chain",
+        required_memory={'janissary_resolved': True},
+        choices=[
+            EventChoice(
+                text="Affet ve birleştir",
+                effects={'happiness': 10, 'morale': 15, 'loyalty': 5},
+                description="Af ilan edildi. Birlik sağlandı."
+            ),
+            EventChoice(
+                text="Suçluları cezalandır",
+                effects={'morale': -10, 'loyalty': 10, 'happiness': -5},
+                description="İsyancılar cezalandırıldı. Padişah memnun."
+            ),
+            EventChoice(
+                text="Yeniçeri ocağını reforma et",
+                effects={'gold': -1500, 'morale': 5, 'military_bonus': 10},
+                description="Yeniçeri sistemi modernleştirildi."
+            )
+        ]
+    ),
+    
+    # ========== ZİNCİR OLAY 3: İPEK YOLU MACERASI (3 aşama) ==========
+    Event(
+        id="silkroad_chain_1_offer",
+        title="Tüccar Teklifi",
+        description="Zengin bir tüccar büyük bir kervan yolculuğu öneriyor. Yüksek kar vaat ediyor.",
+        event_type=EventType.ECONOMIC,
+        severity=EventSeverity.MODERATE,
+        chain_id="silkroad_chain",
+        min_turn=15,
+        choices=[
+            EventChoice(
+                text="Büyük yatırım yap",
+                effects={'gold': -2000},
+                description="Büyük sermaye yatırıldı. Kervan yola çıktı."
+            ),
+            EventChoice(
+                text="Küçük yatırım yap",
+                effects={'gold': -800},
+                description="Temkinli yatırım yapıldı."
+            ),
+            EventChoice(
+                text="Reddet",
+                effects={},
+                description="Teklif reddedildi."
+            )
+        ]
+    ),
+    Event(
+        id="silkroad_chain_2_journey",
+        title="Kervan Tehlikede!",
+        description="Kervanınız eşkıyaların pusuya düştü! Ne yapacaksınız?",
+        event_type=EventType.ECONOMIC,
+        severity=EventSeverity.MAJOR,
+        chain_id="silkroad_chain",
+        required_memory={'silkroad_invested': True},
+        choices=[
+            EventChoice(
+                text="Muhafız gönder",
+                effects={'gold': -500, 'soldiers': -20},
+                description="Muhafızlar yola çıktı."
+            ),
+            EventChoice(
+                text="Fidye öde",
+                effects={'gold': -1000},
+                description="Eşkıyalara fidye ödendi."
+            ),
+            EventChoice(
+                text="Kendi başlarına bırак",
+                effects={},
+                description="Kervan kendi kaderine bırakıldı..."
+            )
+        ]
+    ),
+    Event(
+        id="silkroad_chain_3_return",
+        title="Kervan Dönüşü",
+        description="Kervan nihayet döndü. Sonuçlar belli olacak.",
+        event_type=EventType.ECONOMIC,
+        severity=EventSeverity.MAJOR,
+        chain_id="silkroad_chain",
+        required_memory={'silkroad_invested': True},
+        choices=[
+            EventChoice(
+                text="Karları al",
+                effects={'gold': 4000, 'trade_modifier': 10},
+                description="Muhteşem kar! Ticaret ilişkileri güçlendi."
+            ),
+            EventChoice(
+                text="Tüccarla ortaklık kur",
+                effects={'gold': 2000, 'trade_modifier': 20},
+                description="Kalıcı ticaret ortaklığı kuruldu."
+            ),
+            EventChoice(
+                text="Kayıpları kabul et",
+                effects={'gold': -500},
+                description="Yolculuk zarara uğradı."
+            )
+        ]
+    ),
+    
+    # ========== ZİNCİR OLAY 4: PADİŞAH ZİYARETİ (4 aşama) ==========
+    Event(
+        id="sultan_chain_1_news",
+        title="Padişah Geliyor!",
+        description="Haberci geldi: Padişah hazretleri eyaletimizi ziyaret edecek! Büyük onur!",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MAJOR,
+        chain_id="sultan_chain",
+        min_turn=30,
+        choices=[
+            EventChoice(
+                text="Muhteşem karşılama hazırla",
+                effects={'gold': -3000, 'loyalty': 10},
+                description="Görkemli hazırlıklar başladı."
+            ),
+            EventChoice(
+                text="Mütevazi karşılama",
+                effects={'gold': -1000},
+                description="Saygılı ama sade hazırlıklar."
+            ),
+            EventChoice(
+                text="Erteleme talep et",
+                effects={'loyalty': -15},
+                description="Padişah memnun değil ama erteledi."
+            )
+        ]
+    ),
+    Event(
+        id="sultan_chain_2_preparation",
+        title="Hazırlık Günleri",
+        description="Ziyaret yaklaşıyor. Son hazırlıklar yapılıyor.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MODERATE,
+        chain_id="sultan_chain",
+        required_memory={'sultan_visit': True},
+        choices=[
+            EventChoice(
+                text="Askeri geçit töreni",
+                effects={'gold': -500, 'morale': 15},
+                description="Ordunuz geçit için hazırlanıyor."
+            ),
+            EventChoice(
+                text="Halk şenliği",
+                effects={'gold': -800, 'happiness': 15},
+                description="Halk için büyük şenlik hazırlanıyor."
+            ),
+            EventChoice(
+                text="Hediye hazırla",
+                effects={'gold': -1500},
+                description="Padişaha özel hediyeler hazırlandı."
+            )
+        ]
+    ),
+    Event(
+        id="sultan_chain_3_visit",
+        title="Padişah Geldi!",
+        description="Padişah hazretleri eyalete teşrif etti. Herkes heyecanlı ve gergin.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.CRITICAL,
+        chain_id="sultan_chain",
+        required_memory={'sultan_visit': True},
+        choices=[
+            EventChoice(
+                text="Sadakatinizi bildirin",
+                effects={'loyalty': 20},
+                description="Padişahın önünde diz çöktünüz."
+            ),
+            EventChoice(
+                text="Başarılarınızı sunun",
+                effects={'loyalty': 10, 'gold': 500},
+                description="Padişah eyaletin gelişimini takdir etti."
+            ),
+            EventChoice(
+                text="Şikayet iletin",
+                effects={'loyalty': -10, 'gold': 1000},
+                description="Cesaretinizi beğendi ama temkinli."
+            )
+        ]
+    ),
+    Event(
+        id="sultan_chain_4_aftermath",
+        title="Ziyaret Sonrası",
+        description="Padişah ayrıldı. Şimdi sonuçlar belli oluyor.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MAJOR,
+        chain_id="sultan_chain",
+        required_memory={'sultan_visit': True},
+        choices=[
+            EventChoice(
+                text="Padişah memnun - terfi",
+                effects={'loyalty': 15, 'gold': 2000, 'happiness': 10},
+                description="Padişah sizi ödüllendirdi! Büyük onur."
+            ),
+            EventChoice(
+                text="Normal ayrılış",
+                effects={'loyalty': 5},
+                description="Ziyaret başarıyla tamamlandı."
+            ),
+            EventChoice(
+                text="Padişah soğuk ayrıldı",
+                effects={'loyalty': -20, 'happiness': -10},
+                description="Bir şeyler ters gitti. Endişe verici."
+            )
+        ]
+    ),
+    
+    # ========== ZİNCİR OLAY 5: FETİH SEFERİ (5 aşama) ==========
+    Event(
+        id="conquest_chain_1_call",
+        title="Sefere Çağrı",
+        description="Padişah büyük sefer için asker topluyor. Katılım bekleniyor.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MAJOR,
+        chain_id="conquest_chain",
+        min_turn=35,
+        choices=[
+            EventChoice(
+                text="Büyük ordu gönder",
+                effects={'soldiers': -200, 'gold': -1000, 'loyalty': 20},
+                description="Büyük bir kuvvet sefere katılıyor."
+            ),
+            EventChoice(
+                text="Küçük birlik gönder",
+                effects={'soldiers': -50, 'gold': -300, 'loyalty': 5},
+                description="Sembolik katılım sağlandı."
+            ),
+            EventChoice(
+                text="Mazeret bildir",
+                effects={'loyalty': -25, 'gold': -500},
+                description="Katılamadınız. Padişah kızgın."
+            )
+        ]
+    ),
+    Event(
+        id="conquest_chain_2_march",
+        title="Uzun Yürüyüş",
+        description="Ordu seferde. Lojistik sorunlar çıkıyor.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MODERATE,
+        chain_id="conquest_chain",
+        required_memory={'conquest_joined': True},
+        choices=[
+            EventChoice(
+                text="Ek erzak gönder",
+                effects={'gold': -800, 'food': -500},
+                description="Erzak konvoyu yola çıktı."
+            ),
+            EventChoice(
+                text="Yağma izni ver",
+                effects={'morale': 10, 'loyalty': -10},
+                description="Askerler yağmaladı. Halk şikayetçi."
+            ),
+            EventChoice(
+                text="Disiplin koru",
+                effects={'morale': -10, 'soldiers': -20},
+                description="Disiplin korundu ama kayıplar var."
+            )
+        ]
+    ),
+    Event(
+        id="conquest_chain_3_siege",
+        title="Kuşatma",
+        description="Düşman kalesi kuşatıldı. Taktik kararlar gerekiyor.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.CRITICAL,
+        chain_id="conquest_chain",
+        required_memory={'conquest_joined': True},
+        choices=[
+            EventChoice(
+                text="Genel saldırı",
+                effects={'soldiers': -80, 'morale': 20},
+                description="Kanlı saldırı! Kayıplar ağır ama ilerleme var."
+            ),
+            EventChoice(
+                text="Kuşatmayı sürdür",
+                effects={'gold': -500, 'food': -300},
+                description="Sabırlı kuşatma devam ediyor."
+            ),
+            EventChoice(
+                text="Tünel kaz",
+                effects={'gold': -1000, 'soldiers': -30},
+                description="Gizli tünel kazılıyor."
+            )
+        ]
+    ),
+    Event(
+        id="conquest_chain_4_battle",
+        title="Büyük Savaş!",
+        description="Nihai savaş başladı! Kaderi belirleyecek an.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.CRITICAL,
+        chain_id="conquest_chain",
+        required_memory={'conquest_joined': True},
+        choices=[
+            EventChoice(
+                text="Ön safta savaş",
+                effects={'soldiers': -50, 'morale': 30, 'loyalty': 15},
+                description="Kahramanca savaştınız! Zafer yakın."
+            ),
+            EventChoice(
+                text="Taktik komuta",
+                effects={'soldiers': -30, 'morale': 15},
+                description="Akıllı taktiklerle avantaj sağladınız."
+            ),
+            EventChoice(
+                text="Geride kal",
+                effects={'morale': -20, 'loyalty': -10},
+                description="Geride kaldınız. Dedikodular yayılıyor."
+            )
+        ]
+    ),
+    Event(
+        id="conquest_chain_5_spoils",
+        title="Zafer ve Ganimet",
+        description="Savaş kazanıldı! Ganimetler paylaşılıyor.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MAJOR,
+        chain_id="conquest_chain",
+        required_memory={'conquest_victory': True},
+        choices=[
+            EventChoice(
+                text="Büyük pay al",
+                effects={'gold': 5000, 'loyalty': -10, 'iron': 500},
+                description="Büyük ganimet! Ama kıskançlık var."
+            ),
+            EventChoice(
+                text="Adil paylaş",
+                effects={'gold': 2500, 'morale': 20, 'happiness': 10},
+                description="Adil paylaşım. Herkes memnun."
+            ),
+            EventChoice(
+                text="Padişaha bağışla",
+                effects={'gold': 1000, 'loyalty': 25},
+                description="Ganimetleri padişaha sundunuz. Büyük sadakat."
+            )
+        ]
+    ),
 ]
+
+# ============================================================
+# CİNSİYETE ÖZEL OLAYLAR (YENİ)
+# ============================================================
+
+# ERKEK ÖZEL OLAYLARI
+MALE_EVENTS = [
+    Event(
+        id="raid_invitation",
+        title="Akın Daveti",
+        description="Macar sınırında bir akın planlanıyor. Komşu Sancakbeyi sizi de davet ediyor. Bizzat katılmak şeref meselesi.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MODERATE,
+        gender_filter="male",  # Sadece erkek
+        min_turn=20,
+        choices=[
+            EventChoice(
+                text="Bizzat katıl",
+                effects={'gold': 1500, 'soldiers': -30, 'morale': 25, 'loyalty': 10},
+                description="Akına bizzat katıldınız. Zafer ve ganimet!"
+            ),
+            EventChoice(
+                text="Birlik gönder, kendim kalmak",
+                effects={'gold': 500, 'soldiers': -20, 'morale': 5},
+                description="Birlik gönderdiniz ama katılmadınız. Bazıları dedikoduyor."
+            ),
+            EventChoice(
+                text="Reddet",
+                effects={'morale': -15, 'loyalty': -5},
+                description="Akından uzak durdunuz. Savaşçılar hayal kırıklığına uğradı."
+            )
+        ]
+    ),
+    Event(
+        id="yenicheri_loyalty_test",
+        title="Yeniçeri Ağası ile Mülaakat",
+        description="Yeniçeri Ağası sizinle özel görüşmek istiyor. Askeri konularda fikrinizi soruyor. Bu bir sadakat testi olabilir.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MODERATE,
+        gender_filter="male",
+        min_turn=30,
+        choices=[
+            EventChoice(
+                text="Askeri deneyimimi paylaş",
+                effects={'morale': 20, 'loyalty': 10},
+                description="Askeri bilginiz Ağa'yı etkiledi. Saygınlığınız arttı."
+            ),
+            EventChoice(
+                text="Diplomatik cevap ver",
+                effects={'morale': 5, 'loyalty': 5},
+                description="Dikkatli cevaplar verdiniz. Ağa tarafsız kaldı."
+            ),
+            EventChoice(
+                text="Padişaha sadakatimi vurgula",
+                effects={'loyalty': 20, 'morale': -5},
+                description="Padişaha bağlılığınızı vurguladınız. Ağa memnun ama askerler soğuk."
+            )
+        ]
+    ),
+]
+
+# KADIN ÖZEL OLAYLARI
+FEMALE_EVENTS = [
+    Event(
+        id="harem_letter",
+        title="Saray Mektubu",
+        description="Hürrem Sultan'dan gizli bir mektup geldi. Saray politikaları hakkında bilgi paylaşıyor ve tavsiye istiyor.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MODERATE,
+        gender_filter="female",  # Sadece kadın
+        min_turn=15,
+        choices=[
+            EventChoice(
+                text="Değerli istihbarat paylaş",
+                effects={'loyalty': 20, 'gold': 1000},
+                description="Hürrem Sultan memnun. Saray desteğiniz güçlendi."
+            ),
+            EventChoice(
+                text="Diplomatik cevap yaz",
+                effects={'loyalty': 10},
+                description="Dikkatli bir cevap yazdınız. İlişkiniz devam ediyor."
+            ),
+            EventChoice(
+                text="Tarafsız kal",
+                effects={'loyalty': -5},
+                description="Saray politikalarından uzak durdunuz. Bazıları bunu zayıflık olarak gördü."
+            )
+        ]
+    ),
+    Event(
+        id="skeptical_beys",
+        title="Şüpheci Beyler",
+        description="Bazı sancak beyleri kadın vali olarak yetkinliğinizi sorguluyor. Bir toplantı yapmanız gerekiyor.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MAJOR,
+        gender_filter="female",
+        min_turn=10,
+        choices=[
+            EventChoice(
+                text="Diplomatik becerilerimi göster",
+                effects={'happiness': 15, 'loyalty': 10},
+                description="İkna edici konuşmanız beylerı etkiledi. Saygı kazandınız."
+            ),
+            EventChoice(
+                text="Başarılarımı kanıtla",
+                effects={'gold': -500, 'happiness': 10, 'morale': 10},
+                description="Eyaletin başarılarını gösterdiniz. Şüpheler azaldı."
+            ),
+            EventChoice(
+                text="Padişah fermanını göster",
+                effects={'loyalty': 15, 'happiness': -5},
+                description="Padişah otoritesini vurguladınız. Beyler sustu ama memnun değil."
+            )
+        ]
+    ),
+    Event(
+        id="charity_event",
+        title="Vakıf Açılışı Daveti",
+        description="Yeni bir imaret vakfı açılışına davet edildiniz. Katılımınız toplumsal itibarınızı artırabilir.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.MINOR,
+        gender_filter="female",
+        min_turn=20,
+        choices=[
+            EventChoice(
+                text="Cömertçe bağış yap",
+                effects={'gold': -1000, 'happiness': 25, 'loyalty': 5},
+                description="Cömert bağışınız halk arasında büyük takdir topladı."
+            ),
+            EventChoice(
+                text="Sembolik katılım",
+                effects={'happiness': 10},
+                description="Açılışa katıldınız. Halk memnun."
+            ),
+            EventChoice(
+                text="Meşguliyetten özür dile",
+                effects={'happiness': -5},
+                description="Katılmadınız. Bazıları hayal kırıklığına uğradı."
+            )
+        ]
+    ),
+]
+
+# Cinsiyete özel olayları havuza ekle
+EVENT_POOL.extend(MALE_EVENTS)
+EVENT_POOL.extend(FEMALE_EVENTS)
+
+# Genişletilmiş olayları dahil et
+try:
+    from game.systems.events_expanded import get_expanded_events
+    EVENT_POOL.extend(get_expanded_events())
+except ImportError:
+    pass  # events_expanded.py henüz yok
 
 
 class EventSystem:
@@ -546,6 +1288,15 @@ class EventSystem:
         self.event_history: List[str] = []
         self.events_this_year: int = 0
         self.max_events_per_year: int = 3
+        
+        # YENİ: Olay hafızası - seçimlerin kalıcı etkileri
+        self.event_memory: Dict[str, any] = {}
+        
+        # YENİ: Bekleyen zincir tetikleyiciler
+        self.pending_triggers: List[ChainTrigger] = []
+        
+        # YENİ: Aktif olay zincirleri
+        self.active_chains: Dict[str, EventChain] = {}
         
         # Olay ağırlıkları
         self.event_weights = {
@@ -564,6 +1315,13 @@ class EventSystem:
         """
         if self.current_event:
             return None
+        
+        # YENİ: Önce bekleyen zincir tetikleyicileri kontrol et
+        triggered_event = self._check_pending_triggers()
+        if triggered_event:
+            self.current_event = triggered_event
+            self.events_this_year += 1
+            return triggered_event
         
         if self.events_this_year >= self.max_events_per_year:
             return None
@@ -585,12 +1343,17 @@ class EventSystem:
         # Olay türü seç
         event_type = self._weighted_random_type()
         
-        # Bu türden uygun olay seç
+        # Bu türden uygun olay seç (hafıza koşullarını da kontrol et)
+        # Oyuncu cinsiyetini al
+        player_gender = game_state.get('player_gender', 'male')
+        
         candidates = [
             e for e in EVENT_POOL 
             if e.event_type == event_type
             and e.min_year <= year <= e.max_year
             and e.id not in self.event_history[-10:]  # Son 10 olayda tekrar yok
+            and self._check_memory_requirements(e)  # Hafıza koşulları
+            and (e.gender_filter is None or e.gender_filter == player_gender)  # Cinsiyet filtresi
         ]
         
         if not candidates:
@@ -601,6 +1364,47 @@ class EventSystem:
         self.events_this_year += 1
         
         return event
+    
+    def _check_pending_triggers(self) -> Optional[Event]:
+        """Bekleyen tetikleyicileri kontrol et ve uygun olanı döndür"""
+        for trigger in self.pending_triggers[:]:  # Kopya üzerinde iterasyon
+            trigger.turns_remaining -= 1
+            if trigger.turns_remaining <= 0:
+                # Bu tetikleyiciyi kaldır
+                self.pending_triggers.remove(trigger)
+                
+                # Hafıza güncellemelerini uygula
+                if trigger.memory_updates:
+                    self.event_memory.update(trigger.memory_updates)
+                
+                # Olayı bul ve döndür
+                for event in EVENT_POOL:
+                    if event.id == trigger.event_id:
+                        return event
+        return None
+    
+    def _check_memory_requirements(self, event: Event) -> bool:
+        """Olayın hafıza gereksinimlerini kontrol et"""
+        if not event.required_memory:
+            return True
+        
+        for key, required_value in event.required_memory.items():
+            actual_value = self.event_memory.get(key)
+            if actual_value != required_value:
+                return False
+        return True
+    
+    def add_trigger(self, event_id: str, delay: int, source_event: str, 
+                   choice: str, memory_updates: Dict = None):
+        """Yeni zincir tetikleyici ekle"""
+        trigger = ChainTrigger(
+            event_id=event_id,
+            turns_remaining=delay,
+            source_event_id=source_event,
+            choice_made=choice,
+            memory_updates=memory_updates
+        )
+        self.pending_triggers.append(trigger)
     
     def _weighted_random_type(self) -> EventType:
         """Ağırlıklı rastgele olay türü seç"""
@@ -644,6 +1448,9 @@ class EventSystem:
         # Etkileri topla
         effects = choice.effects.copy()
         
+        # YENİ: Zincir olay işleme
+        self._process_chain_event(self.current_event, choice_index)
+        
         # Sonraki aşama var mı?
         if choice.next_stage and self.current_event.stages:
             next_s = self.current_event.stages.get(choice.next_stage)
@@ -663,6 +1470,102 @@ class EventSystem:
         self.current_stage = None
         
         return effects
+    
+    def _process_chain_event(self, event: Event, choice_index: int):
+        """Zincir olay mantığını işle - seçime göre sonraki olayı tetikle"""
+        if not event.chain_id:
+            return
+        
+        chain_id = event.chain_id
+        choice_text = event.choices[choice_index].text if choice_index < len(event.choices) else ""
+        
+        # === VEBA ZİNCİRİ ===
+        if event.id == "plague_chain_1_signs":
+            self.event_memory['plague_started'] = True
+            if choice_index == 0:  # Karantina
+                self.event_memory['plague_quarantine'] = True
+                self.add_trigger("plague_chain_2_contained", 3, event.id, choice_text,
+                               {'plague_handling': 'quarantine'})
+            elif choice_index == 1:  # Hekimler
+                self.event_memory['plague_quarantine'] = False
+                self.add_trigger("plague_chain_2_spread", 4, event.id, choice_text,
+                               {'plague_handling': 'doctors'})
+            else:  # Bekle
+                self.event_memory['plague_quarantine'] = False
+                self.add_trigger("plague_chain_2_spread", 2, event.id, choice_text,
+                               {'plague_handling': 'waited'})
+        
+        elif event.id in ["plague_chain_2_spread", "plague_chain_2_contained"]:
+            self.add_trigger("plague_chain_3_peak", 3, event.id, choice_text)
+        
+        elif event.id == "plague_chain_3_peak":
+            self.add_trigger("plague_chain_4_end", 4, event.id, choice_text)
+        
+        # === YENİÇERİ ZİNCİRİ ===
+        elif event.id == "janissary_chain_1_demand":
+            if choice_index == 0:  # Maaş artır - zincir biter
+                pass  # Sorun çözüldü
+            elif choice_index == 1:  # Söz ver
+                self.event_memory['janissary_angry'] = True
+                self.add_trigger("janissary_chain_2_unrest", 5, event.id, choice_text)
+            else:  # Reddet
+                self.event_memory['janissary_angry'] = True
+                self.add_trigger("janissary_chain_2_unrest", 2, event.id, choice_text)
+        
+        elif event.id == "janissary_chain_2_unrest":
+            if choice_index == 0:  # Hemen maaş - zincir biter
+                self.event_memory['janissary_resolved'] = True
+            elif choice_index == 1:  # Sadık birlikler
+                self.event_memory['janissary_revolt'] = True
+                self.add_trigger("janissary_chain_3_revolt", 2, event.id, choice_text)
+            else:  # Kaç
+                self.event_memory['janissary_revolt'] = True
+                self.add_trigger("janissary_chain_3_revolt", 1, event.id, choice_text)
+        
+        elif event.id == "janissary_chain_3_revolt":
+            self.event_memory['janissary_resolved'] = True
+            self.add_trigger("janissary_chain_4_aftermath", 2, event.id, choice_text)
+        
+        # === İPEK YOLU ZİNCİRİ ===
+        elif event.id == "silkroad_chain_1_offer":
+            if choice_index in [0, 1]:  # Yatırım yaptı
+                self.event_memory['silkroad_invested'] = True
+                self.event_memory['silkroad_big_investment'] = (choice_index == 0)
+                self.add_trigger("silkroad_chain_2_journey", 5, event.id, choice_text)
+        
+        elif event.id == "silkroad_chain_2_journey":
+            self.add_trigger("silkroad_chain_3_return", 4, event.id, choice_text,
+                           {'silkroad_protected': choice_index == 0})
+        
+        # === PADİŞAH ZİYARETİ ZİNCİRİ ===
+        elif event.id == "sultan_chain_1_news":
+            if choice_index != 2:  # Erteleme değilse
+                self.event_memory['sultan_visit'] = True
+                self.event_memory['sultan_grand'] = (choice_index == 0)
+                self.add_trigger("sultan_chain_2_preparation", 3, event.id, choice_text)
+        
+        elif event.id == "sultan_chain_2_preparation":
+            self.add_trigger("sultan_chain_3_visit", 3, event.id, choice_text)
+        
+        elif event.id == "sultan_chain_3_visit":
+            self.add_trigger("sultan_chain_4_aftermath", 2, event.id, choice_text)
+        
+        # === FETİH SEFERİ ZİNCİRİ ===
+        elif event.id == "conquest_chain_1_call":
+            if choice_index in [0, 1]:  # Katıldı
+                self.event_memory['conquest_joined'] = True
+                self.event_memory['conquest_big_army'] = (choice_index == 0)
+                self.add_trigger("conquest_chain_2_march", 4, event.id, choice_text)
+        
+        elif event.id == "conquest_chain_2_march":
+            self.add_trigger("conquest_chain_3_siege", 5, event.id, choice_text)
+        
+        elif event.id == "conquest_chain_3_siege":
+            self.add_trigger("conquest_chain_4_battle", 4, event.id, choice_text)
+        
+        elif event.id == "conquest_chain_4_battle":
+            self.event_memory['conquest_victory'] = True
+            self.add_trigger("conquest_chain_5_spoils", 2, event.id, choice_text)
     
     def dismiss_event(self):
         """Olayı kapat (hiçbir şey yapma)"""
@@ -715,10 +1618,23 @@ class EventSystem:
     
     def to_dict(self) -> Dict:
         """Kayıt için dictionary'e dönüştür"""
+        # Pending triggers'ı serileştir
+        triggers_data = []
+        for trigger in self.pending_triggers:
+            triggers_data.append({
+                'event_id': trigger.event_id,
+                'turns_remaining': trigger.turns_remaining,
+                'source_event_id': trigger.source_event_id,
+                'choice_made': trigger.choice_made,
+                'memory_updates': trigger.memory_updates
+            })
+        
         return {
             'event_history': self.event_history,
             'events_this_year': self.events_this_year,
-            'current_event_id': self.current_event.id if self.current_event else None
+            'current_event_id': self.current_event.id if self.current_event else None,
+            'event_memory': self.event_memory,  # YENİ
+            'pending_triggers': triggers_data,  # YENİ
         }
     
     @classmethod
@@ -727,6 +1643,20 @@ class EventSystem:
         system = cls()
         system.event_history = data.get('event_history', [])
         system.events_this_year = data.get('events_this_year', 0)
+        
+        # YENİ: Event memory'yi yükle
+        system.event_memory = data.get('event_memory', {})
+        
+        # YENİ: Pending triggers'ı yükle
+        for trigger_data in data.get('pending_triggers', []):
+            trigger = ChainTrigger(
+                event_id=trigger_data['event_id'],
+                turns_remaining=trigger_data['turns_remaining'],
+                source_event_id=trigger_data['source_event_id'],
+                choice_made=trigger_data['choice_made'],
+                memory_updates=trigger_data.get('memory_updates')
+            )
+            system.pending_triggers.append(trigger)
         
         # Aktif olayı geri yükle
         current_id = data.get('current_event_id')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - İnteraktif Savaş Ekranı
-Kuşatma ve büyük savaşlarda taktiksel kararlar
+Kuşatma ve büyük savaşlarda taktiksel kararlar + Özel Yetenekler
 """
 
 import pygame
@@ -9,7 +9,10 @@ import random
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
-from game.systems.warfare import BattleType, BattlePhase
+from game.systems.warfare import (
+    BattleType, BattlePhase, SiegePhase, TerrainType, WeatherType,
+    SPECIAL_ABILITIES, SpecialAbilityType, TERRAIN_MODIFIERS, WEATHER_MODIFIERS
+)
 
 
 class BattleScreen(BaseScreen):
@@ -110,38 +113,102 @@ class BattleScreen(BaseScreen):
         self.victory = False
     
     def _setup_tactics_menu(self):
-        """Taktik seçeneklerini ayarla"""
+        """Taktik seçeneklerini ayarla - organize menü"""
         self.tactics_menu.clear()
         
         if self.battle_ended:
             self.tactics_menu.add_item(
-                "Savaş Alanından Ayrıl",
+                "Savaş Alanından Ayrıl (Escape)",
                 self._end_battle,
                 "escape"
             )
             return
         
-        # Taktik seçenekleri - her birinin avantaj/dezavantajı var
-        tactics = [
-            ("Merkez Hücumu", self._tactic_center_attack, 
-             "Yüksek hasar, yüksek kayıp riski"),
-            ("Kanat Manevrası", self._tactic_flank,
-             "Orta hasar, düşük kayıp"),
-            ("Savunmada Kal", self._tactic_defend,
-             "Düşük hasar, moralı korur"),
-            ("Topçu Bombardımanı", self._tactic_artillery,
-             "Uzak mesafeden hasar, mühimmat harcır"),
-            ("Aldatıcı Geri Çekilme", self._tactic_feint,
-             "Düşmanı açığa çıkarır, riskli"),
-            ("Teslim Çağrısı", self._tactic_demand_surrender,
-             "Savaşsız zafer şansı, reddedilirse moral düşer"),
-        ]
-        
-        for i, (name, callback, desc) in enumerate(tactics):
+        # === KUŞATMA DURUMU ===
+        if self.current_battle and hasattr(self.current_battle, 'siege_state') and self.current_battle.siege_state:
+            siege = self.current_battle.siege_state
+            wall_status = f"Sur: %{siege.wall_integrity}" if siege.wall_integrity < 100 else ""
+            
             self.tactics_menu.add_item(
-                name,
-                callback,
-                str(i + 1)
+                f"[{siege.get_phase_name().upper()}] {wall_status}",
+                None,
+                ""
+            )
+            
+            # Aşama ilerletme
+            can_advance, reason = siege.can_advance_phase()
+            if can_advance:
+                self.tactics_menu.add_item(
+                    "➤ Sonraki Aşamaya Geç (P)",
+                    self._advance_siege_phase,
+                    "p"
+                )
+        
+        # === SALDIRI TAKTİKLERİ ===
+        self.tactics_menu.add_item(
+            "1. Merkez Hücumu - Yüksek hasar, riskli",
+            self._tactic_center_attack,
+            "1"
+        )
+        self.tactics_menu.add_item(
+            "2. Kanat Manevrası - Orta hasar, güvenli",
+            self._tactic_flank,
+            "2"
+        )
+        self.tactics_menu.add_item(
+            "3. Savunmada Kal - Moralı koru",
+            self._tactic_defend,
+            "3"
+        )
+        self.tactics_menu.add_item(
+            "4. Topçu Ateşi - Uzak mesafe",
+            self._tactic_artillery,
+            "4"
+        )
+        self.tactics_menu.add_item(
+            "5. Aldatıcı Çekilme - Tuzak kur",
+            self._tactic_feint,
+            "5"
+        )
+        self.tactics_menu.add_item(
+            "6. Teslim Çağrısı - Savaşsız zafer",
+            self._tactic_demand_surrender,
+            "6"
+        )
+        
+        # === ÖZEL YETENEKLER ===
+        abilities_available = False
+        
+        if self._can_use_ability(SpecialAbilityType.JANISSARY_VOLLEY):
+            abilities_available = True
+            self.tactics_menu.add_item(
+                "Y: Yeniceri Atesi",
+                lambda: self._use_special_ability(SpecialAbilityType.JANISSARY_VOLLEY),
+                "y"
+            )
+        
+        if self._can_use_ability(SpecialAbilityType.AKINCI_RAID):
+            abilities_available = True
+            self.tactics_menu.add_item(
+                "A: 🐎 Akıncı Baskını",
+                lambda: self._use_special_ability(SpecialAbilityType.AKINCI_RAID),
+                "a"
+            )
+        
+        if self._can_use_ability(SpecialAbilityType.CANNON_BARRAGE):
+            abilities_available = True
+            self.tactics_menu.add_item(
+                "B: 💣 Top Bombardımanı",
+                lambda: self._use_special_ability(SpecialAbilityType.CANNON_BARRAGE),
+                "b"
+            )
+        
+        if self._can_use_ability(SpecialAbilityType.CAVALRY_CHARGE):
+            abilities_available = True
+            self.tactics_menu.add_item(
+                "S: Suvari Sarji",
+                lambda: self._use_special_ability(SpecialAbilityType.CAVALRY_CHARGE),
+                "s"
             )
     
     def _update_status_panel(self):
@@ -162,6 +229,15 @@ class BattleScreen(BaseScreen):
     
     def announce_screen(self):
         self.audio.announce_screen_change("Savaş Meydanı")
+        
+        # Savaş bittiyse sadece sonucu söyle
+        if self.battle_ended:
+            if self.victory:
+                self.audio.speak("Zafer! Savaş sona erdi. Escape tuşuyla çıkın.", interrupt=False)
+            else:
+                self.audio.speak("Yenilgi. Savaş sona erdi. Escape tuşuyla çıkın.", interrupt=False)
+            return
+        
         if self.current_battle:
             self.audio.speak(
                 f"{self.current_battle.defender_name} kuşatması. "
@@ -349,6 +425,108 @@ class BattleScreen(BaseScreen):
         
         self._process_round_end()
     
+    def _can_use_ability(self, ability_type: SpecialAbilityType) -> bool:
+        """Özel yetenek kullanılabilir mi?"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return False
+        
+        # Basit kontroller
+        if ability_type == SpecialAbilityType.JANISSARY_VOLLEY:
+            return gm.military.infantry >= 50
+        elif ability_type == SpecialAbilityType.AKINCI_RAID:
+            return gm.military.cavalry >= 30
+        elif ability_type == SpecialAbilityType.CANNON_BARRAGE:
+            return gm.military.artillery_crew >= 10 and gm.economy.resources.iron >= 100
+        elif ability_type == SpecialAbilityType.CAVALRY_CHARGE:
+            return gm.military.cavalry >= 50
+        
+        return False
+    
+    def _use_special_ability(self, ability_type: SpecialAbilityType):
+        """Özel yetenek kullan"""
+        ability = SPECIAL_ABILITIES.get(ability_type)
+        if not ability:
+            return
+        
+        gm = self.screen_manager.game_manager
+        self.audio.speak(f"{ability.name_tr} kullanılıyor!", interrupt=True)
+        
+        # Maliyet uygula
+        if ability_type == SpecialAbilityType.CANNON_BARRAGE:
+            gm.economy.resources.iron -= 100
+        
+        # Hasar hesapla
+        damage = int(ability.damage_multiplier * random.randint(20, 40))
+        morale_damage = ability.morale_damage + random.randint(-5, 5)
+        
+        self.enemy_morale -= morale_damage
+        self.enemy_casualties += int(damage * 3)
+        
+        # Bazı yeteneklerin ekstra etkileri
+        if ability_type == SpecialAbilityType.JANISSARY_VOLLEY:
+            self.last_action_result = (
+                f"YENİÇERİ ATEŞİ! Yoğun tüfek volisi düşmanı taradı. "
+                f"{morale_damage} moral hasarı, ağır kayıplar!"
+            )
+        elif ability_type == SpecialAbilityType.AKINCI_RAID:
+            self.last_action_result = (
+                f"AKINCI BASKINI! Hafif süvariler düşman gerisine sızdı. "
+                f"Panik yarattık! {morale_damage} moral hasarı!"
+            )
+        elif ability_type == SpecialAbilityType.CANNON_BARRAGE:
+            self.last_action_result = (
+                f"TOP BOMBARDIMANI! Tüm toplar ateş açtı. "
+                f"Surlar sarsıldı! {morale_damage} moral hasarı!"
+            )
+            # Kuşatmada sur hasarı
+            if self.current_battle and self.current_battle.siege_state:
+                wall_damage = random.randint(10, 25)
+                self.current_battle.siege_state.wall_integrity -= wall_damage
+                self.last_action_result += f" Sur bütünlüğü %{wall_damage} azaldı!"
+        elif ability_type == SpecialAbilityType.CAVALRY_CHARGE:
+            self.last_action_result = (
+                f"SÜVARİ ŞARJI! Ağır süvariler düşman hattına daldı. "
+                f"Hat kırıldı! {morale_damage} moral hasarı!"
+            )
+        
+        # Taktik kaydet
+        if self.current_battle:
+            self.current_battle.abilities_used.append(ability.name_tr)
+        
+        self._process_round_end()
+    
+    def _advance_siege_phase(self):
+        """Kuşatma aşamasını ilerlet"""
+        if not self.current_battle or not self.current_battle.siege_state:
+            return
+        
+        siege = self.current_battle.siege_state
+        can_advance, reason = siege.can_advance_phase()
+        
+        if not can_advance:
+            self.audio.speak(f"Aşama ilerletilemez: {reason}", interrupt=True)
+            return
+        
+        # Aşama ilerlet
+        if siege.phase == SiegePhase.BLOCKADE:
+            siege.phase = SiegePhase.BOMBARDMENT
+            self.audio.speak(
+                "BOMBARDIMAN AŞAMASINA GEÇİLDİ! Artık toplarla surları dövebilirsiniz.",
+                interrupt=True
+            )
+        elif siege.phase == SiegePhase.BOMBARDMENT:
+            siege.phase = SiegePhase.ASSAULT
+            self.audio.speak(
+                "GENEL HÜCUM AŞAMASINA GEÇİLDİ! Son saldırı başlasın!",
+                interrupt=True
+            )
+            # Hücum aşamasında maksimum 3 tur
+            self.max_rounds = self.current_round + 3
+        
+        self._setup_tactics_menu()
+        self._update_status_panel()
+    
     def _process_round_end(self):
         """Oyuncu turunun sonunda düşman turunu başlat"""
         # Sonucu duyur
@@ -357,13 +535,24 @@ class BattleScreen(BaseScreen):
         # Savaş sesleri çal
         self.audio.play_ui_sound('battle_hit')
         
-        # Zafer kontrolü (oyuncu anında kazandı mı?)
+        # Eğer savaş zaten bittiyse (teslim çağrısı kabul edildi vb.) düşman turu yok
+        if self.battle_ended:
+            self._update_status_panel()
+            self._setup_tactics_menu()  # "Ayrıl" seçeneğini göster
+            if self.victory:
+                self.audio.speak("Zafer kazandınız! Escape tuşuyla ayrılın.", interrupt=False)
+            else:
+                self.audio.speak("Yenildiniz. Escape tuşuyla ayrılın.", interrupt=False)
+            return
+        
+        # Zafer kontrolü (oyuncu anında kazandı mı? - düşman morali sıfır)
         if self.enemy_morale <= 0:
             self.victory = True
             self.battle_ended = True
             self.audio.speak("ZAFER! Düşman tamamen çöktü! Kale ele geçirildi!", interrupt=False)
             self._update_status_panel()
             self._setup_tactics_menu()
+            self.audio.speak("Escape tuşuyla ayrılın.", interrupt=False)
             return
         
         # Düşman turunu başlat
@@ -489,9 +678,9 @@ class BattleScreen(BaseScreen):
         # Başlık
         header_font = self.get_header_font()
         if self.current_battle:
-            title = f"⚔️ {self.current_battle.defender_name} KUŞATMASI - TUR {self.current_round}"
+            title = f"{self.current_battle.defender_name} KUSATMASI - TUR {self.current_round}"
         else:
-            title = "⚔️ SAVAŞ"
+            title = "SAVAS"
         
         title_render = header_font.render(title, True, COLORS['gold'])
         surface.blit(title_render, (50, 30))

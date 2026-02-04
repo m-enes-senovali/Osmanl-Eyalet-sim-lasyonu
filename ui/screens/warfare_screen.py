@@ -65,12 +65,23 @@ class WarfareScreen(BaseScreen):
         can_war, reason = gm.warfare.can_start_war(gm.turn_count)
         
         if can_war:
+            # Kadın karakter kontrolü
+            is_female = gm.player and gm.player.gender.value == 'female'
+            
             # Komşulara akın/kuşatma seçenekleri
             for neighbor in gm.diplomacy.neighbors.keys():
-                self.action_menu.add_item(
-                    f"Akın: {neighbor} (300 altın)",
-                    lambda n=neighbor: self._start_raid(n)
-                )
+                if is_female:
+                    # Kadın vali akına bizzat katılamaz, vekil gönderir
+                    self.action_menu.add_item(
+                        f"Akına Vekil Gönder: {neighbor} (300 altın)",
+                        lambda n=neighbor: self._start_raid(n, personal=False)
+                    )
+                else:
+                    # Erkek vali bizzat liderlik edebilir
+                    self.action_menu.add_item(
+                        f"Akın (Bizzat): {neighbor} (+%20 bonus, 300 altın)",
+                        lambda n=neighbor: self._start_raid(n, personal=True)
+                    )
             
             self.action_menu.add_item("", None)  # Ayırıcı
             
@@ -79,6 +90,21 @@ class WarfareScreen(BaseScreen):
                     f"Kuşatma: {neighbor} (1500 altın)",
                     lambda n=neighbor: self._start_siege(n)
                 )
+            
+            # Deniz akını - sadece kıyı eyaletlerinde
+            if gm.province.is_coastal:
+                self.action_menu.add_item("", None)  # Ayırıcı
+                fleet_power = gm.naval.get_fleet_power()
+                warship_count = sum(1 for s in gm.naval.ships if s.get_definition().is_warship)
+                
+                if warship_count > 0:
+                    for neighbor in gm.diplomacy.neighbors.keys():
+                        self.action_menu.add_item(
+                            f"Deniz Akini: {neighbor} (500 altin)",
+                            lambda n=neighbor: self._start_naval_raid(n)
+                        )
+                else:
+                    self.action_menu.add_item("Deniz akini icin savas gemisi gerekli", None)
         else:
             self.action_menu.add_item(f"⚠ {reason}", None)
         
@@ -145,13 +171,24 @@ class WarfareScreen(BaseScreen):
         
         return False
     
-    def _start_raid(self, target: str):
-        """Akın başlat"""
+    def _start_raid(self, target: str, personal: bool = True):
+        """Akın başlat - personal=True ise bizzat liderlik"""
         gm = self.screen_manager.game_manager
         if not gm:
             return
         
-        gm.warfare.start_raid(target, gm.military, gm.economy, gm.turn_count)
+        # Erkek karakter bizzat liderlik ederse +%20 bonus
+        raid_bonus = 0.20 if personal else 0.0
+        
+        success, message = gm.warfare.start_raid(
+            target, gm.military, gm.economy, gm.turn_count, raid_bonus
+        )
+        
+        if personal:
+            self.audio.speak("Bizzat akını yönetiyorsunuz! " + message, interrupt=True)
+        else:
+            self.audio.speak("Vekiliniz akını yönetiyor. " + message, interrupt=True)
+        
         self._update_panels()
         self._setup_action_menu()
     
@@ -161,7 +198,21 @@ class WarfareScreen(BaseScreen):
         if not gm:
             return
         
-        gm.warfare.start_siege(target, gm.military, gm.economy, gm.turn_count)
+        success, message = gm.warfare.start_siege(target, gm.military, gm.economy, gm.turn_count)
+        self.audio.speak(message, interrupt=True)
+        self._update_panels()
+        self._setup_action_menu()
+    
+    def _start_naval_raid(self, target: str):
+        """Deniz akını başlat"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+        
+        success, message = gm.warfare.start_naval_raid(
+            target, gm.naval, gm.economy, gm.turn_count, gm.province.is_coastal
+        )
+        self.audio.speak(message, interrupt=True)
         self._update_panels()
         self._setup_action_menu()
     
@@ -180,7 +231,7 @@ class WarfareScreen(BaseScreen):
     def draw(self, surface: pygame.Surface):
         # Başlık
         header_font = self.get_header_font()
-        title = header_font.render("⚔️ SAVAŞ YÖNETİMİ", True, COLORS['gold'])
+        title = header_font.render("SAVAS YONETIMI", True, COLORS['gold'])
         surface.blit(title, (20, 20))
         
         # Paneller

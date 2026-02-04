@@ -183,6 +183,76 @@ class Game:
             ScreenType.BUILDING_INTERIOR,
             BuildingInteriorScreen(self.screen_manager)
         )
+        
+        # Ayarlar ekranı
+        from ui.screens.settings_screen import SettingsScreen
+        self.screen_manager.register_screen(
+            ScreenType.SETTINGS,
+            SettingsScreen(self.screen_manager)
+        )
+        
+        # Müzakere ekranı
+        from ui.screens.negotiation_screen import NegotiationScreen
+        self.screen_manager.register_screen(
+            ScreenType.NEGOTIATION,
+            NegotiationScreen(self.screen_manager)
+        )
+        
+        # Casusluk ekranı (YENİ)
+        from ui.screens.espionage_screen import EspionageScreen
+        self.screen_manager.register_screen(
+            ScreenType.ESPIONAGE,
+            EspionageScreen(self.screen_manager)
+        )
+        
+        # Din/Kültür ekranı (YENİ)
+        from ui.screens.religion_screen import ReligionScreen
+        self.screen_manager.register_screen(
+            ScreenType.RELIGION,
+            ReligionScreen(self.screen_manager)
+        )
+        
+        # Başarılar ekranı (YENİ)
+        from ui.screens.achievement_screen import AchievementScreen
+        self.screen_manager.register_screen(
+            ScreenType.ACHIEVEMENT,
+            AchievementScreen(self.screen_manager)
+        )
+        
+        # Eğitim ekranı (YENİ)
+        from ui.screens.tutorial_screen import TutorialScreen
+        self.screen_manager.register_screen(
+            ScreenType.TUTORIAL,
+            TutorialScreen(self.screen_manager)
+        )
+        
+        # İşçi görüşme ekranı (YENİ)
+        from ui.screens.worker_interview_screen import WorkerInterviewScreen
+        self.screen_manager.register_screen(
+            ScreenType.WORKER_INTERVIEW,
+            WorkerInterviewScreen(self.screen_manager)
+        )
+        
+        # Deniz kuvvetleri ekranı (YENİ)
+        from ui.screens.naval_screen import NavalScreen
+        self.screen_manager.register_screen(
+            ScreenType.NAVAL,
+            NavalScreen(self.screen_manager)
+        )
+        
+        # Topçu ekranı (YENİ)
+        from ui.screens.artillery_screen import ArtilleryScreen
+        self.screen_manager.register_screen(
+            ScreenType.ARTILLERY,
+            ArtilleryScreen(self.screen_manager)
+        )
+        
+        # Karakter oluşturma ekranı (YENİ)
+        from ui.screens.character_creation_screen import CharacterCreationScreen
+        self.screen_manager.register_screen(
+            ScreenType.CHARACTER_CREATION,
+            CharacterCreationScreen(self.screen_manager)
+        )
     
     def _load_sounds(self):
         """Ses dosyalarını yükle"""

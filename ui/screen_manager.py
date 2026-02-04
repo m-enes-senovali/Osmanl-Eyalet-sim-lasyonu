@@ -8,6 +8,7 @@ import pygame
 from enum import Enum
 from typing import Optional
 from audio.audio_manager import get_audio_manager
+from audio.music_manager import get_music_manager
 from config import COLORS
 
 
@@ -34,6 +35,15 @@ class ScreenType(Enum):
     MULTIPLAYER_GAME = "multiplayer_game"  # Çok oyunculu oyun
     RAID_REPORT = "raid_report"  # Akın rapor ekranı
     BUILDING_INTERIOR = "building_interior"  # Bina iç ekranı
+    NEGOTIATION = "negotiation"  # Diplomatik müzakere ekranı
+    ESPIONAGE = "espionage"  # Casusluk ekranı (YENİ)
+    RELIGION = "religion"  # Din/Kültür ekranı (YENİ)
+    ACHIEVEMENT = "achievement"  # Başarılar ekranı (YENİ)
+    TUTORIAL = "tutorial"  # Eğitim ekranı (YENİ)
+    WORKER_INTERVIEW = "worker_interview"  # İşçi görüşme ekranı (YENİ)
+    NAVAL = "naval"  # Deniz kuvvetleri ekranı (YENİ)
+    ARTILLERY = "artillery"  # Topçu ekranı (YENİ)
+    CHARACTER_CREATION = "character_creation"  # Karakter oluşturma (YENİ)
 
 
 class BaseScreen:
@@ -79,6 +89,10 @@ class ScreenManager:
         self.current_screen_type: Optional[ScreenType] = None
         self.previous_screen_type: Optional[ScreenType] = None
         self.audio = get_audio_manager()
+        self.music = get_music_manager()
+        
+        # Multiplayer mod flag - alt ekranların geri dönüşünü belirler
+        self.is_multiplayer_mode = False
     
     def register_screen(self, screen_type: ScreenType, screen: BaseScreen):
         """Ekran kaydet"""
@@ -100,6 +114,9 @@ class ScreenManager:
         
         # Yeni ekrana gir
         self.current_screen.on_enter()
+        
+        # Müziği ekrana göre değiştir
+        self.music.on_screen_change(screen_type.name)
         
         if announce:
             self.current_screen.announce_screen()

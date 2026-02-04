@@ -58,9 +58,14 @@ class ProvinceViewScreen(BaseScreen):
         
         self.side_menu.add_item("Ekonomi", lambda: self._open_screen(ScreenType.ECONOMY), "e")
         self.side_menu.add_item("Ordu", lambda: self._open_screen(ScreenType.MILITARY), "m")
+        self.side_menu.add_item("Donanma", lambda: self._open_screen(ScreenType.NAVAL), "n")
+        self.side_menu.add_item("Topçu", lambda: self._open_screen(ScreenType.ARTILLERY), "t")
         self.side_menu.add_item("İnşaat", lambda: self._open_screen(ScreenType.CONSTRUCTION), "c")
         self.side_menu.add_item("Diplomasi", lambda: self._open_screen(ScreenType.DIPLOMACY), "d")
         self.side_menu.add_item("Halk", lambda: self._open_screen(ScreenType.POPULATION), "p")
+        self.side_menu.add_item("Casusluk", lambda: self._open_screen(ScreenType.ESPIONAGE), "s")
+        self.side_menu.add_item("Din", lambda: self._open_screen(ScreenType.RELIGION), "")
+        self.side_menu.add_item("Başarılar", lambda: self._open_screen(ScreenType.ACHIEVEMENT), "b")
     
     def _create_buttons(self):
         """Butonları oluştur"""
@@ -118,12 +123,16 @@ class ProvinceViewScreen(BaseScreen):
             tutorial.welcome_message()
     
     def announce_screen(self):
-        self.audio.announce_screen_change("Eyalet Yönetimi")
         gm = self.screen_manager.game_manager
-        if gm:
-            self.audio.speak(f"{gm.province.name}, Yıl {gm.current_year}", interrupt=False)
-            self.audio.speak(f"Altın: {gm.economy.resources.gold:,}", interrupt=False)
-            self.audio.speak("H tuşuna basarak yardım alabilirsiniz.", interrupt=False)
+        if gm and gm.player:
+            title = gm.player.get_full_title()
+            self.audio.announce_screen_change(f"{gm.province.name} - {title}")
+            self.audio.speak(f"Yıl {gm.current_year}, Altın: {gm.economy.resources.gold:,}", interrupt=False)
+        else:
+            self.audio.announce_screen_change("Eyalet Yönetimi")
+            if gm:
+                self.audio.speak(f"{gm.province.name}, Yıl {gm.current_year}", interrupt=False)
+        self.audio.speak("H tuşuna basarak yardım alabilirsiniz.", interrupt=False)
     
     def _update_panels(self):
         """Panel içeriklerini güncelle"""
@@ -433,10 +442,10 @@ class ProvinceViewScreen(BaseScreen):
         
         # Kaynaklar
         resources = [
-            ("💰 Altın", gm.economy.resources.gold, COLORS['gold']),
-            ("🌾 Zahire", gm.economy.resources.food, COLORS['success']),
-            ("🪵 Kereste", gm.economy.resources.wood, (139, 90, 43)),
-            ("⚒ Demir", gm.economy.resources.iron, (150, 150, 160)),
+            ("Altin", gm.economy.resources.gold, COLORS['gold']),
+            ("Zahire", gm.economy.resources.food, COLORS['success']),
+            ("Kereste", gm.economy.resources.wood, (139, 90, 43)),
+            ("Demir", gm.economy.resources.iron, (150, 150, 160)),
         ]
         
         font = self.get_info_font()
@@ -604,5 +613,8 @@ class ProvinceViewScreen(BaseScreen):
         self.screen_manager.change_screen(ScreenType.SAVE_LOAD)
     
     def _on_main_menu(self):
-        """Ana menüye dön"""
-        self.screen_manager.change_screen(ScreenType.MAIN_MENU)
+        """Ana menüye veya multiplayer ekranına dön"""
+        if getattr(self.screen_manager, 'is_multiplayer_mode', False):
+            self.screen_manager.change_screen(ScreenType.MULTIPLAYER_GAME)
+        else:
+            self.screen_manager.change_screen(ScreenType.MAIN_MENU)

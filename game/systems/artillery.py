@@ -36,6 +36,7 @@ class CannonDefinition:
     power: int           # Savaş gücü
     range_level: int     # Menzil (1-10)
     siege_bonus: int     # Kuşatma bonusu
+    maintenance: int     # Günlük bakım maliyeti (altın)
 
 
 # Tüm top tanımları
@@ -51,7 +52,8 @@ CANNON_DEFINITIONS: Dict[CannonType, CannonDefinition] = {
         crew_required=3,
         power=10,
         range_level=3,
-        siege_bonus=5
+        siege_bonus=5,
+        maintenance=2  # Küçük top, düşük bakım
     ),
     
     CannonType.BALYEMEZ: CannonDefinition(
@@ -65,7 +67,8 @@ CANNON_DEFINITIONS: Dict[CannonType, CannonDefinition] = {
         crew_required=6,
         power=25,
         range_level=6,
-        siege_bonus=15
+        siege_bonus=15,
+        maintenance=5  # Orta top
     ),
     
     CannonType.KOLUNBURNA: CannonDefinition(
@@ -79,7 +82,8 @@ CANNON_DEFINITIONS: Dict[CannonType, CannonDefinition] = {
         crew_required=8,
         power=40,
         range_level=9,
-        siege_bonus=25
+        siege_bonus=25,
+        maintenance=8  # Hassas top, yüksek bakım
     ),
     
     CannonType.SAHI: CannonDefinition(
@@ -93,7 +97,8 @@ CANNON_DEFINITIONS: Dict[CannonType, CannonDefinition] = {
         crew_required=20,
         power=100,
         range_level=5,  # Ağır olduğu için menzil düşük
-        siege_bonus=80
+        siege_bonus=80,
+        maintenance=20  # Devasa top, yüksek bakım
     )
 }
 
@@ -223,6 +228,10 @@ class ArtillerySystem:
     def get_siege_bonus(self) -> int:
         """Toplam kuşatma bonusu"""
         return sum(cannon.get_definition().siege_bonus for cannon in self.cannons)
+    
+    def get_maintenance_cost(self) -> int:
+        """Toplam topçu bakım maliyeti"""
+        return sum(cannon.get_definition().maintenance for cannon in self.cannons)
     
     def get_cannon_counts(self) -> Dict[CannonType, int]:
         """Her türden kaç top var"""

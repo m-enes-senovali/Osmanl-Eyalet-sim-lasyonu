@@ -112,7 +112,7 @@ class ProvinceSelectScreen(BaseScreen):
         self.province_menu.clear()
         
         for i, province in enumerate(AVAILABLE_PROVINCES):
-            coastal_text = "⚓ Kıyı" if province["is_coastal"] else "🏔️ İç"
+            coastal_text = "[Kiyi]" if province["is_coastal"] else "[Ic]"
             text = f"{province['name']} ({province['difficulty']}) - {coastal_text}"
             self.province_menu.add_item(
                 text,
@@ -201,14 +201,14 @@ class ProvinceSelectScreen(BaseScreen):
     def draw(self, surface: pygame.Surface):
         # Başlık
         title_font = self.get_title_font()
-        title = title_font.render("⚔️ EYALET SEÇİMİ", True, COLORS['gold'])
+        title = title_font.render("EYALET SECIMI", True, COLORS['gold'])
         title_rect = title.get_rect(centerx=SCREEN_WIDTH // 2, top=40)
         surface.blit(title, title_rect)
         
         # Alt başlık
         subtitle_font = pygame.font.Font(None, FONTS['body'])
         subtitle = subtitle_font.render(
-            "Yönetmek istediğiniz eyaleti seçin. ⚓ = Kıyı (Tersane), 🏔️ = İç bölge",
+            "Yonetmek istediginiz eyaleti secin. [Kiyi] = Tersane, [Ic] = Ic bolge",
             True, COLORS['text']
         )
         subtitle_rect = subtitle.get_rect(centerx=SCREEN_WIDTH // 2, top=100)

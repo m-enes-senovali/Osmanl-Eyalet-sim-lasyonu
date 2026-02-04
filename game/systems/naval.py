@@ -44,6 +44,7 @@ class ShipDefinition:
     combat_power: int        # Savaş gücü
     speed: int               # Hız (1-10)
     is_warship: bool         # Savaş gemisi mi?
+    maintenance: int         # Günlük bakım maliyeti (altın)
 
 
 # Tüm gemi tanımları
@@ -63,7 +64,8 @@ SHIP_DEFINITIONS: Dict[ShipType, ShipDefinition] = {
         cargo_capacity=50,
         combat_power=0,
         speed=4,
-        is_warship=False
+        is_warship=False,
+        maintenance=5  # Küçük gemi
     ),
     
     ShipType.KALYON: ShipDefinition(
@@ -81,7 +83,8 @@ SHIP_DEFINITIONS: Dict[ShipType, ShipDefinition] = {
         cargo_capacity=200,
         combat_power=5,
         speed=6,
-        is_warship=False
+        is_warship=False,
+        maintenance=15  # Büyük ticaret gemisi
     ),
     
     ShipType.FIRKATEYN: ShipDefinition(
@@ -99,7 +102,8 @@ SHIP_DEFINITIONS: Dict[ShipType, ShipDefinition] = {
         cargo_capacity=30,
         combat_power=25,
         speed=8,
-        is_warship=True
+        is_warship=True,
+        maintenance=25  # Savaş gemisi, yüksek bakım
     ),
     
     ShipType.KADIRGA: ShipDefinition(
@@ -117,7 +121,8 @@ SHIP_DEFINITIONS: Dict[ShipType, ShipDefinition] = {
         cargo_capacity=20,
         combat_power=50,
         speed=7,
-        is_warship=True
+        is_warship=True,
+        maintenance=50  # Büyük mürettebat
     ),
     
     ShipType.MAHON: ShipDefinition(
@@ -135,7 +140,8 @@ SHIP_DEFINITIONS: Dict[ShipType, ShipDefinition] = {
         cargo_capacity=50,
         combat_power=100,
         speed=5,
-        is_warship=True
+        is_warship=True,
+        maintenance=80  # En büyük gemi, en yüksek bakım
     )
 }
 
@@ -276,6 +282,10 @@ class NavalSystem:
     def get_trade_capacity(self) -> int:
         """Toplam ticaret kapasitesi"""
         return sum(ship.get_definition().cargo_capacity for ship in self.ships if not ship.get_definition().is_warship)
+    
+    def get_maintenance_cost(self) -> int:
+        """Toplam filo bakım maliyeti"""
+        return sum(ship.get_definition().maintenance for ship in self.ships)
     
     def get_ship_counts(self) -> Dict[ShipType, int]:
         """Her türden kaç gemi var"""

@@ -5,18 +5,19 @@
   "province": {
     "name": "Selanik Sancağı",
     "capital": "Selanik",
-    "region": "Rumeli"
+    "region": "Rumeli",
+    "is_coastal": false
   },
   "time": {
     "year": 1520,
     "month": 1,
-    "turn": 0
+    "turn": 1
   },
   "economy": {
     "resources": {
-      "gold": 10000,
-      "food": 8000,
-      "wood": 4000,
+      "gold": 10824,
+      "food": 9186,
+      "wood": 4375,
       "iron": 2000,
       "stone": 1000,
       "rope": 500,
@@ -26,7 +27,7 @@
     "tax_rate": 0.15,
     "trade_level": 1,
     "tax_modifier": 1.0,
-    "trade_modifier": 1.0,
+    "trade_modifier": 0.8,
     "expense_modifier": 1.0
   },
   "military": {
@@ -46,14 +47,14 @@
   },
   "population": {
     "population": {
-      "farmers": 6000,
-      "merchants": 2000,
-      "artisans": 1500,
-      "soldiers": 500
+      "farmers": 6108,
+      "merchants": 2036,
+      "artisans": 1527,
+      "soldiers": 509
     },
-    "happiness": 70,
+    "happiness": 90,
     "health": 80,
-    "unrest": 0,
+    "unrest": 8,
     "active_revolt": false,
     "happiness_modifiers": {},
     "growth_rate": 0.02
@@ -70,26 +71,36 @@
     "construction_queue": []
   },
   "diplomacy": {
-    "sultan_loyalty": 90,
+    "sultan_loyalty": 89,
     "sultan_favor": 50,
     "sadrazam_relation": 50,
     "defterdar_relation": 50,
     "neighbors": {
       "Rumeli Eyaleti": {
         "value": 70,
-        "type": "neutral"
+        "type": "neutral",
+        "personality": "mercantile"
       },
       "Mora Sancağı": {
         "value": 60,
-        "type": "neutral"
+        "type": "neutral",
+        "personality": "mercantile"
       },
       "Venedik": {
         "value": -30,
-        "type": "neutral"
+        "type": "neutral",
+        "personality": "mercantile"
       }
     },
     "active_missions": [],
-    "envoy_cooldown": 0
+    "envoy_cooldown": 0,
+    "vassals": [],
+    "marriage_alliances": [],
+    "prestige": 100,
+    "prestige_history": [],
+    "event_chains": [],
+    "completed_chains": [],
+    "relationship_momentum": []
   },
   "events": {
     "event_history": [],
@@ -97,10 +108,10 @@
     "current_event_id": null
   },
   "warfare": {
-    "war_history": [],
-    "peace_treaties": {},
     "war_weariness": 0,
-    "battle_counter": 0
+    "battle_counter": 0,
+    "war_history": [],
+    "player_tactic_history": []
   },
   "trade": {
     "trade_agreements": {},
@@ -117,26 +128,29 @@
       {
         "name": "Ahmet",
         "type": "farmer",
-        "skill": 1,
+        "skill": 5,
         "task": "farming",
-        "efficiency": 1.0,
-        "turns": 0
+        "efficiency": 1.5,
+        "turns": 3288,
+        "experience": 100
       },
       {
         "name": "Mehmet",
         "type": "farmer",
-        "skill": 1,
+        "skill": 5,
         "task": "farming",
-        "efficiency": 1.0,
-        "turns": 0
+        "efficiency": 1.5,
+        "turns": 4945,
+        "experience": 100
       },
       {
         "name": "Mustafa",
         "type": "lumberjack",
-        "skill": 1,
+        "skill": 5,
         "task": "logging",
-        "efficiency": 1.0,
-        "turns": 0
+        "efficiency": 1.5,
+        "turns": 4945,
+        "experience": 100
       }
     ],
     "name_index": 3

@@ -1,70 +1,56 @@
 # -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Büyük Osmanlı Haritası
-Grid tabanlı navigasyon ile tüm eyaletler
+Yön tabanlı navigasyon ile tüm bölgeler (territories.py verisi)
 """
 
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from game.data.territories import (
+    TERRITORIES, Territory, TerritoryType, Region,
+    get_territory, get_neighbors_with_direction, get_all_neighbors
+)
 
 
-# Osmanlı İmparatorluğu haritası (1520 dönemi - Kanuni başlangıcı)
-# NOT: Rodos 1522'de, Kıbrıs 1571'de, Girit 1669'da, Bağdat 1534'te fethedildi
-# Grid: 7 sütun x 5 satır
-OTTOMAN_MAP = {
-    # Satır 0 (Kuzey) - Balkanlar ve Karadeniz
-    (0, 0): {"name": "Bosna Eyaleti", "type": "eyalet", "is_coastal": True, "connections": [(1, 0), (0, 1)]},
-    (1, 0): {"name": "Belgrad Sancağı", "type": "sancak", "is_coastal": False, "connections": [(0, 0), (2, 0), (1, 1)]},
-    (2, 0): {"name": "Rumeli Eyaleti", "type": "eyalet", "is_coastal": True, "connections": [(1, 0), (3, 0), (2, 1)]},
-    (3, 0): {"name": "Silistre Eyaleti", "type": "eyalet", "is_coastal": True, "connections": [(2, 0), (4, 0), (3, 1)]},
-    (4, 0): {"name": "Kefe Eyaleti", "type": "eyalet", "is_coastal": True, "connections": [(3, 0), (5, 0), (4, 1)]},
-    (5, 0): {"name": "Kırım Hanlığı", "type": "vasal", "is_coastal": True, "connections": [(4, 0), (5, 1)]},
-    
-    # Satır 1 - Yunanistan ve Anadolu kuzeyi
-    (0, 1): {"name": "Arnavutluk Sancağı", "type": "sancak", "is_coastal": True, "connections": [(0, 0), (1, 1), (0, 2)]},
-    (1, 1): {"name": "Selanik Sancağı", "type": "sancak", "is_coastal": True, "connections": [(0, 1), (2, 1), (1, 0), (1, 2)]},
-    (2, 1): {"name": "Konstantiniye (Başkent)", "type": "başkent", "is_coastal": True, "connections": [(1, 1), (3, 1), (2, 0), (2, 2)]},
-    (3, 1): {"name": "Kastamonu Sancağı", "type": "sancak", "is_coastal": True, "connections": [(2, 1), (4, 1), (3, 0), (3, 2)]},
-    (4, 1): {"name": "Trabzon Eyaleti", "type": "eyalet", "is_coastal": True, "connections": [(3, 1), (5, 1), (4, 0), (4, 2)]},
-    (5, 1): {"name": "Safevi Sınırı", "type": "düşman", "is_coastal": False, "connections": [(4, 1), (5, 0), (5, 2)]},
-    
-    # Satır 2 - Ege ve İç Anadolu
-    (0, 2): {"name": "Mora Sancağı", "type": "sancak", "is_coastal": True, "connections": [(0, 1), (1, 2)]},
-    (1, 2): {"name": "Aydın Sancağı (İzmir)", "type": "sancak", "is_coastal": True, "connections": [(0, 2), (2, 2), (1, 1), (1, 3)]},
-    (2, 2): {"name": "Anadolu Eyaleti", "type": "eyalet", "is_coastal": False, "connections": [(1, 2), (3, 2), (2, 1), (2, 3)]},
-    (3, 2): {"name": "Karaman Eyaleti", "type": "eyalet", "is_coastal": False, "connections": [(2, 2), (4, 2), (3, 1), (3, 3)]},
-    (4, 2): {"name": "Dulkadir Beyliği", "type": "vasal", "is_coastal": False, "connections": [(3, 2), (5, 2), (4, 1), (4, 3)]},
-    (5, 2): {"name": "Diyarbakır Eyaleti", "type": "eyalet", "is_coastal": False, "connections": [(4, 2), (5, 1), (5, 3)]},
-    
-    # Satır 3 - Akdeniz ve Güney Anadolu
-    (0, 3): {"name": "Girit (Venedik)", "type": "düşman", "is_coastal": True, "connections": [(1, 3)]},
-    (1, 3): {"name": "Rodos (Şövalyeler)", "type": "düşman", "is_coastal": True, "connections": [(0, 3), (2, 3), (1, 2)]},
-    (2, 3): {"name": "Teke Sancağı (Antalya)", "type": "sancak", "is_coastal": True, "connections": [(1, 3), (3, 3), (2, 2)]},
-    (3, 3): {"name": "Adana Sancağı", "type": "sancak", "is_coastal": True, "connections": [(2, 3), (4, 3), (3, 2)]},
-    (4, 3): {"name": "Halep Eyaleti", "type": "eyalet", "is_coastal": False, "connections": [(3, 3), (5, 3), (4, 2), (4, 4)]},
-    (5, 3): {"name": "Musul Eyaleti", "type": "eyalet", "is_coastal": False, "connections": [(4, 3), (5, 2), (5, 4)]},
-    
-    # Satır 4 (Güney) - Arap toprakları
-    (2, 4): {"name": "Kıbrıs (Venedik)", "type": "düşman", "is_coastal": True, "connections": [(3, 4)]},
-    (3, 4): {"name": "Şam Eyaleti", "type": "eyalet", "is_coastal": True, "connections": [(2, 4), (4, 4), (3, 3)]},
-    (4, 4): {"name": "Kudüs Sancağı", "type": "sancak", "is_coastal": True, "connections": [(3, 4), (5, 4), (4, 3)]},
-    (5, 4): {"name": "Bağdat (Safevi)", "type": "düşman", "is_coastal": False, "connections": [(4, 4), (5, 3)]},
-}
+def _get_type_name(territory: Territory) -> str:
+    """Bölge türü Türkçe adı"""
+    type_names = {
+        TerritoryType.OSMANLI_EYALET: "Osmanlı Eyaleti",
+        TerritoryType.OSMANLI_SANCAK: "Osmanlı Sancağı",
+        TerritoryType.VASAL: "Vasal Devlet",
+        TerritoryType.KOMSU_DEVLET: "Komşu Devlet"
+    }
+    return type_names.get(territory.territory_type, "Bilinmeyen")
+
+
+def _get_region_name(territory: Territory) -> str:
+    """Bölge coğrafyası Türkçe adı"""
+    region_names = {
+        Region.ANADOLU: "Anadolu",
+        Region.BALKANLAR: "Rumeli",
+        Region.ORTADOGU: "Ortadoğu",
+        Region.AFRIKA: "Afrika",
+        Region.ADALAR: "Adalar",
+        Region.KARADENIZ: "Karadeniz",
+        Region.AVRUPA: "Avrupa",
+        Region.IRAN: "İran"
+    }
+    return region_names.get(territory.region, "Bilinmeyen")
 
 
 class MapScreen(BaseScreen):
-    """Büyük Osmanlı haritası - Grid tabanlı navigasyon"""
+    """Büyük Osmanlı haritası - Yön tabanlı komşu navigasyonu"""
     
     def __init__(self, screen_manager):
         super().__init__(screen_manager)
         
-        # Oyuncunun eyaleti (başlangıç: Anadolu)
-        self.player_position = (2, 2)  # Anadolu Eyaleti
-        self.current_position = self.player_position  # Gezilen konum
+        # Mevcut konumdaki bölge ismi
+        self.current_territory_name = "Rum Eyaleti"  # Varsayılan
+        self.player_territory_name = "Rum Eyaleti"   # Oyuncunun eyaleti
         
-        self.info_panel = Panel(20, 350, 400, 150, "Bölge Bilgisi")
+        self.info_panel = Panel(20, 350, 400, 180, "Bölge Bilgisi")
         
         self.back_button = Button(
             x=20,
@@ -92,265 +78,252 @@ class MapScreen(BaseScreen):
     def on_enter(self):
         # Oyuncunun eyaletini game_manager'dan al
         gm = self.screen_manager.game_manager
-        if gm:
-            # Eyalet ismine göre konum bul
-            for pos, data in OTTOMAN_MAP.items():
-                if gm.province.name in data['name']:
-                    self.player_position = pos
-                    break
-        self.current_position = self.player_position
+        if gm and gm.province:
+            self.player_territory_name = gm.province.name
+        
+        # Başlangıç konumu oyuncunun eyaleti
+        self.current_territory_name = self.player_territory_name
     
     def announce_screen(self):
         self.audio.announce_screen_change("Osmanlı Haritası")
-        self.audio.speak("Ok tuşlarıyla haritada gezinin.", interrupt=False)
+        self.audio.speak("Ok tuşlarıyla haritada gezinin. Yukarı: Kuzey, Aşağı: Güney, Sol: Batı, Sağ: Doğu", interrupt=False)
         self._announce_current_position()
     
     def _announce_current_position(self):
         """Mevcut konumu duyur"""
-        data = OTTOMAN_MAP.get(self.current_position)
-        if not data:
+        territory = get_territory(self.current_territory_name)
+        if not territory:
+            self.audio.speak(f"{self.current_territory_name} - bilinmeyen bölge", interrupt=True)
             return
         
         # Oyuncunun kendi eyaleti mi?
-        is_home = self.current_position == self.player_position
+        is_home = self.current_territory_name == self.player_territory_name
         
-        self.audio.speak(f"{data['name']}", interrupt=True)
+        self.audio.speak(f"{territory.name}", interrupt=True)
+        self.audio.speak(f"Tür: {_get_type_name(territory)}", interrupt=False)
+        self.audio.speak(f"Bölge: {_get_region_name(territory)}", interrupt=False)
         
-        type_names = {
-            "eyalet": "Eyalet",
-            "sancak": "Sancak", 
-            "başkent": "Payitaht (Başkent)",
-            "vasal": "Vasal Devlet",
-            "beylik": "Beylik",
-            "sınır": "Sınır Bölgesi",
-            "ada": "Ada"
-        }
-        self.audio.speak(f"Tür: {type_names.get(data['type'], data['type'])}", interrupt=False)
+        if territory.is_coastal:
+            self.audio.speak("Kıyı bölgesi", interrupt=False)
         
         if is_home:
-            self.audio.speak("Burası sizin eyaletiniz.", interrupt=False)
+            self.audio.speak("Burası sizin eyaletiniz!", interrupt=False)
         
-        # Bağlantıları duyur
-        connections = data.get('connections', [])
-        if connections:
-            neighbor_names = []
-            for conn in connections:
-                n = OTTOMAN_MAP.get(conn)
-                if n:
-                    neighbor_names.append(n['name'].split()[0])  # İlk kelime
-            if neighbor_names:
-                self.audio.speak(f"Komşular: {', '.join(neighbor_names[:4])}", interrupt=False)
+        # Yönlere göre komşuları duyur
+        neighbors = get_neighbors_with_direction(territory)
+        directions = []
+        if neighbors["kuzey"]:
+            directions.append(f"Kuzey: {neighbors['kuzey'][0]}")
+        if neighbors["güney"]:
+            directions.append(f"Güney: {neighbors['güney'][0]}")
+        if neighbors["doğu"]:
+            directions.append(f"Doğu: {neighbors['doğu'][0]}")
+        if neighbors["batı"]:
+            directions.append(f"Batı: {neighbors['batı'][0]}")
+        
+        if directions:
+            self.audio.speak(f"Komşular: {', '.join(directions[:4])}", interrupt=False)
     
     def _update_info_panel(self):
         """Bilgi panelini güncelle"""
         self.info_panel.clear()
-        data = OTTOMAN_MAP.get(self.current_position)
-        if not data:
+        territory = get_territory(self.current_territory_name)
+        if not territory:
             return
         
-        self.info_panel.title = data['name']
+        self.info_panel.title = territory.name
         
-        type_names = {
-            "eyalet": "Eyalet",
-            "sancak": "Sancak",
-            "başkent": "Payitaht",
-            "vasal": "Vasal",
-            "beylik": "Beylik",
-            "sınır": "Sınır",
-            "ada": "Ada"
-        }
-        self.info_panel.add_item("Tür", type_names.get(data['type'], data['type']))
-        self.info_panel.add_item("Konum", f"({self.current_position[0]}, {self.current_position[1]})")
+        self.info_panel.add_item("Tür", _get_type_name(territory))
+        self.info_panel.add_item("Bölge", _get_region_name(territory))
+        self.info_panel.add_item("Başkent", territory.capital)
         
-        is_home = self.current_position == self.player_position
+        if territory.is_coastal:
+            self.info_panel.add_item("Kıyı", "Evet")
+        
+        is_home = self.current_territory_name == self.player_territory_name
         if is_home:
             self.info_panel.add_item("Durum", "SİZİN EYALETİNİZ")
         else:
             # Diplomasi durumu
             gm = self.screen_manager.game_manager
-            if gm and data['name'] in gm.diplomacy.neighbors:
-                relation = gm.diplomacy.neighbors[data['name']]
-                rel = relation.value  # Relation objesi
+            if gm and territory.name in gm.diplomacy.neighbors:
+                relation = gm.diplomacy.neighbors[territory.name]
+                rel = relation.value
                 status = "Dost" if rel >= 50 else "Nötr" if rel >= 0 else "Düşman"
-                self.info_panel.add_item("İlişki", f"{status} (%{rel})")
+                self.info_panel.add_item("İlişki", f"{status} ({rel})")
+        
+        # Kaynaklar
+        if territory.special_resources:
+            self.info_panel.add_item("Kaynaklar", ", ".join(territory.special_resources[:3]))
     
     def handle_event(self, event) -> bool:
         try:
             if self.back_button.handle_event(event):
                 return True
+        except Exception:
+            pass
+        
+        if event.type == pygame.KEYDOWN:
+            # Yön tuşları ile navigasyon
+            if event.key == pygame.K_UP:
+                self._move_direction("kuzey")
+                return True
+            elif event.key == pygame.K_DOWN:
+                self._move_direction("güney")
+                return True
+            elif event.key == pygame.K_LEFT:
+                self._move_direction("batı")
+                return True
+            elif event.key == pygame.K_RIGHT:
+                self._move_direction("doğu")
+                return True
             
-            if event.type == pygame.KEYDOWN:
-                # Backspace / Escape - Geri
-                if event.key in (pygame.K_BACKSPACE, pygame.K_ESCAPE):
-                    self._go_back()
-                    return True
-                
-                # Yukarı ok - Kuzeye git
-                if event.key == pygame.K_UP:
-                    self._move(0, -1)
-                    return True
-                
-                # Aşağı ok - Güneye git
-                if event.key == pygame.K_DOWN:
-                    self._move(0, 1)
-                    return True
-                
-                # Sol ok - Batıya git
-                if event.key == pygame.K_LEFT:
-                    self._move(-1, 0)
-                    return True
-                
-                # Sağ ok - Doğuya git
-                if event.key == pygame.K_RIGHT:
-                    self._move(1, 0)
-                    return True
-                
-                # Home - Kendi eyaletine dön
-                if event.key == pygame.K_HOME:
-                    self.current_position = self.player_position
-                    self._announce_current_position()
-                    return True
-                
-                # H - Elçi gönder
-                if event.key == pygame.K_h and self.current_position != self.player_position:
-                    self._send_envoy()
-                    return True
-                
-                # F1 - Yardım
-                if event.key == pygame.K_F1:
-                    self.audio.speak("Harita Kontrolleri:", interrupt=True)
-                    self.audio.speak("Ok tuşları: Haritada gezin", interrupt=False)
-                    self.audio.speak("Home: Kendi eyaletinize dönün", interrupt=False)
-                    self.audio.speak("H: Elçi gönder", interrupt=False)
-                    self.audio.speak("Backspace: Geri dön", interrupt=False)
-                    return True
-            
-            return False
-        except Exception as e:
-            import traceback
-            print(f"HARITA HATASI: {e}")
-            traceback.print_exc()
-            return False
-    
-    def _move(self, dx: int, dy: int):
-        """Haritada hareket et"""
-        try:
-            new_x = self.current_position[0] + dx
-            new_y = self.current_position[1] + dy
-            new_pos = (new_x, new_y)
-            
-            # Hedef konum var mı?
-            if new_pos in OTTOMAN_MAP:
-                self.current_position = new_pos
-                try:
-                    self.audio.play_ui_sound('click')
-                except:
-                    pass  # Ses dosyası yoksa hata verme
+            # Home - Kendi eyaletine dön
+            elif event.key == pygame.K_HOME:
+                self.current_territory_name = self.player_territory_name
                 self._announce_current_position()
+                self._update_info_panel()
+                return True
+            
+            # E tuşu - Elçi gönder
+            elif event.key == pygame.K_e:
+                self._send_envoy()
+                return True
+            
+            # Backspace - Geri
+            elif event.key == pygame.K_BACKSPACE:
+                self._go_back()
+                return True
+        
+        return False
+    
+    def _move_direction(self, direction: str):
+        """Belirtilen yöne hareket et"""
+        territory = get_territory(self.current_territory_name)
+        if not territory:
+            return
+        
+        neighbors = get_neighbors_with_direction(territory)
+        direction_neighbors = neighbors.get(direction, [])
+        
+        if direction_neighbors:
+            # İlk komşuya git
+            next_territory = direction_neighbors[0]
+            if next_territory in TERRITORIES:
+                self.current_territory_name = next_territory
+                self._announce_current_position()
+                self._update_info_panel()
             else:
-                # Yön ismi
-                dir_name = ""
-                if dy < 0:
-                    dir_name = "kuzeyde"
-                elif dy > 0:
-                    dir_name = "güneyde"
-                elif dx < 0:
-                    dir_name = "batıda"
-                elif dx > 0:
-                    dir_name = "doğuda"
-                self.audio.speak(f"Bu yönde ({dir_name}) bölge yok.", interrupt=True)
-        except Exception as e:
-            print(f"Harita hatası: {e}")
+                self.audio.speak(f"{next_territory} - bu bölgeye gidilemiyor", interrupt=True)
+        else:
+            direction_names = {"kuzey": "kuzeyde", "güney": "güneyde", "doğu": "doğuda", "batı": "batıda"}
+            self.audio.speak(f"Bu yönde ({direction_names.get(direction, direction)}) komşu yok", interrupt=True)
     
     def _send_envoy(self):
         """Bulunulan konuma elçi gönder"""
-        gm = self.screen_manager.game_manager
-        data = OTTOMAN_MAP.get(self.current_position)
-        
-        if not gm or not data:
+        if self.current_territory_name == self.player_territory_name:
+            self.audio.speak("Kendi eyaletinize elçi gönderemezsiniz.", interrupt=True)
             return
         
-        if gm.diplomacy.send_envoy(data['name']):
-            self.audio.speak(f"{data['name']}'e elçi gönderildi.", interrupt=True)
-        else:
-            self.audio.speak("Elçi gönderilemedi.", interrupt=True)
+        gm = self.screen_manager.game_manager
+        if gm:
+            if gm.diplomacy.envoy_cooldown > 0:
+                self.audio.speak(f"Elçi göndermek için {gm.diplomacy.envoy_cooldown} tur beklemelisiniz.", interrupt=True)
+                return
+            
+            if self.current_territory_name in gm.diplomacy.neighbors:
+                gm.diplomacy.send_envoy(self.current_territory_name)
+                self.audio.speak(f"{self.current_territory_name} bölgesine elçi gönderildi!", interrupt=True)
+            else:
+                self.audio.speak("Bu bölgeye elçi gönderilemez.", interrupt=True)
     
     def update(self, dt: float):
-        self._update_info_panel()
+        pass
     
     def draw(self, surface: pygame.Surface):
-        # Başlık
-        header_font = self.get_header_font()
-        title = header_font.render("🗺️ OSMANLI İMPARATORLUĞU HARİTASI", True, COLORS['gold'])
-        surface.blit(title, (20, 20))
+        surface.fill(COLORS['background'])
         
-        # Harita çiz
+        # Başlık
+        header_text = self.get_header_font().render(
+            f"Osmanlı Haritası - {self.current_territory_name}",
+            True, COLORS['text']
+        )
+        surface.blit(header_text, (20, 20))
+        
+        # Mini harita çizimi (basit metin tabanlı)
         self._draw_map(surface)
         
         # Bilgi paneli
         self.info_panel.draw(surface)
-        
-        # Kontroller
-        self._draw_controls(surface)
+        self._update_info_panel()
         
         # Geri butonu
         self.back_button.draw(surface)
+        
+        # Kontrol ipuçları
+        self._draw_controls(surface)
     
     def _draw_map(self, surface: pygame.Surface):
-        """Haritayı çiz"""
+        """Haritayı çiz - mevcut bölge ve yönler"""
+        territory = get_territory(self.current_territory_name)
+        if not territory:
+            return
+        
+        # Merkez bölge
+        center_x = SCREEN_WIDTH // 2
+        center_y = 200
+        
+        # Mevcut bölge kutusu
+        pygame.draw.rect(surface, COLORS['primary'], (center_x - 80, center_y - 25, 160, 50))
+        pygame.draw.rect(surface, COLORS['text'], (center_x - 80, center_y - 25, 160, 50), 2)
+        
         font = self.get_map_font()
+        text = font.render(territory.name[:20], True, COLORS['text'])
+        text_rect = text.get_rect(center=(center_x, center_y))
+        surface.blit(text, text_rect)
         
-        # Grid boyutları
-        cell_width = 120
-        cell_height = 50
-        start_x = 50
-        start_y = 60
+        # Yön göstergeleri
+        neighbors = get_neighbors_with_direction(territory)
         
-        for pos, data in OTTOMAN_MAP.items():
-            x = start_x + pos[0] * cell_width
-            y = start_y + pos[1] * cell_height
-            
-            # Renk belirle
-            if pos == self.current_position:
-                color = COLORS['gold']
-                border = 3
-            elif pos == self.player_position:
-                color = COLORS['success']
-                border = 2
-            else:
-                type_colors = {
-                    "eyalet": COLORS['text'],
-                    "sancak": (150, 150, 150),
-                    "başkent": (255, 215, 0),
-                    "vasal": (100, 150, 200),
-                    "beylik": (200, 150, 100),
-                    "sınır": (150, 100, 100),
-                    "ada": (100, 150, 150)
-                }
-                color = type_colors.get(data['type'], COLORS['text'])
-                border = 1
-            
-            # Kutu çiz
-            rect = pygame.Rect(x, y, cell_width - 5, cell_height - 5)
-            pygame.draw.rect(surface, color, rect, border)
-            
-            # İsim yaz (kısaltılmış)
-            name = data['name'][:12]
-            text = font.render(name, True, color)
-            text_rect = text.get_rect(center=rect.center)
-            surface.blit(text, text_rect)
+        # Kuzey
+        if neighbors["kuzey"]:
+            name = neighbors["kuzey"][0][:15]
+            text = font.render(f"↑ {name}", True, COLORS['success'])
+            surface.blit(text, (center_x - 60, center_y - 70))
+        
+        # Güney
+        if neighbors["güney"]:
+            name = neighbors["güney"][0][:15]
+            text = font.render(f"↓ {name}", True, COLORS['success'])
+            surface.blit(text, (center_x - 60, center_y + 45))
+        
+        # Batı
+        if neighbors["batı"]:
+            name = neighbors["batı"][0][:15]
+            text = font.render(f"← {name}", True, COLORS['success'])
+            surface.blit(text, (center_x - 200, center_y - 10))
+        
+        # Doğu
+        if neighbors["doğu"]:
+            name = neighbors["doğu"][0][:15]
+            text = font.render(f"→ {name}", True, COLORS['success'])
+            surface.blit(text, (center_x + 100, center_y - 10))
     
     def _draw_controls(self, surface: pygame.Surface):
         """Kontrol ipuçlarını çiz"""
-        font = pygame.font.Font(None, FONTS['small'])
-        
-        hints = [
-            "←↑↓→ Gezin | Home: Eve Dön | H: Elçi Gönder | F1: Yardım"
+        font = self.get_map_font()
+        controls = [
+            "↑↓←→: Haritada gezin",
+            "Home: Kendi eyaletinize dönün",
+            "E: Elçi gönder",
+            "Backspace: Geri"
         ]
         
-        for i, hint in enumerate(hints):
-            text = font.render(hint, True, COLORS['text'])
-            surface.blit(text, (450, 480 + i * 20))
+        y = SCREEN_HEIGHT - 130
+        for ctrl in controls:
+            text = font.render(ctrl, True, COLORS['text'])
+            surface.blit(text, (450, y))
+            y += 25
     
     def _go_back(self):
         self.screen_manager.change_screen(ScreenType.DIPLOMACY)

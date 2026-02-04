@@ -461,4 +461,7 @@ class ConstructionScreen(BaseScreen):
     
     def _go_back(self):
         """Geri dön"""
-        self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
+        if getattr(self.screen_manager, 'is_multiplayer_mode', False):
+            self.screen_manager.change_screen(ScreenType.MULTIPLAYER_GAME)
+        else:
+            self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)

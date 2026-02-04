@@ -5,7 +5,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Askeri Ekran
 
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
-from ui.components import Button, Panel, MenuList
+from ui.components import Button, Panel, HierarchicalMenu
 from game.systems.military import UnitType, UNIT_DEFINITIONS
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
 
@@ -16,52 +16,114 @@ class MilitaryScreen(BaseScreen):
     def __init__(self, screen_manager):
         super().__init__(screen_manager)
         
-        # Paneller
-        self.army_panel = Panel(20, 80, 450, 350, "Ordu Durumu")
-        self.training_panel = Panel(490, 80, 380, 200, "Eğitim Kuyruğu")
-        self.stats_panel = Panel(490, 300, 380, 130, "İstatistikler")
+        # Paneller (üst kısım)
+        self.army_panel = Panel(20, 80, 400, 250, "Ordu Durumu")
+        self.training_panel = Panel(440, 80, 400, 150, "Eğitim Kuyruğu")
+        self.stats_panel = Panel(440, 250, 400, 80, "İstatistikler")
         
-        # Birlik toplama menüsü
-        self.recruit_menu = MenuList(
+        # Hiyerarşik menü (alt kısım)
+        self.action_menu = HierarchicalMenu(
             x=20,
-            y=460,
-            width=450,
+            y=360,
+            width=820,
             item_height=40
-        )
-        self._setup_recruit_menu()
-        
-        # Eylem butonları
-        self.fight_button = Button(
-            x=490,
-            y=460,
-            width=180,
-            height=50,
-            text="Eşkıya Bastır",
-            shortcut="f",
-            callback=self._fight_bandits
-        )
-        
-        self.back_button = Button(
-            x=20,
-            y=SCREEN_HEIGHT - 70,
-            width=150,
-            height=50,
-            text="Geri",
-            shortcut="backspace",
-            callback=self._go_back
         )
         
         self._header_font = None
     
-    def _setup_recruit_menu(self):
-        """Asker toplama menüsünü ayarla"""
-        self.recruit_menu.clear()
+    def _setup_action_menu(self):
+        """Hiyerarşik askeri menüyü ayarla"""
+        self.action_menu.clear()
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+        
+        mil = gm.military
+        eco = gm.economy
+        
+        # === 1. ASKER TOPLA (her birim tipi alt menü) ===
         for unit_type in UnitType:
             stats = UNIT_DEFINITIONS[unit_type]
-            self.recruit_menu.add_item(
-                f"{stats.name_tr} Topla (10)",
-                lambda ut=unit_type: self._recruit(ut, 10)
-            )
+            current_count = mil.units.get(unit_type, 0)
+            
+            # Bu birim için toplama seçenekleri
+            unit_items = []
+            
+            # Mevcut sayı bilgisi
+            unit_items.append({
+                'text': f"Mevcut: {current_count} adet",
+                'callback': None
+            })
+            unit_items.append({
+                'text': f"Maliyet: {stats.cost_gold} altın/birim, {stats.train_time} tur eğitim",
+                'callback': None
+            })
+            unit_items.append({'text': '', 'is_separator': True})
+            
+            # Eğitim seçenekleri
+            for count in [10, 50, 100]:
+                cost = stats.cost_gold * count
+                can_afford = eco.can_afford(gold=cost)
+                if can_afford:
+                    unit_items.append({
+                        'text': f"+{count} topla ({cost} altın)",
+                        'callback': lambda ut=unit_type, c=count: self._recruit(ut, c)
+                    })
+                else:
+                    unit_items.append({
+                        'text': f"+{count} ({cost} altın) - Yetersiz",
+                        'callback': None
+                    })
+            
+            # Maksimum topla
+            max_affordable = eco.resources.gold // stats.cost_gold if stats.cost_gold > 0 else 0
+            if max_affordable >= 10:
+                max_count = min(max_affordable, 200)
+                unit_items.append({
+                    'text': f"Maksimum: {max_count} topla ({stats.cost_gold * max_count} altın)",
+                    'callback': lambda ut=unit_type, c=max_count: self._recruit(ut, c)
+                })
+            
+            self.action_menu.add_category(f"{stats.name_tr} ({current_count})", unit_items)
+        
+        # === 2. EĞİTİM KUYRUĞU ===
+        training_items = []
+        if mil.training_queue:
+            for item in mil.training_queue:
+                stats = UNIT_DEFINITIONS[item.unit_type]
+                training_items.append({
+                    'text': f"{item.count}x {stats.name_tr}: {item.turns_remaining} tur kaldı",
+                    'callback': None
+                })
+        else:
+            training_items.append({'text': "Eğitimde birim yok", 'callback': None})
+        
+        training_items.append({'text': '', 'is_separator': True})
+        training_items.append({
+            'text': f"Toplam eğitimde: {sum(i.count for i in mil.training_queue)} asker",
+            'callback': None
+        })
+        
+        self.action_menu.add_category("Eğitim Kuyruğu", training_items)
+        
+        # === 3. ORDU DURUMU ===
+        durum_items = [
+            {'text': f"Toplam Asker: {mil.get_total_soldiers()}", 'callback': None},
+            {'text': f"Toplam Güç: {mil.get_total_power()}", 'callback': None},
+            {'text': f"Bakım Maliyeti: {mil.get_maintenance_cost()} altın/tur", 'callback': None},
+            {'text': '', 'is_separator': True},
+            {'text': f"Moral: %{mil.morale}", 'callback': None},
+            {'text': f"Zaferler: {mil.total_victories}", 'callback': None},
+            {'text': f"Kayıplar: {mil.total_losses}", 'callback': None},
+        ]
+        
+        self.action_menu.add_category("Ordu Durumu", durum_items)
+        
+        # === 4. EŞKIYA BASTIR ===
+        self.action_menu.add_action("Eşkıya Bastır", self._fight_bandits)
+        
+        # === GERİ BUTONU ===
+        self.action_menu.add_back_button()
     
     def get_header_font(self):
         if self._header_font is None:
@@ -70,6 +132,7 @@ class MilitaryScreen(BaseScreen):
     
     def on_enter(self):
         self._update_panels()
+        self._setup_action_menu()
     
     def announce_screen(self):
         self.audio.announce_screen_change("Askeri Yönetim")
@@ -114,36 +177,24 @@ class MilitaryScreen(BaseScreen):
         self.stats_panel.add_item("Kayıplar", str(mil.total_losses))
     
     def handle_event(self, event) -> bool:
-        if self.recruit_menu.handle_event(event):
+        # HierarchicalMenu tüm navigasyonu işler
+        result = self.action_menu.handle_event(event)
+        
+        # False dönerse ana ekrana dön
+        if result is False:
+            self._go_back()
             return True
         
-        if self.fight_button.handle_event(event):
-            return True
-        
-        if self.back_button.handle_event(event):
+        # True ise menü işledi
+        if result is True:
             return True
         
         if event.type == pygame.KEYDOWN:
-            # Backspace veya Escape - Geri dön
-            if event.key in (pygame.K_BACKSPACE, pygame.K_ESCAPE):
-                self._go_back()
-                return True
-            
-            # F1 - Özet
+            # F1 - Özet (tek kısayol)
             if event.key == pygame.K_F1:
                 gm = self.screen_manager.game_manager
                 if gm:
                     gm.military.announce_army()
-                return True
-            
-            # Tab - Paneller arası
-            if event.key == pygame.K_TAB:
-                self._announce_next_panel()
-                return True
-            
-            # I - Detaylı birim dökümü
-            if event.key == pygame.K_i:
-                self._announce_unit_breakdown()
                 return True
         
         return False
@@ -200,32 +251,59 @@ class MilitaryScreen(BaseScreen):
         self._current_panel = (self._current_panel + 1) % len(panels)
         panels[self._current_panel].announce_content()
     
+    def _announce_training_queue(self):
+        """Eğitim kuyruğunu duyur"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+        
+        mil = gm.military
+        
+        if not mil.training_queue:
+            self.audio.speak(
+                "Eğitim kuyruğu boş. Asker topladığınızda burada görünecek.",
+                interrupt=True
+            )
+            return
+        
+        total_units = sum(item.count for item in mil.training_queue)
+        self.audio.speak(f"Eğitim kuyruğunda {total_units} asker:", interrupt=True)
+        
+        for item in mil.training_queue:
+            stats = UNIT_DEFINITIONS[item.unit_type]
+            if item.turns_remaining == 1:
+                self.audio.speak(
+                    f"{item.count} {stats.name_tr}: Bu tur sonunda hazır olacak!",
+                    interrupt=False
+                )
+            else:
+                self.audio.speak(
+                    f"{item.count} {stats.name_tr}: {item.turns_remaining} tur sonra hazır.",
+                    interrupt=False
+                )
+        
+        self.audio.speak(
+            "Tur geçirmek için ana ekranda Boşluk tuşuna basın.",
+            interrupt=False
+        )
+    
     def update(self, dt: float):
         self._update_panels()
+        self.action_menu.update()  # İlk duyuruyu yapar
     
     def draw(self, surface: pygame.Surface):
         # Başlık
         header_font = self.get_header_font()
-        title = header_font.render("⚔ ASKERİ YÖNETİM", True, COLORS['gold'])
+        title = header_font.render("ASKERI YONETIM", True, COLORS['gold'])
         surface.blit(title, (20, 20))
         
-        # Paneller
+        # Paneller (üst kısım)
         self.army_panel.draw(surface)
         self.training_panel.draw(surface)
         self.stats_panel.draw(surface)
         
-        # Asker toplama menüsü başlığı
-        small_font = pygame.font.Font(None, FONTS['subheader'])
-        recruit_title = small_font.render("Asker Topla", True, COLORS['gold'])
-        surface.blit(recruit_title, (20, 435))
-        self.recruit_menu.draw(surface)
-        
-        # Butonlar
-        self.fight_button.draw(surface)
-        self.back_button.draw(surface)
-        
-        # Birim bilgileri
-        self._draw_unit_info(surface)
+        # Hiyerarşik menü (alt kısım)
+        self.action_menu.draw(surface)
     
     def _draw_unit_info(self, surface: pygame.Surface):
         """Seçili birim bilgilerini göster"""
@@ -238,29 +316,40 @@ class MilitaryScreen(BaseScreen):
         pygame.draw.rect(surface, COLORS['panel_bg'], rect, border_radius=10)
         pygame.draw.rect(surface, COLORS['panel_border'], rect, width=2, border_radius=10)
         
-        # Seçili birim
-        if self.recruit_menu.items:
-            selected_idx = self.recruit_menu.selected_index
-            unit_type = list(UnitType)[selected_idx]
-            stats = UNIT_DEFINITIONS[unit_type]
-            
-            font = pygame.font.Font(None, FONTS['body'])
-            small_font = pygame.font.Font(None, FONTS['small'])
-            
-            # Birim adı
-            name = font.render(stats.name_tr, True, COLORS['gold'])
-            surface.blit(name, (rect.x + 20, rect.y + 15))
-            
-            # İstatistikler
-            info_lines = [
-                f"Saldırı: {stats.attack} | Savunma: {stats.defense} | Hız: {stats.speed}",
-                f"Maliyet: {stats.cost_gold} Altın, {stats.cost_food} Zahire",
-                f"Eğitim: {stats.train_time} tur | Bakım: {stats.maintenance}/tur"
-            ]
-            
-            for i, line in enumerate(info_lines):
-                text = small_font.render(line, True, COLORS['text'])
-                surface.blit(text, (rect.x + 20, rect.y + 45 + i * 25))
+        # Hangi birim seçili?
+        if not self.recruit_menu.items:
+            return
+        
+        selected_idx = self.recruit_menu.selected_index
+        
+        # Menü yapısı: Her birim için 1 başlık + 4 seçenek (10, 50, 100, maksimum) = ~5 item
+        # Hangi birim grubundayız hesapla
+        items_per_unit = 5  # Başlık + 4 seçenek (maksimum varsa)
+        unit_types = list(UnitType)
+        
+        # Güvenli index hesaplama
+        unit_index = min(selected_idx // items_per_unit, len(unit_types) - 1)
+        unit_type = unit_types[unit_index]
+        stats = UNIT_DEFINITIONS[unit_type]
+        current_count = gm.military.units.get(unit_type, 0)
+        
+        font = pygame.font.Font(None, FONTS['body'])
+        small_font = pygame.font.Font(None, FONTS['small'])
+        
+        # Birim adı ve mevcut sayı
+        name = font.render(f"{stats.name_tr} - Mevcut: {current_count}", True, COLORS['gold'])
+        surface.blit(name, (rect.x + 20, rect.y + 15))
+        
+        # İstatistikler
+        info_lines = [
+            f"Saldırı: {stats.attack} | Savunma: {stats.defense} | Hız: {stats.speed}",
+            f"Maliyet: {stats.cost_gold} Altın, {stats.cost_food} Zahire",
+            f"Eğitim: {stats.train_time} tur | Bakım: {stats.maintenance}/tur"
+        ]
+        
+        for i, line in enumerate(info_lines):
+            text = small_font.render(line, True, COLORS['text'])
+            surface.blit(text, (rect.x + 20, rect.y + 45 + i * 25))
     
     def _recruit(self, unit_type: UnitType, count: int):
         """Asker topla"""
@@ -268,6 +357,7 @@ class MilitaryScreen(BaseScreen):
         if gm:
             gm.military.recruit(unit_type, count, gm.economy)
             self._update_panels()
+            self._setup_action_menu()  # Menüyü güncelle
     
     def _fight_bandits(self):
         """Eşkıya bastır"""
@@ -290,4 +380,7 @@ class MilitaryScreen(BaseScreen):
     
     def _go_back(self):
         """Geri dön"""
-        self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
+        if getattr(self.screen_manager, 'is_multiplayer_mode', False):
+            self.screen_manager.change_screen(ScreenType.MULTIPLAYER_GAME)
+        else:
+            self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)

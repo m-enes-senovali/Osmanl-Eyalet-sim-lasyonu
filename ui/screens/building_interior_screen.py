@@ -534,9 +534,9 @@ class BuildingInteriorScreen(BaseScreen):
         header_font = self.get_header_font()
         if self.building_type:
             stats = BUILDING_DEFINITIONS[self.building_type]
-            title = f"🏛️ {stats.name_tr.upper()} - SEVİYE {self.building_level}"
+            title = f"{stats.name_tr.upper()} - SEVIYE {self.building_level}"
         else:
-            title = "🏛️ BİNA"
+            title = "BINA"
         
         title_render = header_font.render(title, True, COLORS['gold'])
         surface.blit(title_render, (20, 30))

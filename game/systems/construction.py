@@ -159,7 +159,7 @@ BUILDING_DEFINITIONS = {
         maintenance=5,
         build_time=2,
         max_level=5,
-        food_production=400
+        food_production=600
     ),
     BuildingType.MINE: BuildingStats(
         name="Mine",
@@ -528,6 +528,24 @@ class ConstructionSystem:
             building = self.buildings[BuildingType.INN]
             return 0.01 * building.level  # Seviye başına +1% nüfus artışı
         return 0.0
+    
+    def get_population_capacity(self) -> int:
+        """Maksimum nüfus kapasitesi (taşıma kapasitesi)"""
+        base_capacity = 50000  # Temel kapasite
+        
+        # Han bonusu: +10,000/seviye
+        if BuildingType.INN in self.buildings:
+            base_capacity += self.buildings[BuildingType.INN].level * 10000
+        
+        # Hastane bonusu: +5,000/seviye
+        if BuildingType.HOSPITAL in self.buildings:
+            base_capacity += self.buildings[BuildingType.HOSPITAL].level * 5000
+        
+        # Ambar bonusu: +3,000/seviye
+        if BuildingType.WAREHOUSE in self.buildings:
+            base_capacity += self.buildings[BuildingType.WAREHOUSE].level * 3000
+        
+        return base_capacity
     
     def get_building_list(self) -> List[tuple]:
         """Bina listesi [(tip, isim, seviye), ...]"""

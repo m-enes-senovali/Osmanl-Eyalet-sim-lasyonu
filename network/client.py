@@ -43,6 +43,9 @@ class NetworkClient:
         # Callback'ler
         self.callbacks: Dict[str, Callable] = {}
         
+        # Bekleyen teklifler (ittifak/ticaret)
+        self.pending_proposals: list = []
+        
         # Bağlantı thread'i
         self._thread: Optional[threading.Thread] = None
         self._running = False
@@ -52,8 +55,8 @@ class NetworkClient:
         """WebSocket kütüphanesi mevcut mu?"""
         return WEBSOCKETS_AVAILABLE
     
-    def connect(self, server_ip: str, port: int = 8765) -> bool:
-        """Sunucuya bağlan"""
+    def connect(self, server_ip: str, port: int = 8765, blocking: bool = True) -> bool:
+        """Sunucuya bağlan (blocking=False ile non-blocking mod)"""
         if not WEBSOCKETS_AVAILABLE:
             print("websockets kütüphanesi yüklü değil!")
             return False
@@ -72,6 +75,10 @@ class NetworkClient:
         self._thread = threading.Thread(target=self._connection_loop, daemon=True)
         self._thread.start()
         
+        # Non-blocking mod - hemen dön
+        if not blocking:
+            return True
+        
         # Bağlantı için bekle (maksimum 3 saniye)
         import time
         for _ in range(30):  # 30 x 0.1s = 3 saniye
@@ -85,6 +92,18 @@ class NetworkClient:
         
         print("Bağlantı zaman aşımı!")
         return False
+    
+    def start_connect(self, server_ip: str, port: int = 8765) -> None:
+        """Non-blocking bağlantı başlat (is_connecting ile kontrol et)"""
+        self.connect(server_ip, port, blocking=False)
+    
+    def is_connecting(self) -> bool:
+        """Bağlantı devam ediyor mu?"""
+        return self._running and not self.connected and not self._connection_error
+    
+    def get_connection_error(self) -> str:
+        """Bağlantı hatası varsa döndür"""
+        return self._connection_error
     
     def _connection_loop(self):
         """Arka plan bağlantı döngüsü"""
@@ -149,9 +168,9 @@ class NetworkClient:
         if "room" in data:
             self.room_data = data["room"]
         
-        # Player ID güncelle
-        if "player_id" in data:
-            self.player_id = data["player_id"]
+        # NOT: player_id güncellenmez - sadece get_pending_messages'da
+        # room_created/room_joined mesajlarında güncellenir.
+        # Diğer mesajlardaki player_id başka oyuncuların ID'si olabilir!
         
         # Room code güncelle
         if "room_code" in data:
@@ -174,12 +193,21 @@ class NetworkClient:
             data = self.incoming_messages.get()
             messages.append(data)
             
+            msg_type = data.get("type", "")
+            
+            # DEBUG: Mesaj geldiğinde logla
+            print(f"[DEBUG] Mesaj alındı: type={msg_type}, player_id_in_msg={data.get('player_id')}, my_player_id={self.player_id}")
+            
             # 1. ÖNCE state'i güncelle (mesajdaki verilerle)
             if "room" in data:
                 self.room_data = data["room"]
             
-            if "player_id" in data:
+            # player_id SADECE kendi oyuncumuza atanan mesajlarda güncellenmeli
+            # (room_created, room_joined) - diğer oyuncuların eylemlerinde değil!
+            if "player_id" in data and msg_type in ("room_created", "room_joined"):
+                old_id = self.player_id
                 self.player_id = data["player_id"]
+                print(f"[DEBUG] player_id GÜNCELLENDİ: {old_id} -> {self.player_id} (mesaj: {msg_type})")
             
             if "room_code" in data:
                 self.room_code = data["room_code"]
@@ -191,8 +219,24 @@ class NetworkClient:
             if self.room_data and self.player_id:
                 self.is_host = self.room_data.get("host_id") == self.player_id
             
-            # 3. EN SON callback'i çağır
-            msg_type = data.get("type", "")
+            # DEBUG: Kendi oyuncu bilgimizi logla
+            my_player = self.get_my_player()
+            if my_player:
+                print(f"[DEBUG] Benim bilgim: name={my_player.get('name')}, province={my_player.get('province')}")
+            
+            # 3. Teklif işleme
+            if msg_type in ("alliance_proposal", "trade_proposal"):
+                proposal = {
+                    "id": f"{msg_type}_{data.get('from_player', {}).get('id', 'unknown')}",
+                    "type": "alliance" if msg_type == "alliance_proposal" else "trade",
+                    "from_player": data.get("from_player", {}),
+                    "from_player_id": data.get("from_player_id") or data.get("from_player", {}).get("id"),
+                    "message": data.get("message", "")
+                }
+                self.pending_proposals.append(proposal)
+                print(f"[DEBUG] Yeni teklif eklendi: {proposal}")
+            
+            # 4. EN SON callback'i çağır
             if msg_type in self.callbacks:
                 try:
                     self.callbacks[msg_type](data)
@@ -256,7 +300,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": target_player_id,
-            "action_type": "propose_alliance"
+            "action": "propose_alliance"
         })
     
     def declare_war(self, target_player_id: str):
@@ -265,7 +309,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": target_player_id,
-            "action_type": "declare_war"
+            "action": "declare_war"
         })
     
     def propose_trade(self, target_player_id: str):
@@ -274,7 +318,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": target_player_id,
-            "action_type": "propose_trade"
+            "action": "propose_trade"
         })
     
     def attack(self, target_player_id: str):
@@ -283,7 +327,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": target_player_id,
-            "action_type": "battle"
+            "action": "battle"
         })
     
     def accept_alliance(self, from_player_id: str):
@@ -292,7 +336,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": from_player_id,
-            "action_type": "accept_alliance"
+            "action": "accept_alliance"
         })
     
     def reject_alliance(self, from_player_id: str):
@@ -301,7 +345,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": from_player_id,
-            "action_type": "reject_alliance"
+            "action": "reject_alliance"
         })
     
     def accept_trade(self, from_player_id: str):
@@ -310,7 +354,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": from_player_id,
-            "action_type": "accept_trade"
+            "action": "accept_trade"
         })
     
     def reject_trade(self, from_player_id: str):
@@ -319,7 +363,7 @@ class NetworkClient:
             "action": "diplomacy",
             "player_id": self.player_id,
             "target_id": from_player_id,
-            "action_type": "reject_trade"
+            "action": "reject_trade"
         })
     
     def send_chat(self, message: str):
@@ -405,6 +449,50 @@ class NetworkClient:
         if not self.room_data:
             return False
         return self.room_data.get("game_started", False)
+    
+    def is_allied_with(self, player_id: str) -> bool:
+        """Belirtilen oyuncuyla ittifakta mıyız?"""
+        if not self.room_data or not self.player_id:
+            return False
+        
+        # game_state sunucu tarafından room.to_dict()'e eklendi
+        game_state = self.room_data.get("game_state", {})
+        alliances = game_state.get("alliances", [])
+        
+        # Alliance: {"player1": id, "player2": id}
+        for alliance in alliances:
+            p1 = alliance.get("player1")
+            p2 = alliance.get("player2")
+            if (p1 == self.player_id and p2 == player_id) or (p1 == player_id and p2 == self.player_id):
+                return True
+        return False
+    
+    def is_at_war_with(self, player_id: str) -> bool:
+        """Belirtilen oyuncuyla savaşta mıyız?"""
+        if not self.room_data or not self.player_id:
+            return False
+        
+        # game_state sunucu tarafından room.to_dict()'e eklendi
+        game_state = self.room_data.get("game_state", {})
+        wars = game_state.get("wars", [])
+        
+        # War: {"attacker": id, "defender": id, "status": "active"}
+        for war in wars:
+            if war.get("status") != "active":
+                continue
+            att = war.get("attacker")
+            dfd = war.get("defender")
+            if (att == self.player_id and dfd == player_id) or (att == player_id and dfd == self.player_id):
+                return True
+        return False
+    
+    def get_pending_proposals(self) -> list:
+        """Bekleyen teklifleri döndür"""
+        return self.pending_proposals
+    
+    def clear_proposal(self, proposal_id: str):
+        """Yanıtlanan teklifi sil"""
+        self.pending_proposals = [p for p in self.pending_proposals if p.get("id") != proposal_id]
 
 
 # Tekil instance

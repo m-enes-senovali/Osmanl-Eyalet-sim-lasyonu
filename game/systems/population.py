@@ -11,26 +11,45 @@ from audio.audio_manager import get_audio_manager
 @dataclass
 class PopulationGroups:
     """Nüfus grupları"""
-    farmers: int = 6000      # Çiftçiler
+    farmers: int = 6000      # Çiftçiler (reaya)
     merchants: int = 2000    # Tüccarlar
-    artisans: int = 1500     # Zanaatkarlar
+    artisans: int = 1500     # Zanaatkarlar (esnaf)
     soldiers: int = 500      # Asker aileleri
+    scholars: int = 200      # Ulema (din adamları, müderrisler)
     
     @property
     def total(self) -> int:
-        return self.farmers + self.merchants + self.artisans + self.soldiers
+        return self.farmers + self.merchants + self.artisans + self.soldiers + self.scholars
     
     def to_dict(self) -> Dict:
         return {
             'farmers': self.farmers,
             'merchants': self.merchants,
             'artisans': self.artisans,
-            'soldiers': self.soldiers
+            'soldiers': self.soldiers,
+            'scholars': self.scholars
         }
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'PopulationGroups':
+        # Eski kayıtlarla uyumluluk
+        data.setdefault('scholars', 200)
         return cls(**data)
+
+
+class MigrationPolicy:
+    """Göç politikaları - Osmanlı İskan politikası"""
+    OPEN = 'open'          # Açık kapı - herkes hoşgeldin
+    SELECTIVE = 'selective' # Seçici - sadece zanaatkarlar/tüccarlar
+    RESTRICTED = 'restricted' # Kısıtlı - sadece yüksek nüfus bölgelerinden
+    CLOSED = 'closed'      # Kapalı - göçe izin yok
+    
+    POLICY_EFFECTS = {
+        'open': {'growth_bonus': 0.02, 'happiness_penalty': 0, 'unrest_mod': 5},
+        'selective': {'growth_bonus': 0.01, 'happiness_penalty': 0, 'unrest_mod': 0},
+        'restricted': {'growth_bonus': 0.005, 'happiness_penalty': 0, 'unrest_mod': -5},
+        'closed': {'growth_bonus': 0.0, 'happiness_penalty': -5, 'unrest_mod': -10}
+    }
 
 
 class PopulationSystem:
@@ -42,6 +61,12 @@ class PopulationSystem:
         self.health = 80           # Sağlık durumu 0-100
         self.food_consumption = 0  # Hesaplanacak
         
+        # Göç politikası
+        self.migration_policy = MigrationPolicy.SELECTIVE
+        
+        # Eğitim sistemi
+        self.education_level = 1  # 1-5 (1=temel medrese, 5=yüksek ilim)
+        
         # Etkenler
         self.happiness_modifiers = {}  # {source: value}
         self.growth_rate = 0.02        # %2 doğal artış
@@ -50,10 +75,65 @@ class PopulationSystem:
         self.unrest = 0  # 0-100, 80+ isyan riski
         self.active_revolt = False
     
+    def set_migration_policy(self, policy: str) -> bool:
+        """Göç politikasını değiştir"""
+        if policy in MigrationPolicy.POLICY_EFFECTS:
+            self.migration_policy = policy
+            audio = get_audio_manager()
+            policy_names = {
+                'open': 'Açık Kapı',
+                'selective': 'Seçici',
+                'restricted': 'Kısıtlı',
+                'closed': 'Kapalı'
+            }
+            audio.speak(f"Göç politikası değiştirildi: {policy_names[policy]}", interrupt=True)
+            return True
+        return False
+    
+    def convert_profession(self, from_group: str, to_group: str, count: int) -> bool:
+        """
+        Meslek dönüşümü - Osmanlı lonca sistemi
+        Örn: Çiftçi -> Zanaatkar (şehirlileşme)
+        """
+        audio = get_audio_manager()
+        
+        # Kaynak grubunda yeterli nüfus var mı?
+        current = getattr(self.population, from_group, 0)
+        if current < count + 100:  # Minimum 100 kalsın
+            audio.speak(f"Yeterli {from_group} yok. En az 100 kalmalı.", interrupt=True)
+            return False
+        
+        # Dönüşüm maliyeti: eğitim seviyesine göre
+        education_cost = (5 - self.education_level) * 50  # Düşük eğitim = yüksek maliyet
+        
+        # Uygula
+        setattr(self.population, from_group, current - count)
+        target = getattr(self.population, to_group, 0)
+        setattr(self.population, to_group, target + count)
+        
+        group_names = {
+            'farmers': 'Çiftçi', 'merchants': 'Tüccar',
+            'artisans': 'Zanaatkar', 'soldiers': 'Asker', 'scholars': 'Ulema'
+        }
+        
+        audio.speak(
+            f"{count} kişi {group_names[from_group]}'den {group_names[to_group]}'a dönüştü.",
+            interrupt=True
+        )
+        return True
+    
+    def get_migration_effect(self) -> dict:
+        """Aktif göç politikasının etkilerini al"""
+        return MigrationPolicy.POLICY_EFFECTS.get(
+            self.migration_policy,
+            MigrationPolicy.POLICY_EFFECTS['selective']
+        )
+    
     def calculate_food_consumption(self) -> int:
         """Yiyecek tüketimini hesapla"""
-        # Her kişi 0.05 yiyecek tüketir (daha dengeli)
-        return int(self.population.total * 0.05)
+        # Her kişi 0.02 yiyecek tüketir (dengelenmiş - eskiden 0.05)
+        # Örnek: 10000 nüfus = 200 zahire/tur tüketim
+        return int(self.population.total * 0.02)
     
     def calculate_happiness(self, tax_rate: float, has_mosque: bool, 
                            has_hospital: bool, security: int) -> int:
@@ -102,7 +182,8 @@ class PopulationSystem:
         return max(0, min(100, int(unrest)))
     
     def process_turn(self, food_available: int, tax_rate: float,
-                    has_mosque: bool, has_hospital: bool, military_power: int):
+                    has_mosque: bool, has_hospital: bool, military_power: int,
+                    population_capacity: int = 50000):
         """Tur sonunda nüfusu güncelle"""
         audio = get_audio_manager()
         
@@ -129,12 +210,26 @@ class PopulationSystem:
             self.health = min(100, self.health + 5)
         
         # Nüfus artışı/azalışı
-        growth_modifier = self.happiness / 100 * self.growth_rate
+        total_pop = self.population.total
+        
+        # YENİ: Azalan büyüme hızı (yüksek nüfusta yavaşlar)
+        effective_growth = self.growth_rate
+        if total_pop > 100000:
+            effective_growth *= 0.25  # 100k+ → %25 hız
+        elif total_pop > 50000:
+            effective_growth *= 0.5   # 50k+ → %50 hız
+        
+        growth_modifier = self.happiness / 100 * effective_growth
         if food_shortage:
             growth_modifier = -0.05  # %5 düşüş
         
-        total_pop = self.population.total
         change = int(total_pop * growth_modifier)
+        
+        # YENİ: Kapasite limiti kontrolü
+        if total_pop + change > population_capacity:
+            change = max(0, population_capacity - total_pop)
+            if change == 0 and total_pop >= population_capacity:
+                audio.announce("Nüfus kapasitesine ulaşıldı. Daha fazla Han veya Hastane inşa edin.")
         
         # Değişimi gruplara dağıt
         if change != 0:
@@ -205,7 +300,9 @@ class PopulationSystem:
             'unrest': self.unrest,
             'active_revolt': self.active_revolt,
             'happiness_modifiers': self.happiness_modifiers,
-            'growth_rate': self.growth_rate
+            'growth_rate': self.growth_rate,
+            'migration_policy': self.migration_policy,
+            'education_level': self.education_level
         }
     
     @classmethod
@@ -219,4 +316,6 @@ class PopulationSystem:
         system.active_revolt = data['active_revolt']
         system.happiness_modifiers = data.get('happiness_modifiers', {})
         system.growth_rate = data.get('growth_rate', 0.02)
+        system.migration_policy = data.get('migration_policy', MigrationPolicy.SELECTIVE)
+        system.education_level = data.get('education_level', 1)
         return system

@@ -93,8 +93,11 @@ class MultiplayerLobbyScreen(BaseScreen):
         return self._header_font
     
     def on_enter(self):
-        from network.client import get_network_client
+        from network import get_network_client  # HTTP client
         self.network = get_network_client()
+        
+        # Network client'ı diğer ekranlarla paylaş
+        self.screen_manager._shared_network = self.network
         
         self.state = "menu"
         self._setup_main_menu()
@@ -127,7 +130,7 @@ class MultiplayerLobbyScreen(BaseScreen):
         self.main_menu.add_item("Ana Menüye Dön", self._go_back)
     
     def _setup_lobby_menu(self):
-        """Lobi menüsünü ayarla"""
+        """Lobi menüsünü ayarla (DÜZELTİLDİ: Ready yerine Eyalet Kontrolü)"""
         self.action_menu.clear()
         
         my_player = self.network.get_my_player() if self.network else None
@@ -141,16 +144,24 @@ class MultiplayerLobbyScreen(BaseScreen):
             province_name = my_player.get("province")
             self.action_menu.add_item(f"Seçilen: {province_name}", None)
         
-        # Host ise ve en az 2 kişi varsa başlat butonu
+        # Host ise başlat butonu kontrolü
         if self.network and self.network.is_host:
             players = self.network.get_players()
-            all_have_province = all(p.get("province") for p in players)
-            if len(players) >= 2 and all_have_province:
-                self.action_menu.add_item("Oyunu Başlat", self._start_game)
-            elif len(players) < 2:
+            
+            # 1. Sadece "Bağlı (Connected)" olan oyuncuları listeye al (Eski hayalet oyuncular engellemesin)
+            active_players = [p for p in players if p.get("connected")]
+            
+            # 2. "ready" durumuna BAKMA. Sadece "province" (eyalet) seçmişler mi ona bak.
+            # p.get("province") boş değilse eyalet seçmiş demektir.
+            all_have_province = all(p.get("province") for p in active_players)
+            
+            # En az 2 oyuncu var mı ve hepsinin eyaleti var mı?
+            if len(active_players) >= 2 and all_have_province:
+                self.action_menu.add_item("OYUNU BASLAT", self._start_game)
+            elif len(active_players) < 2:
                 self.action_menu.add_item("Bekleniyor... (2+ oyuncu gerekli)", None)
             else:
-                self.action_menu.add_item("Bekleniyor... (herkes eyalet seçmeli)", None)
+                self.action_menu.add_item("Bekleniyor... (Herkesin seçmesi bekleniyor)", None)
         
         self.action_menu.add_item("Mesaj Gönder", self._send_chat_prompt)
         self.action_menu.add_item("Odadan Ayrıl", self._leave_room)
@@ -179,21 +190,30 @@ class MultiplayerLobbyScreen(BaseScreen):
             return
         
         room = self.network.room_data
+        
+        # Sadece bağlı oyuncuları say
+        active_count = len([p for p in room.get('players', {}).values() if p.get('connected')])
+        
         self.players_panel.add_item("Oda Kodu", room.get("code", "???"))
-        self.players_panel.add_item("Oyuncular", f"{len(room.get('players', {}))} / 6")
+        self.players_panel.add_item("Aktif Oyuncular", f"{active_count}")
         self.players_panel.add_item("", "")
         
         for pid, player in room.get("players", {}).items():
-            status = "✅" if player.get("ready") else "⏳"
-            if not player.get("connected"):
-                status = "❌"
+            connected = player.get("connected")
+            
+            # Paneldeki işareti de "Ready"e göre değil "Eyalet var mı"ya göre yapalım
+            has_province = bool(player.get("province"))
+            status = "[Hazir]" if has_province else "[Bekliyor]"
+            
+            if not connected:
+                status = "[Cevrimdisi]"
             
             province = player.get("province", "Seçilmedi")
             name = player.get("name", "?")
             
             # Host işareti
             if pid == room.get("host_id"):
-                name = f"👑 {name}"
+                name = f"[HOST] {name}"
             
             self.players_panel.add_item(f"{status} {name}", province)
     
@@ -252,6 +272,17 @@ class MultiplayerLobbyScreen(BaseScreen):
             if self.main_menu.handle_event(event):
                 return True
         
+        elif self.state == "connecting":
+            # Bağlantı sırasında ESC ile iptal
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                    self.audio.speak("Bağlantı iptal edildi.", interrupt=True)
+                    if self.network:
+                        self.network.disconnect()
+                    self.state = "menu"
+                    self._setup_main_menu()
+                    return True
+        
         elif self.state == "lobby":
             if self.action_menu.handle_event(event):
                 return True
@@ -294,7 +325,7 @@ class MultiplayerLobbyScreen(BaseScreen):
     # ===== AKSİYONLAR =====
     
     def _create_room(self):
-        """Oda oluştur"""
+        """Oda oluştur (HTTP)"""
         if not self.network:
             self.audio.speak("Ağ bağlantısı yok.", interrupt=True)
             return
@@ -302,12 +333,20 @@ class MultiplayerLobbyScreen(BaseScreen):
         self.state = "connecting"
         self.audio.speak(f"Sunucuya bağlanılıyor: {self.server_ip}:{self.server_port}", interrupt=True)
         
+        # HTTP bağlantı testi
         if self.network.connect(self.server_ip, self.server_port):
-            self.network.create_room(self.player_name)
+            # Bağlantı başarılı - oda oluştur
+            if self.network.create_room(self.player_name):
+                self.audio.speak(f"Oda oluşturuldu! Kod: {self.network.room_code}", interrupt=True)
+                self._set_state("lobby")
+            else:
+                self.audio.speak(f"Oda oluşturulamadı: {self.network.last_error}", interrupt=True)
+                self.state = "menu"
+                self._setup_main_menu()
         else:
-            self.error_message = "Sunucuya bağlanılamadı"
-            self.audio.speak(self.error_message, interrupt=True)
+            self.audio.speak(f"Sunucuya bağlanılamadı: {self.network.last_error}", interrupt=True)
             self.state = "menu"
+            self._setup_main_menu()
     
     def _join_room_prompt(self):
         """Oda kodunu sor"""
@@ -316,19 +355,27 @@ class MultiplayerLobbyScreen(BaseScreen):
         self.room_code_input.focus()
     
     def _join_room(self, room_code: str):
-        """Odaya katıl"""
+        """Odaya katıl (HTTP)"""
         if not self.network:
             return
         
         self.state = "connecting"
-        self.audio.speak(f"Odaya katılınıyor: {room_code}", interrupt=True)
+        self.audio.speak(f"Sunucuya bağlanılıyor, oda kodu: {room_code}", interrupt=True)
         
+        # HTTP bağlantı testi
         if self.network.connect(self.server_ip, self.server_port):
-            self.network.join_room(room_code, self.player_name)
+            # Bağlantı başarılı - odaya katıl
+            if self.network.join_room(room_code, self.player_name):
+                self.audio.speak(f"Odaya katıldınız! Kod: {room_code}", interrupt=True)
+                self._set_state("lobby")
+            else:
+                self.audio.speak(f"Odaya katılınamadı: {self.network.last_error}", interrupt=True)
+                self.state = "menu"
+                self._setup_main_menu()
         else:
-            self.error_message = "Sunucuya bağlanılamadı"
-            self.audio.speak(self.error_message, interrupt=True)
+            self.audio.speak(f"Sunucuya bağlanılamadı: {self.network.last_error}", interrupt=True)
             self.state = "menu"
+            self._setup_main_menu()
     
     def _change_name(self):
         """İsim değiştir"""
@@ -355,7 +402,11 @@ class MultiplayerLobbyScreen(BaseScreen):
     def _start_game(self):
         """Oyunu başlat"""
         if self.network and self.network.is_host:
-            self.network.start_game()
+            if self.network.start_game():
+                self.audio.speak("Oyun başlıyor!", interrupt=True)
+                self.screen_manager.change_screen(ScreenType.MULTIPLAYER_GAME)
+            else:
+                self.audio.speak(f"Oyun başlatılamadı: {self.network.last_error}", interrupt=True)
     
     def _send_chat_prompt(self):
         """Mesaj gönder"""
@@ -401,6 +452,7 @@ class MultiplayerLobbyScreen(BaseScreen):
         player = data.get("player", {})
         self.audio.speak(f"{player.get('name')} ayrıldı.", interrupt=True)
         self._update_players_panel()
+        self._setup_lobby_menu()
     
     def _on_province_selected(self, data: dict):
         """Eyalet seçildi"""
@@ -418,15 +470,7 @@ class MultiplayerLobbyScreen(BaseScreen):
         self._setup_lobby_menu()
         self._setup_province_menu()
         
-        # Tüm oyuncular eyalet seçti mi kontrol et
-        if self.network and self.network.room_data:
-            players = list(self.network.room_data.get("players", {}).values())
-            all_have_province = all(p.get("province") for p in players)
-            if len(players) >= 2 and all_have_province:
-                if self.network.is_host:
-                    self.audio.speak("Tüm oyuncular eyalet seçti. Oyunu başlatabilirsiniz!", interrupt=True)
-                else:
-                    self.audio.speak("Tüm oyuncular eyalet seçti. Host oyunu başlatabilir.", interrupt=True)
+        # NOT: Burada sesli uyarı yok. Sunucudan "all_ready" gelince konuşacak.
     
     def _on_player_ready(self, data: dict):
         """Oyuncu hazır durumu değişti"""
@@ -434,10 +478,10 @@ class MultiplayerLobbyScreen(BaseScreen):
         self._setup_lobby_menu()  # Menüyü güncelle
     
     def _on_all_ready(self, data: dict):
-        """Tüm oyuncular hazır"""
+        """Tüm oyuncular hazır (DÜZELTİLDİ)"""
         msg = data.get("message", "Tüm oyuncular hazır!")
         self.audio.speak(msg, interrupt=True)
-        self._setup_lobby_menu()  # Başlat butonunu göster
+        self._setup_lobby_menu()  # Başlat butonunu GÖSTER
     
     def _on_game_started(self, data: dict):
         """Oyun başladı"""
@@ -466,6 +510,13 @@ class MultiplayerLobbyScreen(BaseScreen):
             self._set_state("lobby")
         elif self.state == "lobby":
             self._leave_room()
+        elif self.state == "connecting":
+            # Bağlantı iptal edildi
+            if self.network:
+                self.network.disconnect()
+            self.audio.speak("Bağlantı iptal edildi.", interrupt=True)
+            self.state = "menu"
+            self._setup_main_menu()
         else:
             if self.network:
                 self.network.disconnect()
@@ -475,6 +526,26 @@ class MultiplayerLobbyScreen(BaseScreen):
         # Ağ mesajlarını işle
         if self.network:
             self.network.get_pending_messages()  # Callback'ler otomatik çağrılır
+            
+            # Bağlantı durumunu kontrol et (non-blocking)
+            if self.state == "connecting":
+                if self.network.connected:
+                    # Bağlantı başarılı - bekleyen aksiyonu çalıştır
+                    if hasattr(self, '_pending_action'):
+                        if self._pending_action == "create_room":
+                            self.audio.speak("Bağlantı başarılı! Oda oluşturuluyor...", interrupt=True)
+                            self.network.create_room(self.player_name)
+                        elif self._pending_action == "join_room":
+                            self.audio.speak("Bağlantı başarılı! Odaya katılınıyor...", interrupt=True)
+                            self.network.join_room(self._pending_room_code, self.player_name)
+                        self._pending_action = None
+                elif self.network.get_connection_error():
+                    # Bağlantı başarısız
+                    error = self.network.get_connection_error()
+                    self.error_message = f"Bağlantı hatası: {error}"
+                    self.audio.speak(self.error_message, interrupt=True)
+                    self.state = "menu"
+                    self._setup_main_menu()
             
             if self.state == "lobby":
                 self._update_players_panel()

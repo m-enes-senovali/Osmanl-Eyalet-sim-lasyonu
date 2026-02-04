@@ -1,11 +1,21 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "game_id": "ad3814e4",
   "save_slot": 3,
+  "player": {
+    "name": "Kasım",
+    "gender": "male",
+    "birth_year": 1490,
+    "prestige": 50,
+    "experience": 0,
+    "background": "default",
+    "turns_as_governor": 0
+  },
   "province": {
     "name": "Rum Eyaleti",
     "capital": "Sivas",
-    "region": "Anadolu"
+    "region": "Anadolu",
+    "is_coastal": false
   },
   "time": {
     "year": 1521,
@@ -14,44 +24,73 @@
   },
   "economy": {
     "resources": {
-      "gold": 13785,
+      "gold": 13685,
       "food": 5778,
       "wood": 3900,
-      "iron": 1400
+      "iron": 1400,
+      "stone": 1000,
+      "rope": 500,
+      "tar": 300,
+      "sailcloth": 200
+    },
+    "market": {
+      "grain_price": 1.0,
+      "silk_price": 10.0,
+      "spice_price": 15.0,
+      "cloth_price": 5.0,
+      "salt_price": 2.0,
+      "copper_price": 3.0
     },
     "tax_rate": 0.2,
     "trade_level": 1,
+    "inflation_rate": 0.0,
+    "active_trade_routes": [
+      "black_sea"
+    ],
     "tax_modifier": 1.0,
     "trade_modifier": 5.5,
     "expense_modifier": 1.0
   },
   "military": {
     "units": {
-      "sipahi": 54,
       "yenicheri": 28,
-      "azap": 98,
+      "kapikulu_sipahi": 20,
       "topcu": 5,
-      "akinci": 18
+      "cebeci": 10,
+      "timarli_sipahi": 50,
+      "akinci": 18,
+      "azap": 98,
+      "kadirga": 0,
+      "levent": 0
     },
     "training_queue": [],
     "morale": 100,
+    "experience": 0,
     "at_war": false,
     "total_losses": 0,
-    "total_victories": 0
+    "total_victories": 0,
+    "timar_capacity": 100,
+    "available_timars": 50,
+    "has_port": false,
+    "port_level": 0,
+    "commanders": []
   },
   "population": {
     "population": {
       "farmers": 8784,
       "merchants": 2922,
       "artisans": 2188,
-      "soldiers": 723
+      "soldiers": 723,
+      "scholars": 200
     },
     "happiness": 95,
     "health": 100,
     "unrest": 4,
     "active_revolt": false,
     "happiness_modifiers": {},
-    "growth_rate": 0.02
+    "growth_rate": 0.02,
+    "migration_policy": "selective",
+    "education_level": 1
   },
   "construction": {
     "buildings": {
@@ -90,19 +129,29 @@
     "neighbors": {
       "Karaman": {
         "value": 30,
-        "type": "neutral"
+        "type": "neutral",
+        "personality": "mercantile"
       },
       "Dulkadir": {
         "value": 10,
-        "type": "neutral"
+        "type": "neutral",
+        "personality": "mercantile"
       },
       "Akkoyunlu": {
         "value": -20,
-        "type": "neutral"
+        "type": "neutral",
+        "personality": "mercantile"
       }
     },
     "active_missions": [],
-    "envoy_cooldown": 0
+    "envoy_cooldown": 0,
+    "vassals": [],
+    "marriage_alliances": [],
+    "prestige": 100,
+    "prestige_history": [],
+    "event_chains": [],
+    "completed_chains": [],
+    "relationship_momentum": []
   },
   "events": {
     "event_history": [
@@ -110,6 +159,254 @@
       "drought"
     ],
     "events_this_year": 1,
-    "current_event_id": null
+    "current_event_id": null,
+    "event_memory": {},
+    "pending_triggers": []
+  },
+  "warfare": {
+    "war_weariness": 0,
+    "battle_counter": 0,
+    "war_history": [],
+    "player_tactic_history": []
+  },
+  "trade": {
+    "trade_agreements": {},
+    "total_trade_income": 0,
+    "caravans_lost": 0,
+    "caravans_completed": 0,
+    "caravan_counter": 0,
+    "has_port": false,
+    "port_level": 0,
+    "market_prices": {
+      "ipek": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      },
+      "baharat": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      },
+      "kumaş": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      },
+      "demir": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      },
+      "kereste": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      },
+      "tuz": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      },
+      "tahıl": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      },
+      "mücevher": {
+        "multiplier": 1.0,
+        "trend": 0.0
+      }
+    },
+    "merchant_relations": {
+      "venedik": 50,
+      "ceneviz": 45,
+      "safevi": 30,
+      "ozbek": 40,
+      "gucerat": 45,
+      "ragusa": 55,
+      "portekiz": 25
+    },
+    "inventory": {
+      "ipek": 0,
+      "baharat": 0,
+      "kumaş": 0,
+      "demir": 0,
+      "kereste": 0,
+      "tuz": 0,
+      "tahıl": 0,
+      "mücevher": 0
+    },
+    "active_caravans": []
+  },
+  "workers": {
+    "workers": [
+      {
+        "name": "Ahmet",
+        "type": "farmer",
+        "skill": 5,
+        "task": "farming",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Mehmet",
+        "type": "farmer",
+        "skill": 5,
+        "task": "farming",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Mustafa",
+        "type": "farmer",
+        "skill": 5,
+        "task": "farming",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Ali",
+        "type": "farmer",
+        "skill": 5,
+        "task": "farming",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Hüseyin",
+        "type": "miner",
+        "skill": 5,
+        "task": "mining",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Hasan",
+        "type": "miner",
+        "skill": 5,
+        "task": "mining",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Osman",
+        "type": "lumberjack",
+        "skill": 5,
+        "task": "logging",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Yusuf",
+        "type": "lumberjack",
+        "skill": 5,
+        "task": "logging",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "İbrahim",
+        "type": "craftsman",
+        "skill": 5,
+        "task": "construction",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "Mahmut",
+        "type": "merchant",
+        "skill": 5,
+        "task": "trading",
+        "efficiency": 1.5,
+        "turns": 4942,
+        "experience": 100
+      },
+      {
+        "name": "ekrem",
+        "type": "farmer",
+        "skill": 5,
+        "task": "farming",
+        "efficiency": 1.5,
+        "turns": 204,
+        "experience": 100
+      }
+    ],
+    "name_index": 10
+  },
+  "naval": {
+    "ships": [],
+    "construction_queue": [],
+    "total_ships_built": 0,
+    "naval_victories": 0,
+    "naval_defeats": 0,
+    "ships_lost": 0
+  },
+  "artillery": {
+    "cannons": [],
+    "production_queue": [],
+    "total_cannons_produced": 0,
+    "cannons_destroyed": 0
+  },
+  "espionage": {
+    "spies": [],
+    "active_missions": [],
+    "spy_counter": 0,
+    "mission_counter": 0,
+    "intelligence_level": 0,
+    "security_level": 50,
+    "known_enemy_spies": 0,
+    "successful_missions": 0,
+    "failed_missions": 0,
+    "spies_lost": 0
+  },
+  "religion": {
+    "millet_states": {
+      "muslim": {
+        "loyalty": 80,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 0
+      },
+      "rum": {
+        "loyalty": 50,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      },
+      "ermeni": {
+        "loyalty": 60,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      },
+      "yahudi": {
+        "loyalty": 70,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      },
+      "suryani": {
+        "loyalty": 55,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      }
+    },
+    "ulema": [],
+    "vakifs": [],
+    "ulema_counter": 0,
+    "vakif_counter": 0,
+    "piety": 50,
+    "legitimacy": 70,
+    "tolerance": 60,
+    "education_level": 30,
+    "kizilbas_threat": 30,
+    "kizilbas_suppressed": false,
+    "has_seyhulislam": true,
+    "conversions": 0,
+    "rebellions_suppressed": 0
   }
 }

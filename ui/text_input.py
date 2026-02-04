@@ -70,11 +70,11 @@ class AccessibleTextInput:
             return False
         
         if event.type == pygame.KEYDOWN:
-            # Enter - Onay
+            # Enter - Onay (parent ekrana bırak)
             if event.key == pygame.K_RETURN:
                 self.audio.play_ui_sound('enter')  # Enter sesi
-                self.audio.speak(f"Girilen: {self.text}", interrupt=True)
-                return True
+                # Parent ekranın işleyebilmesi için False döndür
+                return False
             
             # Escape - İptal
             if event.key == pygame.K_ESCAPE:

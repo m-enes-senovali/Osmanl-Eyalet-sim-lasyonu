@@ -40,6 +40,38 @@ class Worker:
     current_task: TaskType = TaskType.IDLE
     efficiency: float = 1.0  # Verimlilik çarpanı
     turns_on_task: int = 0
+    experience: int = 0  # 0-100 deneyim puanı
+    
+    # Seviye için gereken deneyim eşikleri
+    LEVEL_THRESHOLDS = [0, 20, 40, 60, 80]  # Level 1, 2, 3, 4, 5
+    
+    def gain_experience(self, amount: int = 1) -> bool:
+        """Deneyim kazan, seviye atladıysa True döndür"""
+        if self.current_task == TaskType.IDLE:
+            return False  # Boşta deneyim kazanılmaz
+        
+        old_level = self.skill_level
+        self.experience = min(100, self.experience + amount)
+        
+        # Seviye kontrolü
+        for level, threshold in enumerate(self.LEVEL_THRESHOLDS):
+            if self.experience >= threshold:
+                self.skill_level = max(self.skill_level, level + 1)
+        
+        self.skill_level = min(5, self.skill_level)  # Max 5
+        return self.skill_level > old_level
+    
+    def get_experience_progress(self) -> str:
+        """Sonraki seviyeye ilerleme yüzdesi"""
+        if self.skill_level >= 5:
+            return "MAX"
+        next_threshold = self.LEVEL_THRESHOLDS[self.skill_level]
+        current = self.experience
+        if self.skill_level > 1:
+            prev_threshold = self.LEVEL_THRESHOLDS[self.skill_level - 1]
+            current -= prev_threshold
+            next_threshold -= prev_threshold
+        return f"{int((current / next_threshold) * 100)}%"
     
     def get_production(self) -> int:
         """Tur başına üretim miktarı"""
@@ -52,34 +84,50 @@ class Worker:
             WorkerType.ENVOY: 0       # Özel etki
         }
         base = base_production.get(self.worker_type, 0)
-        return int(base * self.skill_level * self.efficiency)
+        # Deneyim bonusu: her 20 deneyim %5 ekstra
+        exp_bonus = 1.0 + (self.experience / 400)  # Max %25 bonus
+        return int(base * self.skill_level * self.efficiency * exp_bonus)
     
     def get_bonus(self) -> Dict[str, float]:
         """Özel bonuslar"""
         bonuses = {}
         
+        # Deneyim çarpanı
+        exp_multiplier = 1.0 + (self.experience / 200)  # Max %50 bonus
+        
         if self.worker_type == WorkerType.CRAFTSMAN:
             # İnşaat hızı bonusu
-            bonuses['construction_speed'] = 0.1 * self.skill_level
+            bonuses['construction_speed'] = 0.1 * self.skill_level * exp_multiplier
         
         elif self.worker_type == WorkerType.MERCHANT:
             # Ticaret bonusu
-            bonuses['trade_bonus'] = 0.05 * self.skill_level
+            bonuses['trade_bonus'] = 0.05 * self.skill_level * exp_multiplier
         
         elif self.worker_type == WorkerType.ENVOY:
             # Diplomasi bonusu
-            bonuses['diplomacy_bonus'] = 0.03 * self.skill_level
+            bonuses['diplomacy_bonus'] = 0.03 * self.skill_level * exp_multiplier
         
         return bonuses
 
 
-# Türk isimleri
-TURKISH_NAMES = [
+# Türk isimleri - Erkek
+TURKISH_MALE_NAMES = [
     "Ahmet", "Mehmet", "Mustafa", "Ali", "Hüseyin",
     "Hasan", "Osman", "Yusuf", "İbrahim", "Mahmut",
     "Süleyman", "Halil", "Recep", "Kemal", "Cemal",
     "Fatih", "Serkan", "Emre", "Murat", "Can"
 ]
+
+# Türk isimleri - Kadın
+TURKISH_FEMALE_NAMES = [
+    "Fatma", "Ayşe", "Hatice", "Zeynep", "Emine",
+    "Meryem", "Hacer", "Hanife", "Şerife", "Havva",
+    "Sultan", "Esma", "Güler", "Nuriye", "Halime",
+    "Selma", "Safiye", "Zeliha", "Rukiye", "Saliha"
+]
+
+# Geriye uyumluluk için
+TURKISH_NAMES = TURKISH_MALE_NAMES
 
 
 class WorkerSystem:
@@ -87,19 +135,10 @@ class WorkerSystem:
     
     def __init__(self):
         self.workers: List[Worker] = []
-        self.base_max_workers = 10  # Minimum işçi kapasitesi
-        self.max_workers = 10
         self.name_index = 0
         
         # Başlangıç işçileri
         self._initialize_starting_workers()
-    
-    def update_max_workers_from_population(self, population: int):
-        """Nüfusa göre maksimum işçi kapasitesini güncelle"""
-        # Her 1000 nüfus = 1 potansiyel işçi
-        calculated = population // 1000
-        # Minimum 10, maksimum 100
-        self.max_workers = max(self.base_max_workers, min(100, calculated))
     
     def _initialize_starting_workers(self):
         """Başlangıç işçilerini oluştur"""
@@ -128,11 +167,7 @@ class WorkerSystem:
         return name
     
     def hire_worker(self, worker_type: WorkerType, skill: int = 1) -> Optional[Worker]:
-        """Yeni işçi kirala"""
-        if len(self.workers) >= self.max_workers:
-            audio = get_audio_manager()
-            audio.speak("Maksimum işçi sayısına ulaşıldı.", interrupt=True)
-            return None
+        """Yeni işçi kirala (sınır yok)"""
         
         worker = Worker(
             name=self._get_next_name(),
@@ -202,9 +237,18 @@ class WorkerSystem:
             'trade_bonus': 0.0,
             'diplomacy_bonus': 0.0
         }
+        level_ups = []
+        
+        audio = get_audio_manager()
         
         for worker in self.workers:
             worker.turns_on_task += 1
+            
+            # Deneyim kazan (çalışan işçiler)
+            if worker.current_task != TaskType.IDLE:
+                leveled_up = worker.gain_experience(1)
+                if leveled_up:
+                    level_ups.append((worker.name, worker.skill_level))
             
             # Uzun süreli görev bonusu
             if worker.turns_on_task > 5:
@@ -223,7 +267,11 @@ class WorkerSystem:
                 if key in bonuses:
                     bonuses[key] += value
         
-        return {'production': production, 'bonuses': bonuses}
+        # Seviye atlayan işçileri duyur
+        for name, level in level_ups:
+            audio.speak(f"{name} seviye {level} oldu!", interrupt=False)
+        
+        return {'production': production, 'bonuses': bonuses, 'level_ups': level_ups}
     
     def get_worker_count_by_type(self) -> Dict[WorkerType, int]:
         """Tür bazında işçi sayısı"""
@@ -314,7 +362,8 @@ class WorkerSystem:
                     'skill': w.skill_level,
                     'task': w.current_task.value,
                     'efficiency': w.efficiency,
-                    'turns': w.turns_on_task
+                    'turns': w.turns_on_task,
+                    'experience': w.experience
                 }
                 for w in self.workers
             ],
@@ -335,7 +384,8 @@ class WorkerSystem:
                 skill_level=w_data['skill'],
                 current_task=TaskType(w_data['task']),
                 efficiency=w_data.get('efficiency', 1.0),
-                turns_on_task=w_data.get('turns', 0)
+                turns_on_task=w_data.get('turns', 0),
+                experience=w_data.get('experience', 0)
             )
             system.workers.append(worker)
         

@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Ağ modülü"""
+"""Ağ modülü - HTTP Polling (basit ve güvenilir)"""
 
-from network.client import NetworkClient, get_network_client
+# HTTP Polling istemcisi (yeni, basit sistem)
+from network.client_http import HTTPNetworkClient
 
-__all__ = ['NetworkClient', 'get_network_client']
+# Uyumluluk için eski isimlerle export
+NetworkClient = HTTPNetworkClient
+
+def get_network_client():
+    """Ağ istemcisi oluştur"""
+    return HTTPNetworkClient()
+
+__all__ = ['NetworkClient', 'HTTPNetworkClient', 'get_network_client']
+

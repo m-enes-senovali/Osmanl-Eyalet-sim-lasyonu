@@ -1,0 +1,27 @@
+{
+  "completed": true,
+  "skipped": false,
+  "current_step": 20,
+  "completed_steps": [
+    "basics_1",
+    "basics_2",
+    "basics_3",
+    "basics_4",
+    "basics_5",
+    "economy_1",
+    "economy_2",
+    "economy_3",
+    "economy_4",
+    "economy_5",
+    "economy_6",
+    "military_1",
+    "military_2",
+    "military_3",
+    "military_4",
+    "military_5",
+    "diplomacy_1",
+    "diplomacy_2",
+    "diplomacy_3",
+    "diplomacy_4"
+  ]
+}

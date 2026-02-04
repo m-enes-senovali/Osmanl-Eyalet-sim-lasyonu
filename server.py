@@ -135,7 +135,8 @@ class GameRoom:
             "game_started": self.game_started,
             "current_turn": self.current_turn,
             "current_player_id": self.current_player_id,
-            "available_provinces": self.get_available_provinces()
+            "available_provinces": self.get_available_provinces(),
+            "game_state": self.game_state  # İttifak/savaş durumları için
         }
 
 
@@ -452,7 +453,7 @@ class GameServer:
                 "war_id": war_id,
                 "attacker": player.to_dict(),
                 "defender": target.to_dict(),
-                "message": f"⚔️ {player.name} ({player.province}), {target.name} ({target.province})'e savaş ilan etti!"
+                "message": f"{player.name} ({player.province}), {target.name} ({target.province})'e savas ilan etti!"
             })
             return {"type": "success", "message": "Savaş ilan edildi"}
         
@@ -472,13 +473,13 @@ class GameServer:
                 attacker_losses = int(attacker_army * random.uniform(0.1, 0.3))
                 defender_losses = int(defender_army * random.uniform(0.4, 0.7))
                 winner = "attacker"
-                result_msg = f"🏆 {player.name} savaşı kazandı!"
+                result_msg = f"{player.name} savasi kazandi!"
             else:
                 # Savunan kazandı
                 attacker_losses = int(attacker_army * random.uniform(0.4, 0.7))
                 defender_losses = int(defender_army * random.uniform(0.1, 0.3))
                 winner = "defender"
-                result_msg = f"🛡️ {target.name} savunmayı başardı!"
+                result_msg = f"{target.name} savunmayi basardi!"
             
             # Kayıpları uygula
             player.game_state["army"] = max(0, attacker_army - attacker_losses)
@@ -517,7 +518,7 @@ class GameServer:
                 "type": "alliance_formed",
                 "player1": player.to_dict(),
                 "player2": target.to_dict(),
-                "message": f"🤝 {player.name} ve {target.name} ittifak kurdu!"
+                "message": f"{player.name} ve {target.name} ittifak kurdu!"
             })
             return {"type": "success", "message": "İttifak kuruldu"}
         
@@ -542,7 +543,7 @@ class GameServer:
                 "type": "trade_agreement_formed",
                 "player1": player.to_dict(),
                 "player2": target.to_dict(),
-                "message": f"💰 {player.name} ve {target.name} ticaret anlaşması imzaladı!"
+                "message": f"{player.name} ve {target.name} ticaret anlasmasi imzaladi!"
             })
             return {"type": "success", "message": "Ticaret anlaşması kuruldu"}
         

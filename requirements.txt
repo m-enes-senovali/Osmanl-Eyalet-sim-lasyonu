@@ -1,3 +1,6 @@
 pygame>=2.5.0
 accessible_output2>=0.17
 websockets>=12.0
+requests>=2.31.0
+flask>=3.0.0
+flask-cors>=4.0.0

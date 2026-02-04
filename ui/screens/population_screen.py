@@ -147,7 +147,7 @@ class PopulationScreen(BaseScreen):
     def draw(self, surface: pygame.Surface):
         # Başlık
         header_font = self.get_header_font()
-        title = header_font.render("👥 HALK YÖNETİMİ", True, COLORS['gold'])
+        title = header_font.render("HALK YONETIMI", True, COLORS['gold'])
         surface.blit(title, (20, 20))
         
         # Paneller
@@ -244,4 +244,7 @@ class PopulationScreen(BaseScreen):
     
     def _go_back(self):
         """Geri dön"""
-        self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
+        if getattr(self.screen_manager, 'is_multiplayer_mode', False):
+            self.screen_manager.change_screen(ScreenType.MULTIPLAYER_GAME)
+        else:
+            self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)

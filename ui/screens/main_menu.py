@@ -27,6 +27,7 @@ class MainMenuScreen(BaseScreen):
         self.menu.add_item("Yeni Oyun", self._on_new_game, "n")
         self.menu.add_item("Devam Et", self._on_continue, "c")
         self.menu.add_item("Çok Oyunculu", self._on_multiplayer, "m")
+        self.menu.add_item("Eğitim", self._on_tutorial, "e")
         self.menu.add_item("Ayarlar", self._on_settings, "a")
         self.menu.add_item("Hakkında", self._on_about, "h")
         self.menu.add_item("Çıkış", self._on_exit, "q")
@@ -102,8 +103,8 @@ class MainMenuScreen(BaseScreen):
         surface.blit(info, info_rect)
     
     def _on_new_game(self):
-        """Yeni oyun başlat - eyalet seçim ekranına git"""
-        self.screen_manager.change_screen(ScreenType.PROVINCE_SELECT)
+        """Yeni oyun başlat - karakter oluşturma ekranına git"""
+        self.screen_manager.change_screen(ScreenType.CHARACTER_CREATION)
     
     def _on_continue(self):
         """Kayıtlı oyuna devam et - yuva seçim ekranını aç"""
@@ -117,15 +118,19 @@ class MainMenuScreen(BaseScreen):
         """Çok oyunculu lobi ekranına git"""
         self.screen_manager.change_screen(ScreenType.MULTIPLAYER)
     
+    def _on_tutorial(self):
+        """Eğitim ekranına git"""
+        self.screen_manager.change_screen(ScreenType.TUTORIAL)
+    
     def _on_settings(self):
-        """Ayarlar ekranı"""
-        self.audio.speak("Ayarlar ekranı henüz hazır değil")
+        """Ayarlar ekranına git"""
+        self.screen_manager.change_screen(ScreenType.SETTINGS)
     
     def _on_about(self):
         """Oyun hakkında bilgi"""
         self.audio.speak(
             "Osmanlı Eyalet Yönetim Simülasyonu. "
-            "Versiyon: Kapalı Beta 1.0. "
+            "Versiyon: Kapalı Beta 3.0. "
             "Bu oyun Muhammet Enes Şenovalı tarafından geliştirilmektedir. "
             "Oyun 1520 yılında, Kanuni Sultan Süleyman döneminde geçmektedir. "
             "Görme engelli oyuncular için tam erişilebilirlik desteği sunulmaktadır. "

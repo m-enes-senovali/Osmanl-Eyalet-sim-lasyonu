@@ -211,14 +211,14 @@ class EventPopupScreen(BaseScreen):
         
         # Olay türü ikonu
         type_icons = {
-            'economic': '💰',
-            'military': '⚔',
-            'population': '👥',
-            'diplomatic': '🤝',
-            'natural': '🌍',
-            'opportunity': '⭐'
+            'economic': '[EKO]',
+            'military': '[ASK]',
+            'population': '[HLK]',
+            'diplomatic': '[DIP]',
+            'natural': '[DOG]',
+            'opportunity': '[FRS]'
         }
-        icon = type_icons.get(event.event_type.value, '❓')
+        icon = type_icons.get(event.event_type.value, '[?]')
         
         # Başlık
         title_font = self.get_title_font()

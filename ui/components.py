@@ -567,3 +567,300 @@ class Tooltip:
         # Metin
         text_rect.topleft = (bg_rect.left + padding, bg_rect.top + padding)
         surface.blit(text_surface, text_rect)
+
+
+class HierarchicalMenu:
+    """
+    Hiyerarşik alt menü desteği olan erişilebilir menü.
+    
+    Navigasyon:
+    - Yukarı/Aşağı: Öğeler arası gezin
+    - Enter: Alt menüye gir / Eylemi uygula
+    - Backspace/Escape: Üst menüye dön
+    """
+    
+    def __init__(self, x: int, y: int, width: int, item_height: int = 40):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.item_height = item_height
+        
+        # Menü yığını - her seviye bir dict listesi
+        # Her öğe: {'text': str, 'callback': func, 'submenu': list veya None}
+        self.menu_stack = []
+        self.root_menu = []
+        self.selected_index = 0
+        
+        self.audio = get_audio_manager()
+        self._font = None
+        self._announced = False
+    
+    def get_font(self):
+        if self._font is None:
+            self._font = pygame.font.Font(None, FONTS['body'])
+        return self._font
+    
+    def set_menu(self, items: list):
+        """
+        Kök menüyü ayarla.
+        items: [{'text': str, 'callback': func veya None, 'submenu': list veya None}, ...]
+        """
+        self.root_menu = items
+        self.menu_stack = []
+        self.selected_index = 0
+        self._announced = False
+    
+    def add_category(self, text: str, items: list):
+        """
+        Kategorili alt menü ekle.
+        items: [{'text': str, 'callback': func}, ...]
+        """
+        # Otomatik geri butonu ekle
+        submenu_items = items.copy()
+        submenu_items.append({'text': '-- Geri --', 'callback': None, 'submenu': None, 'is_back': True})
+        
+        self.root_menu.append({
+            'text': text,
+            'callback': None,
+            'submenu': submenu_items
+        })
+    
+    def add_action(self, text: str, callback):
+        """Direkt eylem ekle (alt menüsüz)."""
+        self.root_menu.append({
+            'text': text,
+            'callback': callback,
+            'submenu': None
+        })
+    
+    def add_separator(self):
+        """Ayırıcı ekle."""
+        self.root_menu.append({
+            'text': '',
+            'callback': None,
+            'submenu': None,
+            'is_separator': True
+        })
+    
+    def add_back_button(self):
+        """Ana ekrana dönüş butonu ekle."""
+        self.root_menu.append({
+            'text': '-- Ana Ekrana Dön --',
+            'callback': None,
+            'submenu': None,
+            'is_main_back': True
+        })
+    
+    def clear(self):
+        """Menüyü temizle."""
+        self.root_menu = []
+        self.menu_stack = []
+        self.selected_index = 0
+    
+    def get_current_menu(self) -> list:
+        """Mevcut görüntülenen menüyü al."""
+        if self.menu_stack:
+            return self.menu_stack[-1]['items']
+        return self.root_menu
+    
+    def get_current_title(self) -> str:
+        """Mevcut menü başlığını al."""
+        if self.menu_stack:
+            return self.menu_stack[-1]['title']
+        return "Ana Menü"
+    
+    def _is_valid_item(self, item: dict) -> bool:
+        """Öğenin geçerli (seçilebilir) olup olmadığını kontrol et."""
+        if item.get('is_separator', False):
+            return False
+        if not item.get('text', '').strip():
+            return False
+        return True
+    
+    def _find_next_valid(self, start: int, direction: int) -> int:
+        """Bir sonraki geçerli öğeyi bul."""
+        menu = self.get_current_menu()
+        if not menu:
+            return 0
+        
+        index = start
+        for _ in range(len(menu)):
+            index = (index + direction) % len(menu)
+            if self._is_valid_item(menu[index]):
+                return index
+        return start
+    
+    def _announce_current(self):
+        """Seçili öğeyi duyur."""
+        menu = self.get_current_menu()
+        if not menu or self.selected_index >= len(menu):
+            return
+        
+        item = menu[self.selected_index]
+        text = item.get('text', '')
+        
+        # Alt menü varsa belirt
+        if item.get('submenu'):
+            text += ". Alt menü, Enter ile açın."
+        elif item.get('is_back') or item.get('is_main_back'):
+            text += ". Geri dönmek için Enter."
+        elif item.get('callback'):
+            text += ". Seçmek için Enter."
+        
+        self.audio.speak(text, interrupt=True)
+    
+    def _announce_menu_enter(self, title: str, count: int):
+        """Alt menüye giriş duyurusu."""
+        self.audio.speak(f"{title} menüsü. {count} öğe.", interrupt=True)
+    
+    def _announce_menu_exit(self):
+        """Üst menüye dönüş duyurusu."""
+        title = self.get_current_title()
+        self.audio.speak(f"Geri: {title}", interrupt=True)
+    
+    def handle_event(self, event):
+        """
+        Olayları işle.
+        Returns: 
+            True - olay işlendi
+            False - ana ekrana dönülmeli
+            None - olay işlenmedi
+        """
+        menu = self.get_current_menu()
+        if not menu:
+            return None  # Menü boşsa işleme
+        
+        if event.type == pygame.KEYDOWN:
+            # Yukarı - Önceki öğe
+            if event.key == pygame.K_UP:
+                self.selected_index = self._find_next_valid(self.selected_index, -1)
+                self._announce_current()
+                return True
+            
+            # Aşağı - Sonraki öğe
+            if event.key == pygame.K_DOWN:
+                self.selected_index = self._find_next_valid(self.selected_index, 1)
+                self._announce_current()
+                return True
+            
+            # Enter - Seç / Alt menüye gir
+            if event.key == pygame.K_RETURN:
+                if self.selected_index < len(menu):
+                    item = menu[self.selected_index]
+                    
+                    # Geri butonu
+                    if item.get('is_back'):
+                        self.audio.play_ui_sound('click')
+                        return self._go_back()
+                    
+                    # Ana ekrana dönüş
+                    if item.get('is_main_back'):
+                        self.audio.play_ui_sound('click')
+                        return False  # Ana ekrana dön sinyali
+                    
+                    # Alt menü varsa aç
+                    if item.get('submenu'):
+                        self.audio.play_ui_sound('click')
+                        self.menu_stack.append({
+                            'title': item['text'],
+                            'items': item['submenu']
+                        })
+                        self.selected_index = 0
+                        self._announce_menu_enter(item['text'], len(item['submenu']))
+                        return True
+                    
+                    # Callback varsa çalıştır
+                    if item.get('callback'):
+                        self.audio.play_ui_sound('click')
+                        item['callback']()
+                        return True
+                
+                return True
+            
+            # Backspace veya Escape - Geri
+            if event.key in (pygame.K_BACKSPACE, pygame.K_ESCAPE):
+                self.audio.play_ui_sound('click')
+                result = self._go_back()
+                if not result:
+                    return False  # Ana ekrana dön sinyali
+                return True
+        
+        return None  # Olay işlenmedi
+    
+    def _go_back(self) -> bool:
+        """
+        Üst menüye dön.
+        Returns: True ise hala menüdeyiz, False ise ana ekrana dönülmeli
+        """
+        if self.menu_stack:
+            self.menu_stack.pop()
+            self.selected_index = 0
+            self._announce_menu_exit()
+            return True
+        return False  # Kök menüdeyiz, ana ekrana dön
+    
+    def announce_menu(self):
+        """Mevcut menüyü duyur."""
+        menu = self.get_current_menu()
+        title = self.get_current_title()
+        count = len([i for i in menu if self._is_valid_item(i)])
+        self.audio.speak(f"{title}. {count} öğe. Yukarı aşağı ok ile gezin, Enter ile seçin.", interrupt=True)
+    
+    def update(self):
+        """Her frame çağrılır, ilk duyuruyu yapar."""
+        if not self._announced:
+            self.announce_menu()
+            self._announced = True
+    
+    def draw(self, surface: pygame.Surface):
+        """Menüyü çiz."""
+        menu = self.get_current_menu()
+        if not menu:
+            return
+        
+        font = self.get_font()
+        
+        # Başlık
+        title = self.get_current_title()
+        if self.menu_stack:
+            title_surface = font.render(f"[{title}]", True, COLORS['gold'])
+            surface.blit(title_surface, (self.x, self.y - 30))
+        
+        # Öğeleri çiz
+        visible_start = max(0, self.selected_index - 5)
+        visible_end = min(len(menu), visible_start + 12)
+        
+        for i, item in enumerate(menu[visible_start:visible_end]):
+            actual_index = visible_start + i
+            y_pos = self.y + (i * self.item_height)
+            
+            # Ayırıcı
+            if item.get('is_separator', False) or not item.get('text', '').strip():
+                continue
+            
+            # Arka plan
+            item_rect = pygame.Rect(self.x, y_pos, self.width, self.item_height - 5)
+            
+            if actual_index == self.selected_index:
+                pygame.draw.rect(surface, COLORS['button_hover'], item_rect, border_radius=5)
+                pygame.draw.rect(surface, COLORS['gold'], item_rect, width=2, border_radius=5)
+            else:
+                pygame.draw.rect(surface, COLORS['button_normal'], item_rect, border_radius=5)
+            
+            # Metin
+            text = item.get('text', '')
+            color = COLORS['gold'] if actual_index == self.selected_index else COLORS['text']
+            
+            # Geri butonu farklı renk
+            if item.get('is_back') or item.get('is_main_back'):
+                color = COLORS['warning'] if actual_index == self.selected_index else COLORS['text_dim']
+            
+            text_surface = font.render(text, True, color)
+            text_rect = text_surface.get_rect(left=item_rect.left + 15, centery=item_rect.centery)
+            surface.blit(text_surface, text_rect)
+            
+            # Alt menü göstergesi
+            if item.get('submenu'):
+                arrow = font.render(">", True, color)
+                arrow_rect = arrow.get_rect(right=item_rect.right - 10, centery=item_rect.centery)
+                surface.blit(arrow, arrow_rect)

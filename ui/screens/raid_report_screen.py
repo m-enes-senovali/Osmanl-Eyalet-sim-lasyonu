@@ -300,9 +300,9 @@ class RaidReportScreen(BaseScreen):
         header_font = self.get_header_font()
         
         if self.raid_story:
-            title_text = f"⚔️ AKIN RAPORU: {self.raid_story.target_name}"
+            title_text = f"AKIN RAPORU: {self.raid_story.target_name}"
         else:
-            title_text = "⚔️ AKIN RAPORU"
+            title_text = "AKIN RAPORU"
         
         title = header_font.render(title_text, True, COLORS['gold'])
         surface.blit(title, (50, 30))

@@ -7,6 +7,11 @@ Osmanlı Eyalet Yönetim Simülasyonu - Yapılandırma
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
+
+# Sürüm Bilgisi (Güncelleme Sistemi için)
+VERSION = "1.0.0"
+GITHUB_REPO = "rodoslavaleksandrov/Osmanl-Eyalet-sim-lasyonu"
+
 GAME_TITLE = "Osmanlı Eyalet Yönetimi"
 
 # Renk Paleti (Osmanlı Motifleri)
@@ -19,6 +24,7 @@ COLORS = {
     'gold': (218, 165, 32),              # Altın
     'text': (245, 240, 230),             # Krem beyaz
     'text_dark': (60, 50, 45),           # Koyu metin
+    'text_dim': (150, 145, 140),         # Soluk metin
     'success': (34, 139, 34),            # Yeşil
     'danger': (178, 34, 34),             # Kırmızı
     'warning': (218, 165, 32),           # Altın sarı
@@ -89,9 +95,24 @@ FONTS = {
     'tooltip': 16,
 }
 
-# Çok Oyunculu Ayarları
+# Çok Oyunculu Ayarları (HTTP Polling)
 MULTIPLAYER = {
     # Varsayılan sunucu - VDS IP adresinizi buraya yazın
-    'default_server': '45.59.70.212',
-    'default_port': 7947,
+    'default_server': '127.0.0.1',  # Localhost test için
+    'default_port': 5000,  # HTTP sunucu portu
+}
+
+# Zafer Koşulları (Oyun Sonu Hedefleri)
+VICTORY_CONDITIONS = {
+    # Ekonomik zafer: Bu kadar altın biriktir
+    'economic_gold': 500000,
+    
+    # Askeri zafer: Bu kadar düşman yenilgisi
+    'military_victories': 10,
+    
+    # Diplomatik zafer: Bu kadar ittifak
+    'diplomatic_alliances': 5,
+    
+    # Hakimiyet zafer: Kapasitenin bu kadar katına ulaş
+    'dominance_population_multiplier': 3,  # 3x kapasite = 150k+
 }
