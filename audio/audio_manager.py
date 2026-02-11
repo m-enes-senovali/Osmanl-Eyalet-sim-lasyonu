@@ -7,6 +7,7 @@ NVDA ve diğer ekran okuyucu desteği ile.
 import os
 import pygame
 from config import AUDIO, ACCESSIBILITY
+from game.game_settings import get_settings
 
 # Erişilebilirlik için accessible_output2
 try:
@@ -33,9 +34,16 @@ class AudioManager:
             return
         
         self._initialized = True
-        self.music_volume = AUDIO['music_volume']
-        self.sfx_volume = AUDIO['sfx_volume']
-        self.ui_volume = AUDIO['ui_volume']
+        settings = get_settings()
+        self.music_volume = settings.get('music_volume') / 100.0
+        self.sfx_volume = settings.get('sfx_volume') / 100.0
+        self.ui_volume = self.sfx_volume # UI sesleri SFX ses seviyesini kullanır
+        
+        # Müzik/SFX kapalıysa sesi 0 yap
+        if not settings.get('music_enabled'):
+            self.music_volume = 0.0
+        if not settings.get('sfx_enabled'):
+            self.sfx_volume = 0.0
         
         # Ses dosyaları önbelleği
         self.sounds = {}
@@ -112,7 +120,7 @@ class AudioManager:
         """UI ses efekti çal (click, hover, notification)"""
         sound_name = f"ui_{sound_type}"
         if sound_name in self.sounds:
-            self.sounds[sound_name].set_volume(self.ui_volume)
+            self.sounds[sound_name].set_volume(self.sfx_volume)
             self.sounds[sound_name].play()
     
     def play_game_sound(self, category: str, name: str, volume: float = None):
@@ -203,6 +211,13 @@ class AudioManager:
         self.music_volume = max(0.0, min(1.0, volume))
         if self.mixer_available:
             pygame.mixer.music.set_volume(self.music_volume)
+        
+        # MusicManager ile senkronize et
+        try:
+            from audio.music_manager import get_music_manager
+            get_music_manager().set_volume(self.music_volume)
+        except ImportError:
+            pass
     
     def set_sfx_volume(self, volume: float):
         """Efekt ses seviyesi ayarla (0.0 - 1.0)"""

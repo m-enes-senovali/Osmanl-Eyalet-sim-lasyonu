@@ -64,7 +64,7 @@ class ArtilleryScreen(BaseScreen):
         self._update_panels()
         self._setup_cannon_menu()
         self._setup_production_menu()
-        self.audio.play_game_sound('military', 'cannon')
+        # self.audio.play_game_sound('military', 'cannon') # Kaldırıldı: Kullanıcı rahatsız oluyor
     
     def announce_screen(self):
         self.audio.announce_screen_change("Topçu Ocağı")

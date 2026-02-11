@@ -1,8 +1,16 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "game_id": "ad3814e4",
   "save_slot": 3,
-  "auto_save": true,
+  "player": {
+    "name": "Kasım",
+    "gender": "male",
+    "birth_year": 1490,
+    "prestige": 50,
+    "experience": 0,
+    "background": "default",
+    "turns_as_governor": 0
+  },
   "province": {
     "name": "Rum Eyaleti",
     "capital": "Sivas",
@@ -359,5 +367,64 @@
     ],
     "total_cannons_produced": 1,
     "cannons_destroyed": 0
+  },
+  "espionage": {
+    "spies": [],
+    "active_missions": [],
+    "spy_counter": 0,
+    "mission_counter": 0,
+    "intelligence_level": 0,
+    "security_level": 50,
+    "known_enemy_spies": 0,
+    "successful_missions": 0,
+    "failed_missions": 0,
+    "spies_lost": 0
+  },
+  "religion": {
+    "millet_states": {
+      "muslim": {
+        "loyalty": 80,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 0
+      },
+      "rum": {
+        "loyalty": 50,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      },
+      "ermeni": {
+        "loyalty": 60,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      },
+      "yahudi": {
+        "loyalty": 70,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      },
+      "suryani": {
+        "loyalty": 55,
+        "population": 0,
+        "unrest": 0,
+        "autonomy": 30
+      }
+    },
+    "ulema": [],
+    "vakifs": [],
+    "ulema_counter": 0,
+    "vakif_counter": 0,
+    "piety": 50,
+    "legitimacy": 70,
+    "tolerance": 60,
+    "education_level": 30,
+    "kizilbas_threat": 15,
+    "kizilbas_suppressed": false,
+    "has_seyhulislam": true,
+    "conversions": 0,
+    "rebellions_suppressed": 0
   }
 }

@@ -9,6 +9,7 @@ from ui.components import Button, Panel, MenuList
 from game.game_settings import get_settings, get_text, t
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, VERSION
 from updater import get_updater
+from audio.music_manager import get_music_manager
 
 
 class SettingsScreen(BaseScreen):
@@ -19,6 +20,7 @@ class SettingsScreen(BaseScreen):
         
         self.settings = get_settings()
         self.updater = get_updater()
+        self.music_manager = get_music_manager()
         
         # Paneller
         self.sound_panel = Panel(20, 80, 400, 200, t('sound_settings'))
@@ -383,6 +385,7 @@ class SettingsScreen(BaseScreen):
             if music_enabled and hasattr(pygame.mixer, 'music'):
                 pygame.mixer.music.set_volume(new_value / 100.0)
             self.audio.music_volume = new_value / 100.0
+            self.music_manager.set_volume(new_value / 100.0)
         elif key == 'sfx_volume':
             sfx_enabled = self.settings.get('sfx_enabled')
             self.audio.sfx_volume = (new_value / 100.0) if sfx_enabled else 0

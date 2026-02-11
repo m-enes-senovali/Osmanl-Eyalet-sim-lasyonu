@@ -9,6 +9,7 @@ import pygame
 from typing import Optional, List
 from enum import Enum
 from config import AUDIO
+from game.game_settings import get_settings
 
 
 class MusicContext(Enum):
@@ -90,7 +91,10 @@ class MusicManager:
         self.current_context: Optional[MusicContext] = None
         self.current_file: Optional[str] = None
         self.is_playing = False
-        self.volume = AUDIO.get('music_volume', 0.5)
+        settings = get_settings()
+        self.volume = settings.get('music_volume') / 100.0
+        if not settings.get('music_enabled'):
+            self.volume = 0.0
         
         # Kriz durumu
         self.crisis_active = False
