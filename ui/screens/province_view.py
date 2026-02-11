@@ -115,6 +115,7 @@ class ProvinceViewScreen(BaseScreen):
     def on_enter(self):
         """Ekrana girişte panelleri güncelle"""
         self._update_panels()
+        self.audio.play_ambient('city')
         
         # İlk giriş rehberi
         gm = self.screen_manager.game_manager
@@ -157,6 +158,25 @@ class ProvinceViewScreen(BaseScreen):
         self.status_panel.add_item("Memnuniyet", f"%{gm.population.happiness}")
         self.status_panel.add_item("Askeri Güç", f"{gm.military.get_total_power():,}")
         self.status_panel.add_item("Padişah Sadakati", f"%{gm.diplomacy.sultan_loyalty}")
+        
+        # Karakter bonusları gösterimi
+        if gm.player:
+            self.status_panel.add_item("", "")  # boşluk
+            self.status_panel.add_item("Karakter", gm.player.get_full_title())
+            
+            if gm.player.gender.value == 'female':
+                self.status_panel.add_item("Diplomasi", "+%20")
+                self.status_panel.add_item("Ticaret", "+%15")
+                self.status_panel.add_item("Vakıf", "+%30")
+                # Aktif malus göster
+                bey_malus = gm.player.get_malus('bey_loyalty')
+                if bey_malus < 0:
+                    remaining = max(0, 40 - gm.player.turns_as_governor)
+                    self.status_panel.add_item("⚠ Bey Şüphesi", f"%{int(abs(bey_malus)*100)} ({remaining} tur)")
+            else:
+                self.status_panel.add_item("Akın Gücü", "+%20")
+                self.status_panel.add_item("Yeniçeri", "+%15")
+                self.status_panel.add_item("Kuşatma", "+%10")
         
         # İsyan uyarısı
         if gm.population.active_revolt:

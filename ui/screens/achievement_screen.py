@@ -68,6 +68,7 @@ class AchievementScreen(BaseScreen):
         self._setup_achievement_menu()
         self._update_summary_panel()
         self._update_detail_panel()
+        self.audio.play_game_sound('events', 'achievement')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Başarılar")

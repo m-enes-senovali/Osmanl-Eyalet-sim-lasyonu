@@ -1,16 +1,8 @@
 {
-  "version": "1.1",
+  "version": "1.0",
   "game_id": "ad3814e4",
   "save_slot": 3,
-  "player": {
-    "name": "Kasım",
-    "gender": "male",
-    "birth_year": 1490,
-    "prestige": 50,
-    "experience": 0,
-    "background": "default",
-    "turns_as_governor": 0
-  },
+  "auto_save": true,
   "province": {
     "name": "Rum Eyaleti",
     "capital": "Sivas",
@@ -19,16 +11,16 @@
   },
   "time": {
     "year": 1521,
-    "month": 11,
-    "turn": 22
+    "month": 12,
+    "turn": 78
   },
   "economy": {
     "resources": {
-      "gold": 13685,
-      "food": 5778,
-      "wood": 3900,
-      "iron": 1400,
-      "stone": 1000,
+      "gold": 133510,
+      "food": 241929,
+      "wood": 62400,
+      "iron": 38192,
+      "stone": 875,
       "rope": 500,
       "tar": 300,
       "sailcloth": 200
@@ -48,17 +40,17 @@
       "black_sea"
     ],
     "tax_modifier": 1.0,
-    "trade_modifier": 5.5,
+    "trade_modifier": 2.255,
     "expense_modifier": 1.0
   },
   "military": {
     "units": {
-      "yenicheri": 28,
+      "yenicheri": 128,
       "kapikulu_sipahi": 20,
-      "topcu": 5,
+      "topcu": 15,
       "cebeci": 10,
-      "timarli_sipahi": 50,
-      "akinci": 18,
+      "timarli_sipahi": 100,
+      "akinci": 118,
       "azap": 98,
       "kadirga": 0,
       "levent": 0
@@ -70,24 +62,26 @@
     "total_losses": 0,
     "total_victories": 0,
     "timar_capacity": 100,
-    "available_timars": 50,
+    "available_timars": 0,
     "has_port": false,
     "port_level": 0,
     "commanders": []
   },
   "population": {
     "population": {
-      "farmers": 8784,
-      "merchants": 2922,
-      "artisans": 2188,
-      "soldiers": 723,
+      "farmers": 26710,
+      "merchants": 8882,
+      "artisans": 6648,
+      "soldiers": 2193,
       "scholars": 200
     },
-    "happiness": 95,
+    "happiness": 100,
     "health": 100,
-    "unrest": 4,
+    "unrest": 0,
     "active_revolt": false,
-    "happiness_modifiers": {},
+    "happiness_modifiers": {
+      "event": 5
+    },
     "growth_rate": 0.02,
     "migration_policy": "selective",
     "education_level": 1
@@ -122,10 +116,10 @@
     "construction_queue": []
   },
   "diplomacy": {
-    "sultan_loyalty": 30,
+    "sultan_loyalty": 26,
     "sultan_favor": 0,
     "sadrazam_relation": 50,
-    "defterdar_relation": 50,
+    "basdefterdar_relation": 50,
     "neighbors": {
       "Karaman": {
         "value": 30,
@@ -156,16 +150,18 @@
   "events": {
     "event_history": [
       "silk_road_opening",
-      "drought"
+      "drought",
+      "skilled_craftsman",
+      "earthquake"
     ],
-    "events_this_year": 1,
+    "events_this_year": 3,
     "current_event_id": null,
     "event_memory": {},
     "pending_triggers": []
   },
   "warfare": {
-    "war_weariness": 0,
-    "battle_counter": 0,
+    "war_weariness": 20,
+    "battle_counter": 1,
     "war_history": [],
     "player_tactic_history": []
   },
@@ -240,7 +236,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -249,7 +245,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -258,7 +254,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -267,7 +263,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -276,7 +272,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -285,7 +281,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -294,7 +290,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -303,7 +299,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -312,7 +308,7 @@
         "skill": 5,
         "task": "construction",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -321,7 +317,7 @@
         "skill": 5,
         "task": "trading",
         "efficiency": 1.5,
-        "turns": 4942,
+        "turns": 5493,
         "experience": 100
       },
       {
@@ -330,7 +326,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 204,
+        "turns": 755,
         "experience": 100
       }
     ],
@@ -345,68 +341,23 @@
     "ships_lost": 0
   },
   "artillery": {
-    "cannons": [],
-    "production_queue": [],
-    "total_cannons_produced": 0,
-    "cannons_destroyed": 0
-  },
-  "espionage": {
-    "spies": [],
-    "active_missions": [],
-    "spy_counter": 0,
-    "mission_counter": 0,
-    "intelligence_level": 0,
-    "security_level": 50,
-    "known_enemy_spies": 0,
-    "successful_missions": 0,
-    "failed_missions": 0,
-    "spies_lost": 0
-  },
-  "religion": {
-    "millet_states": {
-      "muslim": {
-        "loyalty": 80,
-        "population": 0,
-        "unrest": 0,
-        "autonomy": 0
-      },
-      "rum": {
-        "loyalty": 50,
-        "population": 0,
-        "unrest": 0,
-        "autonomy": 30
-      },
-      "ermeni": {
-        "loyalty": 60,
-        "population": 0,
-        "unrest": 0,
-        "autonomy": 30
-      },
-      "yahudi": {
-        "loyalty": 70,
-        "population": 0,
-        "unrest": 0,
-        "autonomy": 30
-      },
-      "suryani": {
-        "loyalty": 55,
-        "population": 0,
-        "unrest": 0,
-        "autonomy": 30
+    "cannons": [
+      {
+        "cannon_id": "cannon_1",
+        "cannon_type": "kolunburna",
+        "name": "Kolunburna #1",
+        "condition": 100,
+        "shots_fired": 0
       }
-    },
-    "ulema": [],
-    "vakifs": [],
-    "ulema_counter": 0,
-    "vakif_counter": 0,
-    "piety": 50,
-    "legitimacy": 70,
-    "tolerance": 60,
-    "education_level": 30,
-    "kizilbas_threat": 30,
-    "kizilbas_suppressed": false,
-    "has_seyhulislam": true,
-    "conversions": 0,
-    "rebellions_suppressed": 0
+    ],
+    "production_queue": [
+      {
+        "cannon_type": "sahi",
+        "turns_remaining": 3,
+        "custom_name": ""
+      }
+    ],
+    "total_cannons_produced": 1,
+    "cannons_destroyed": 0
   }
 }

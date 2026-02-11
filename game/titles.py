@@ -22,10 +22,11 @@ class TitleContext(Enum):
 
 
 # Unvan tablosu: {bağlam: {cinsiyet: unvan}}
+# Tarihi doğruluk: İsim + Unvan formatı (Mehmed Paşa, Mihrimah Hatun)
 TITLE_TABLE = {
     TitleContext.GOVERNOR: {
-        'male': "Vali Paşa",
-        'female': "Vali Hatun"
+        'male': "Paşa",
+        'female': "Hatun"
     },
     TitleContext.GENERAL: {
         'male': "Beyefendi",
@@ -36,8 +37,8 @@ TITLE_TABLE = {
         'female': "Hatun Hazretleri"
     },
     TitleContext.FROM_PEOPLE: {
-        'male': "Efendimiz",
-        'female': "Hanımımız"
+        'male': "Paşa Efendimiz",
+        'female': "Hatun Efendimiz"
     },
     TitleContext.FROM_SOLDIER: {
         'male': "Komutanım",
@@ -52,8 +53,8 @@ TITLE_TABLE = {
         'female': "Devletlü Hatun"
     },
     TitleContext.FORMAL: {
-        'male': "Rumeli Valisi",
-        'female': "Rumeli Valisi"
+        'male': "Vali",
+        'female': "Vali"
     },
     TitleContext.SELF: {
         'male': "Ben, Vali",

@@ -288,8 +288,8 @@ class EspionageSystem:
         return f"{random.choice(first_names)} {random.choice(titles)}".strip()
     
     def start_mission(self, spy_id: str, operation: OperationType, 
-                      target: str, economy) -> Optional[Mission]:
-        """Görev başlat"""
+                      target: str, economy, player=None) -> Optional[Mission]:
+        """Görev başlat - player: kadın casusluk bonusu için"""
         audio = get_audio_manager()
         
         # Casusu bul
@@ -321,6 +321,13 @@ class EspionageSystem:
         # Başarı şansı hesapla
         target_difficulty = self.targets.get(target, {}).get('difficulty', 5)
         base_chance = (spy.skill * 10) - (target_difficulty * 5) - (op_stats.risk * 30)
+        
+        # Kadın karakter: Casusluk bonusu (+%15 başarı şansı)
+        if player:
+            espionage_bonus = player.get_bonus('espionage')
+            if espionage_bonus > 0:
+                base_chance += espionage_bonus * 100  # 0.15 * 100 = +15
+        
         success_chance = max(10, min(90, base_chance))
         
         self.mission_counter += 1

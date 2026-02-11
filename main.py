@@ -262,6 +262,15 @@ class Game:
         ui_path = os.path.join(base_path, 'audio', 'sounds', 'ui')
         self.audio.load_sounds_from_directory(ui_path, prefix='ui_')
         
+        # Oyun ses kategorileri
+        categories = [
+            'military', 'construction', 'economy', 'diplomacy',
+            'naval', 'ambient', 'espionage', 'religion', 'events'
+        ]
+        for cat in categories:
+            cat_path = os.path.join(base_path, 'audio', 'sounds', cat)
+            self.audio.load_sounds_from_directory(cat_path, prefix=f'{cat}_')
+        
         # Müzik
         music_path = os.path.join(base_path, 'audio', 'sounds', 'music')
         if os.path.exists(music_path):

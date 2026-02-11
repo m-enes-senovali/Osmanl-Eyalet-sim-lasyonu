@@ -64,6 +64,7 @@ class NavalScreen(BaseScreen):
         self._update_panels()
         self._setup_ship_menu()
         self._setup_build_menu()
+        self.audio.play_ambient('waves')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Deniz Kuvvetleri")

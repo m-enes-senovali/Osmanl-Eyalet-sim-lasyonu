@@ -54,9 +54,15 @@ class AudioManager:
         try:
             pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
             self.mixer_available = True
+            # Ambiyans için ayrı kanal
+            pygame.mixer.set_num_channels(16)
+            self._ambient_channel = pygame.mixer.Channel(15)  # Son kanal ambiyans için
         except pygame.error as e:
             print(f"Ses sistemi başlatılamadı: {e}")
             self.mixer_available = False
+            self._ambient_channel = None
+        
+        self._current_ambient = None
         
         # Ses klasörlerini oluştur
         self._ensure_sound_directories()
@@ -64,12 +70,13 @@ class AudioManager:
     def _ensure_sound_directories(self):
         """Ses klasörlerinin varlığını kontrol et ve oluştur"""
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        sound_dirs = [
-            os.path.join(base_path, 'audio', 'sounds', 'music'),
-            os.path.join(base_path, 'audio', 'sounds', 'ui'),
-            os.path.join(base_path, 'audio', 'sounds', 'events'),
+        categories = [
+            'music', 'ui', 'events',
+            'military', 'construction', 'economy', 'diplomacy',
+            'naval', 'ambient', 'espionage', 'religion'
         ]
-        for dir_path in sound_dirs:
+        for cat in categories:
+            dir_path = os.path.join(base_path, 'audio', 'sounds', cat)
             os.makedirs(dir_path, exist_ok=True)
     
     def load_sound(self, name: str, path: str) -> bool:
@@ -107,6 +114,50 @@ class AudioManager:
         if sound_name in self.sounds:
             self.sounds[sound_name].set_volume(self.ui_volume)
             self.sounds[sound_name].play()
+    
+    def play_game_sound(self, category: str, name: str, volume: float = None):
+        """
+        Kategorili oyun ses efekti çal.
+        Örn: play_game_sound('military', 'sword_clash')
+        Dosya yoksa sessizce devam eder.
+        """
+        if not self.mixer_available:
+            return
+        sound_name = f"{category}_{name}"
+        if sound_name in self.sounds:
+            sound = self.sounds[sound_name]
+            sound.set_volume(volume if volume is not None else self.sfx_volume)
+            sound.play()
+    
+    def play_ambient(self, name: str, volume: float = None):
+        """
+        Ambiyans sesi çal (loop). Ekran bazlı arka plan sesi.
+        Örn: play_ambient('city'), play_ambient('waves')
+        """
+        if not self.mixer_available or not self._ambient_channel:
+            return
+        
+        sound_name = f"ambient_{name}"
+        if sound_name == self._current_ambient and self._ambient_channel.get_busy():
+            return  # Zaten çalıyor
+        
+        if sound_name in self.sounds:
+            self._ambient_channel.set_volume(volume if volume is not None else self.sfx_volume * 0.5)
+            self._ambient_channel.play(self.sounds[sound_name], loops=-1)
+            self._current_ambient = sound_name
+    
+    def stop_ambient(self):
+        """Ambiyans sesini durdur"""
+        if self._ambient_channel:
+            self._ambient_channel.stop()
+            self._current_ambient = None
+    
+    def play_event_sound(self, event_type: str):
+        """
+        Olay bazlı ses çal.
+        event_type: 'good', 'bad', 'neutral', 'critical', 'achievement'
+        """
+        self.play_game_sound('events', event_type)
     
     def play_music(self, name_or_path: str, loop: bool = True):
         """Müzik çal - isim veya dosya yolu kabul eder"""
@@ -247,6 +298,7 @@ class AudioManager:
     def cleanup(self):
         """Kaynakları temizle"""
         if self.mixer_available:
+            self.stop_ambient()
             pygame.mixer.quit()
 
 

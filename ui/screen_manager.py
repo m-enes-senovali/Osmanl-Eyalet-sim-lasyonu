@@ -107,6 +107,8 @@ class ScreenManager:
         # Önceki ekrandan çık
         if self.current_screen:
             self.current_screen.on_exit()
+            # Ambiyans sesini durdur (yeni ekran kendi ambiyansını başlatır)
+            self.audio.stop_ambient()
         
         self.previous_screen_type = self.current_screen_type
         self.current_screen_type = screen_type

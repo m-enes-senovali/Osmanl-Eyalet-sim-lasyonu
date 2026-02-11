@@ -47,10 +47,14 @@ class WarfareScreen(BaseScreen):
     def on_enter(self):
         self._update_panels()
         self._setup_action_menu()
+        self.audio.play_game_sound('military', 'march')
     
     def announce_screen(self):
-        self.audio.announce_screen_change("Savaş Yönetimi")
         gm = self.screen_manager.game_manager
+        title_suffix = ""
+        if gm and gm.player:
+            title_suffix = f" - {gm.player.get_full_title()}"
+        self.audio.announce_screen_change(f"Savaş Yönetimi{title_suffix}")
         if gm:
             gm.warfare.announce_status()
     

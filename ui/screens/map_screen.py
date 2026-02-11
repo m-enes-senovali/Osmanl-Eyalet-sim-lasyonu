@@ -232,7 +232,7 @@ class MapScreen(BaseScreen):
                 return
             
             if self.current_territory_name in gm.diplomacy.neighbors:
-                gm.diplomacy.send_envoy(self.current_territory_name)
+                gm.diplomacy.send_envoy(self.current_territory_name, player=gm.player)
                 self.audio.speak(f"{self.current_territory_name} bölgesine elçi gönderildi!", interrupt=True)
             else:
                 self.audio.speak("Bu bölgeye elçi gönderilemez.", interrupt=True)

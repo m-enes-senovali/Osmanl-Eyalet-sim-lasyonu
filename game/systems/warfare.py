@@ -752,8 +752,11 @@ class WarfareSystem:
         weights = [0.5, 0.2, 0.1, 0.1, 0.1]  # Açık hava en olası
         return random.choices(list(WeatherType), weights=weights)[0]
     
-    def start_raid(self, target: str, military_system, economy, turn_count: int) -> Tuple[bool, str]:
-        """Akın başlat"""
+    def start_raid(self, target: str, military_system, economy, turn_count: int, raid_bonus: float = 0.0) -> Tuple[bool, str]:
+        """
+        Akın başlat
+        raid_bonus: Liderlik bonusu (erkek bizzat: 0.20, kadın vekil: 0.0)
+        """
         can_start, reason = self.can_start_war(turn_count)
         if not can_start:
             return False, reason
@@ -775,6 +778,10 @@ class WarfareSystem:
         terrain = self.get_random_terrain(target)
         weather = self.get_random_weather()
         
+        # Liderlik bonusu uygula
+        bonus_morale = int(military_system.morale * raid_bonus)
+        bonus_exp = int(military_system.experience * raid_bonus)
+        
         battle = Battle(
             battle_id=f"raid_{self.battle_counter}",
             battle_type=BattleType.RAID,
@@ -784,8 +791,8 @@ class WarfareSystem:
                 infantry=military_system.infantry,
                 cavalry=military_system.cavalry,
                 artillery=military_system.artillery_crew,
-                morale=military_system.morale,
-                experience=military_system.experience
+                morale=min(100, military_system.morale + bonus_morale),
+                experience=min(100, military_system.experience + bonus_exp)
             ),
             defender_army=Army(
                 infantry=random.randint(50, 200),

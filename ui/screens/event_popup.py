@@ -48,6 +48,17 @@ class EventPopupScreen(BaseScreen):
     
     def on_enter(self):
         self._setup_choices()
+        # Olay ciddiyet seviyesine göre ses çal
+        gm = self.screen_manager.game_manager
+        if gm and gm.events.current_event:
+            severity = gm.events.current_event.severity.value
+            severity_sounds = {
+                'critical': 'bad',
+                'major': 'bad',
+                'moderate': 'neutral',
+                'minor': 'good'
+            }
+            self.audio.play_event_sound(severity_sounds.get(severity, 'neutral'))
     
     def _setup_choices(self):
         """Seçenekleri ayarla"""
@@ -293,6 +304,7 @@ class EventPopupScreen(BaseScreen):
         gm = self.screen_manager.game_manager
         if gm:
             effects = gm.events.make_choice(choice_index)
+            self.audio.play_ui_sound('click')
             gm.apply_event_effects(effects)
             self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
     

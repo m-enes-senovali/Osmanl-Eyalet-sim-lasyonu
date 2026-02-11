@@ -65,13 +65,13 @@ MILLET_DEFINITIONS = {
     Millet.MUSLIM: MilletStats(
         name="Muslim",
         name_tr="Müslüman",
-        leader_title="Şeyhülislam",
+        leader_title="—",  # Müslümanlar millet sistemi dışında, yönetici çoğunluk
         population_ratio=0.60,
         tax_modifier=1.0,
         trade_bonus=0.0,
         loyalty_base=80,
         special_ability="askerlik",
-        historical_note="Osmanlı'nın çoğunluk dini, devşirme sistemiyle ordunun temeli"
+        historical_note="Yönetici çoğunluk - millet sistemi yalnızca gayrimüslimler için geçerlidir"
     ),
     Millet.RUM_ORTHODOX: MilletStats(
         name="Greek Orthodox",
@@ -306,7 +306,7 @@ class ReligionSystem:
         self.education_level = 30 # Eğitim seviyesi (0-100)
         
         # Kızılbaş sorunu (1520'de önemli)
-        self.kizilbas_threat = 30   # Safevi yanlısı grupların tehdidi
+        self.kizilbas_threat = 15   # Yavuz'un 1514 Çaldıran seferi sonrası azalmış tehdit
         self.kizilbas_suppressed = False
         
         # İstatistikler
@@ -314,8 +314,14 @@ class ReligionSystem:
         self.rebellions_suppressed = 0
     
     def appoint_ulema(self, rank: UlemaRank, economy) -> Optional[Ulema]:
-        """Ulema ata"""
+        """Ulema ata (Şeyhülislam hariç - o yalnızca Padişah tarafından atanır)"""
         audio = get_audio_manager()
+        
+        # Şeyhülislam yalnızca Padişah tarafından atanır, eyalet valisi atayamaz
+        if rank == UlemaRank.SEYHULISLAM:
+            audio.announce_action_result("Ulema atama", False, 
+                "Şeyhülislam yalnızca Padişah tarafından atanır")
+            return None
         
         stats = ULEMA_DEFINITIONS[rank]
         
@@ -355,21 +361,20 @@ class ReligionSystem:
     
     def _generate_ulema_name(self, rank: UlemaRank) -> str:
         """Ulema ismi üret"""
-        titles = {
-            UlemaRank.SEYHULISLAM: ["Kemalpaşazade", "Zenbilli Ali", "Molla Fenari"],
-            UlemaRank.KADIASKER: ["Abdurrahman", "Sinan", "Haydar"],
-            UlemaRank.KADI: ["Mehmed", "Ahmed", "Mustafa", "Ali"],
-            UlemaRank.MUDERRIS: ["Hoca", "Molla"],
-            UlemaRank.MUFTU: ["Abdullah", "Osman", "İbrahim"],
-            UlemaRank.IMAM: ["Halil", "Hasan", "Hüseyin"],
-        }
-        
         first_names = ["Mehmed", "Ahmed", "Mustafa", "Ali", "Süleyman", "İbrahim"]
         
         if rank == UlemaRank.SEYHULISLAM:
-            return random.choice(titles[rank])
+            # 1520 dönemi doğru isimleri (Zenbilli Ali Efendi 1503-1526 arası görevde)
+            return random.choice(["Zenbilli Ali Efendi", "Kemalpaşazade", "İbn-i Kemal"])
+        elif rank == UlemaRank.KADIASKER:
+            # İki ayrı makam: Rumeli ve Anadolu Kadıaskeri
+            current_kadiaskers = [u.name for u in self.ulema if u.rank == UlemaRank.KADIASKER]
+            if "Rumeli Kadıaskeri" not in [n.split(' - ')[0] for n in current_kadiaskers]:
+                return f"Rumeli Kadıaskeri - {random.choice(first_names)} Efendi"
+            else:
+                return f"Anadolu Kadıaskeri - {random.choice(first_names)} Efendi"
         elif rank == UlemaRank.MUDERRIS:
-            return f"{random.choice(titles[rank])} {random.choice(first_names)}"
+            return f"Molla {random.choice(first_names)}"
         else:
             return f"{random.choice(first_names)} Efendi"
     
@@ -650,7 +655,7 @@ class ReligionSystem:
         system.legitimacy = data.get('legitimacy', 70)
         system.tolerance = data.get('tolerance', 60)
         system.education_level = data.get('education_level', 30)
-        system.kizilbas_threat = data.get('kizilbas_threat', 30)
+        system.kizilbas_threat = data.get('kizilbas_threat', 15)
         system.kizilbas_suppressed = data.get('kizilbas_suppressed', False)
         system.has_seyhulislam = data.get('has_seyhulislam', True)
         system.conversions = data.get('conversions', 0)

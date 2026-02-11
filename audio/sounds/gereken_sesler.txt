@@ -1,0 +1,67 @@
+============================================
+  GEREKEN SES DOSYALARI LİSTESİ
+  Format: .ogg veya .wav
+============================================
+
+--- audio/sounds/military/ ---
+sword_clash.ogg        → Kılıç çarpışması (merkez hücumu)
+charge.ogg             → Süvari/kanat hücum sesi
+shield.ogg             → Kalkan savunma sesi
+cannon.ogg             → Top ateşi
+arrow.ogg              → Ok/tüfek volisi (yeniçeri)
+march.ogg              → Asker yürüyüşü
+recruit.ogg            → Asker toplama sesi
+victory.ogg            → Zafer müziği/sesi
+defeat.ogg             → Yenilgi sesi
+
+--- audio/sounds/construction/ ---
+hammer.ogg             → Çekiç/inşaat sesi
+upgrade.ogg            → Yükseltme tamamlanma sesi
+
+--- audio/sounds/economy/ ---
+coin.ogg               → Madeni para sesi
+tax.ogg                → Vergi toplama sesi
+trade.ogg              → Ticaret/alışveriş sesi
+
+--- audio/sounds/diplomacy/ ---
+scroll.ogg             → Ferman/kağıt açma sesi
+seal.ogg               → Mühür basma sesi
+alliance.ogg           → İttifak/anlaşma sesi
+war_declare.ogg        → Savaş ilanı sesi
+tribute.ogg            → Haraç/altın gönderme sesi
+
+--- audio/sounds/naval/ ---
+waves.ogg              → Dalga sesi (ambiyans olarak da kullanılır)
+anchor.ogg             → Çapa atma sesi
+cannon.ogg             → Deniz topu sesi
+
+--- audio/sounds/ambient/ ---
+city.ogg               → Şehir uğultusu (eyalet ekranı arka planı)
+market.ogg             → Çarşı/pazar sesleri (ticaret ekranı arka planı)
+waves.ogg              → Dalga sesi (deniz ekranı arka planı)
+
+--- audio/sounds/espionage/ ---
+spy_send.ogg           → Casus gönderme sesi
+spy_success.ogg        → Başarılı casusluk sesi
+spy_caught.ogg         → Casus yakalanma sesi
+
+--- audio/sounds/religion/ ---
+prayer.ogg             → Dua/ezan sesi
+
+--- audio/sounds/events/ ---
+good.ogg               → İyi olay bildirimi
+bad.ogg                → Kötü olay bildirimi
+neutral.ogg            → Nötr olay bildirimi
+achievement.ogg        → Başarım kazanma sesi
+
+--- audio/sounds/music/ (opsiyonel ek müzikler) ---
+diplomacy.ogg          → Diplomasi teması
+trade.ogg              → Ticaret teması
+tension.ogg            → Gerilim teması
+peace.ogg              → Barış teması
+
+============================================
+  TOPLAM: 38 ses dosyası
+  Mevcut klasörler otomatik oluşturulur.
+  Dosya yoksa oyun sessizce devam eder.
+============================================

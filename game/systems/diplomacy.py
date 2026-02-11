@@ -164,8 +164,8 @@ class DiplomacySystem:
         self.sultan_favor = 50    # 0-100 (lütuf)
         
         # Saraydaki kişiler
-        self.sadrazam_relation = 50   # Sadrazam
-        self.defterdar_relation = 50  # Defterdar (maliye)
+        self.sadrazam_relation = 65    # Sadrazam (1520: Piri Mehmed Paşa, Yavuz'dan devralındı)
+        self.basdefterdar_relation = 50  # Başdefterdar (maliye başkanı)
         
         # Komşu eyaletler/beylikler (eyalete göre güncellenecek)
         self.neighbors: Dict[str, Relation] = {}
@@ -257,8 +257,8 @@ class DiplomacySystem:
         
         return True
     
-    def send_envoy(self, target: str) -> bool:
-        """Elçi gönder"""
+    def send_envoy(self, target: str, player=None) -> bool:
+        """Elçi gönder - player: cinsiyet bonusu için"""
         if self.envoy_cooldown > 0:
             audio = get_audio_manager()
             audio.announce_action_result(
@@ -271,8 +271,20 @@ class DiplomacySystem:
         if target not in self.neighbors:
             return False
         
+        # Temel ilişki artışı
+        base_improvement = 15
+        
+        # Kadın karakter diplomasi bonusu (+%20 = +3)
+        bonus_text = ""
+        if player:
+            diplomacy_bonus = player.get_bonus('diplomacy')
+            extra = int(base_improvement * diplomacy_bonus)
+            base_improvement += extra
+            if extra > 0:
+                bonus_text = f" (Diplomasi bonusu: +{extra})"
+        
         # İlişkiyi iyileştir
-        self.neighbors[target].value = min(100, self.neighbors[target].value + 15)
+        self.neighbors[target].value = min(100, self.neighbors[target].value + base_improvement)
         self.neighbors[target].update_type()
         
         self.envoy_cooldown = 3  # 3 tur bekleme
@@ -281,7 +293,7 @@ class DiplomacySystem:
         audio.announce_action_result(
             f"{target}'a elçi gönderme",
             True,
-            f"İlişki +15"
+            f"İlişki +{base_improvement}{bonus_text}"
         )
         
         return True
@@ -656,7 +668,7 @@ class DiplomacySystem:
             'sultan_loyalty': self.sultan_loyalty,
             'sultan_favor': self.sultan_favor,
             'sadrazam_relation': self.sadrazam_relation,
-            'defterdar_relation': self.defterdar_relation,
+            'basdefterdar_relation': self.basdefterdar_relation,
             'neighbors': {
                 k: {
                     'value': v.value, 
@@ -682,8 +694,9 @@ class DiplomacySystem:
         system = cls()
         system.sultan_loyalty = data['sultan_loyalty']
         system.sultan_favor = data['sultan_favor']
-        system.sadrazam_relation = data.get('sadrazam_relation', 50)
-        system.defterdar_relation = data.get('defterdar_relation', 50)
+        system.sadrazam_relation = data.get('sadrazam_relation', 65)
+        system.basdefterdar_relation = data.get('basdefterdar_relation', 
+            data.get('defterdar_relation', 50))  # Eski kayıtlarla uyumluluk
         
         # Komşuları kişilikle birlikte yükle
         system.neighbors = {}

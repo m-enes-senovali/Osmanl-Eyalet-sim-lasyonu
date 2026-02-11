@@ -64,6 +64,7 @@ class ArtilleryScreen(BaseScreen):
         self._update_panels()
         self._setup_cannon_menu()
         self._setup_production_menu()
+        self.audio.play_game_sound('military', 'cannon')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Topçu Ocağı")
@@ -175,6 +176,7 @@ class ArtilleryScreen(BaseScreen):
         
         success = gm.artillery.start_production(cannon_type, gm.economy)
         if success:
+            self.audio.play_game_sound('construction', 'hammer')
             self._update_panels()
             self._setup_production_menu()
             self._update_queue_panel()

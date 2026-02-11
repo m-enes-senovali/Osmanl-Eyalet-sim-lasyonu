@@ -49,6 +49,7 @@ class EspionageScreen(BaseScreen):
     def on_enter(self):
         self._update_panels()
         self._setup_action_menu()
+        self.audio.play_game_sound('espionage', 'spy_send')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Casusluk")
@@ -178,6 +179,7 @@ class EspionageScreen(BaseScreen):
         gm = self.screen_manager.game_manager
         if gm:
             gm.espionage.recruit_spy(spy_type, gm.economy)
+            self.audio.play_game_sound('espionage', 'spy_send')
             self._update_panels()
             self._setup_action_menu()
     
@@ -185,7 +187,8 @@ class EspionageScreen(BaseScreen):
         """Görev başlat"""
         gm = self.screen_manager.game_manager
         if gm:
-            gm.espionage.start_mission(spy_id, operation, target, gm.economy)
+            gm.espionage.start_mission(spy_id, operation, target, gm.economy, player=gm.player)
+            self.audio.play_game_sound('espionage', 'spy_send')
             self._update_panels()
             self._setup_action_menu()
     

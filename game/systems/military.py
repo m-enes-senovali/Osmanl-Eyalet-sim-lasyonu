@@ -48,10 +48,11 @@ class UnitStats:
     cost_food: int
     maintenance: int      # Tur başına bakım
     train_time: int       # Eğitim süresi (tur)
-    requires_timar: bool = False  # Tımar gerektirir mi?
-    requires_port: bool = False   # Liman gerektirir mi?
-    special_ability: str = ""     # Özel yetenek
-    historical_note: str = ""     # Tarihi not
+    requires_timar: bool = False      # Tımar gerektirir mi?
+    requires_port: bool = False       # Liman gerektirir mi?
+    requires_devshirme: bool = False  # Devşirme sistemi gerektirir mi? (Gayrimüslim nüfus)
+    special_ability: str = ""         # Özel yetenek
+    historical_note: str = ""         # Tarihi not
     
 
 # 1520 Dönemi Birim Tanımları
@@ -68,8 +69,9 @@ UNIT_DEFINITIONS = {
         cost_food=60,
         maintenance=6,
         train_time=3,
+        requires_devshirme=True,  # Devşirme ile Hristiyan ailelerden toplanan çocuklar
         special_ability="tufek",  # Tüfek kullanır - savunmada bonus
-        historical_note="Devşirme sistemiyle toplanan, kapıkulu piyadesi"
+        historical_note="Devşirme sistemiyle Hristiyan ailelerden toplanan, Müslüman yapılıp yetiştirilen kapıkulu piyadesi"
     ),
     UnitType.KAPIKULU_SIPAHI: UnitStats(
         name="Kapikulu Cavalry",
@@ -82,8 +84,9 @@ UNIT_DEFINITIONS = {
         cost_food=70,
         maintenance=7,
         train_time=3,
+        requires_devshirme=True,  # Devşirme kökenli saray süvarileri
         special_ability="zirh",  # Ağır zırhlı
-        historical_note="Padişah'ın özel muhafız süvarileri"
+        historical_note="Devşirme kökenli, Padişah'ın özel muhafız süvarileri (Sipahi, Silahtar, Ulufeciler, Gurebalar)"
     ),
     UnitType.TOPCU: UnitStats(
         name="Artillery",
@@ -97,7 +100,7 @@ UNIT_DEFINITIONS = {
         maintenance=12,
         train_time=4,
         special_ability="kusatma",  # Kuşatmada çok güçlü
-        historical_note="Osmanlı'nın en güçlü silahı, İstanbul'u fethetti"
+        historical_note="Kuşatma savaşının uzmanları - İstanbul'u fetheden toplar bu ocağın eseri. Meydan muharebesinden çok kale kuşatmasında etkili"
     ),
     UnitType.CEBECI: UnitStats(
         name="Armorer Corps",

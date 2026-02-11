@@ -1,9 +1,9 @@
 {
   "version": "1.1",
-  "game_id": "e19c6f99",
+  "game_id": "c7b286be",
   "save_slot": 1,
   "player": {
-    "name": "Ezgi",
+    "name": "ece",
     "gender": "female",
     "birth_year": 1490,
     "prestige": 50,
@@ -106,8 +106,8 @@
   "diplomacy": {
     "sultan_loyalty": 90,
     "sultan_favor": 50,
-    "sadrazam_relation": 50,
-    "defterdar_relation": 50,
+    "sadrazam_relation": 65,
+    "basdefterdar_relation": 50,
     "neighbors": {},
     "active_missions": [],
     "envoy_cooldown": 0,
@@ -357,7 +357,7 @@
     "legitimacy": 70,
     "tolerance": 60,
     "education_level": 30,
-    "kizilbas_threat": 30,
+    "kizilbas_threat": 15,
     "kizilbas_suppressed": false,
     "has_seyhulislam": true,
     "conversions": 0,

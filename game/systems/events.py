@@ -1267,6 +1267,170 @@ FEMALE_EVENTS = [
     ),
 ]
 
+# === YENİ ERKEK OLAYLARI ===
+MALE_EVENTS.extend([
+    Event(
+        id="wrestling_match",
+        title="Güreş Meydanı Daveti",
+        description="Yeniçeriler aranızda bir güreş müsabakası düzenlemek istiyor. Katılmanız askeri saygınlığınızı artırabilir.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MINOR,
+        gender_filter="male",
+        min_turn=15,
+        choices=[
+            EventChoice(
+                text="Bizzat katıl ve güreş",
+                effects={'morale': 20, 'happiness': 10, 'gold': -100},
+                description="Güreştiniz ve askerlerinizin saygısını kazandınız!"
+            ),
+            EventChoice(
+                text="Seyirci olarak katıl",
+                effects={'morale': 10, 'happiness': 5},
+                description="Müsabakayı izlediniz. Askerler memnun."
+            ),
+            EventChoice(
+                text="Reddet, meşgulüm",
+                effects={'morale': -5},
+                description="Askerler hayal kırıklığına uğradı."
+            )
+        ]
+    ),
+    Event(
+        id="frontier_patrol",
+        title="Serhat Devriyesi",
+        description="Sınır boylarındaki akıncı beyleri sizinle birlikte devriye gezmek istiyor. Tehlikeli ama nüfuz kazandırır.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MODERATE,
+        gender_filter="male",
+        min_turn=25,
+        choices=[
+            EventChoice(
+                text="Akıncılarla birlikte devri",
+                effects={'morale': 15, 'loyalty': 10, 'gold': -200},
+                description="Sınır boylarını gezdiniz. Akıncılar sizi benimsedi."
+            ),
+            EventChoice(
+                text="Komutan gönder",
+                effects={'morale': 5, 'loyalty': 5},
+                description="Güvenilir bir komutan gönderdiniz. İlişkiler sürdü."
+            ),
+            EventChoice(
+                text="Askeri tatbikat düzenle",
+                effects={'morale': 10, 'gold': -500, 'happiness': -5},
+                description="Tatbikat başarılı oldu ama masraflıydı."
+            )
+        ]
+    ),
+    Event(
+        id="hunting_party",
+        title="Av Partisi",
+        description="Komşu sancak beyleri sizi büyük bir av partisine davet ediyor. Diplomatik ilişkileri güçlendirmek için bir fırsat.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MINOR,
+        gender_filter="male",
+        min_turn=10,
+        choices=[
+            EventChoice(
+                text="Büyük bir av ziyafeti ver",
+                effects={'gold': -800, 'happiness': 15, 'loyalty': 10},
+                description="Gösterişli ziyafetiniz beyleri etkiledi. İttifaklar güçlendi."
+            ),
+            EventChoice(
+                text="Sade bir av organize et",
+                effects={'happiness': 8, 'loyalty': 5},
+                description="Samimi bir av günü geçirdiniz. İlişkiler iyileşti."
+            ),
+            EventChoice(
+                text="Avı reddet, divan işleri var",
+                effects={'loyalty': -5, 'gold': 200},
+                description="İş odaklı kararınız bazı beyleri soğuttu."
+            )
+        ]
+    ),
+])
+
+# === YENİ KADIN OLAYLARI ===
+FEMALE_EVENTS.extend([
+    Event(
+        id="court_physician",
+        title="Saray Hekimi Talebi",
+        description="Eyalet halkı arasında hastalık yayılıyor. Saray hekimlerinden yardım isteyebilirsiniz - sarayla bağlantılarınız bunu kolaylaştırır.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.MODERATE,
+        gender_filter="female",
+        min_turn=15,
+        choices=[
+            EventChoice(
+                text="Saray hekimleri çağır",
+                effects={'gold': -600, 'happiness': 25, 'loyalty': 5},
+                description="Saray hekimleri geldi. Hastalık kontrol altına alındı. Halk minnettar."
+            ),
+            EventChoice(
+                text="Yerel hekimleri destekle",
+                effects={'gold': -300, 'happiness': 15},
+                description="Yerel hekimlere kaynak sağladınız. Durumu idare ettiler."
+            ),
+            EventChoice(
+                text="Dua ve sabır tavsiye et",
+                effects={'happiness': -10, 'loyalty': 5},
+                description="Dindar bir tutum takındınız. Ulema memnun ama halk endişeli."
+            )
+        ]
+    ),
+    Event(
+        id="valide_sultan_diplomacy",
+        title="Valide Sultan'ın Ricası",
+        description="Valide Sultan, komşu eyaletle arası bozulan bir paşayı barıştırmanızı rica ediyor. Başarırsanız saray nezdinde itibarınız artar.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MAJOR,
+        gender_filter="female",
+        min_turn=30,
+        choices=[
+            EventChoice(
+                text="Arabuluculuk yap",
+                effects={'gold': -400, 'loyalty': 20, 'happiness': 10},
+                description="Diplomatik zekanızla tarafları barıştırdınız. Valide Sultan çok memnun."
+            ),
+            EventChoice(
+                text="Mektupla çöz",
+                effects={'loyalty': 10},
+                description="Yazışmalarla durumu yatıştırdınız. Kısmen başarılı."
+            ),
+            EventChoice(
+                text="Karışmamayı tercih et",
+                effects={'loyalty': -10},
+                description="Saray politikasından uzak durdunuz. Valide Sultan kırgın."
+            )
+        ]
+    ),
+    Event(
+        id="harem_network_intel",
+        title="Harem Ağından İstihbarat",
+        description="Saraylardaki güvenilir cariyeleriniz önemli bir bilgi getirdi: Rakip bir paşa sizin yerinize atanmak için çalışıyor.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MAJOR,
+        gender_filter="female",
+        min_turn=20,
+        choices=[
+            EventChoice(
+                text="Padişaha sadakat mektubu yaz",
+                effects={'gold': -1000, 'loyalty': 25},
+                description="Hediyelerle birlikte sadakat mektubunuz padişahı etkiledi."
+            ),
+            EventChoice(
+                text="Rakibi gizlice araştır",
+                effects={'gold': -500, 'loyalty': 15, 'happiness': -5},
+                description="Rakibin zayıf noktalarını buldunuz. Konumunuz güçlendi."
+            ),
+            EventChoice(
+                text="Halkın desteğini göster",
+                effects={'gold': -300, 'happiness': 20, 'loyalty': 10},
+                description="Eyaletteki başarılarınızı belgelettiniz. En iyi savunma başarıdır."
+            )
+        ]
+    ),
+])
+
 # Cinsiyete özel olayları havuza ekle
 EVENT_POOL.extend(MALE_EVENTS)
 EVENT_POOL.extend(FEMALE_EVENTS)
@@ -1307,6 +1471,9 @@ class EventSystem:
             EventType.NATURAL: 10,
             EventType.OPPORTUNITY: 10,
         }
+        
+        # Oyuncu unvanı (olay duyurularında kişiselleştirme)
+        self.player_title: Optional[str] = None
     
     def check_for_event(self, year: int, game_state: dict) -> Optional[Event]:
         """
@@ -1344,8 +1511,9 @@ class EventSystem:
         event_type = self._weighted_random_type()
         
         # Bu türden uygun olay seç (hafıza koşullarını da kontrol et)
-        # Oyuncu cinsiyetini al
+        # Oyuncu cinsiyetini ve unvanını al
         player_gender = game_state.get('player_gender', 'male')
+        self.player_title = game_state.get('player_title', None)
         
         candidates = [
             e for e in EVENT_POOL 
@@ -1593,7 +1761,12 @@ class EventSystem:
         }
         
         severity = severity_names.get(self.current_event.severity, "")
-        audio.announce(f"{severity} Olay: {self.current_event.title}")
+        
+        # Kişiselleştirilmiş duyuru
+        if self.player_title:
+            audio.announce(f"{self.player_title}! {severity} Olay: {self.current_event.title}")
+        else:
+            audio.announce(f"{severity} Olay: {self.current_event.title}")
         audio.speak(self.current_event.description, interrupt=False)
         
         audio.speak("Seçenekler:")

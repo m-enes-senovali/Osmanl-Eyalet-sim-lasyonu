@@ -320,6 +320,8 @@ class BattleScreen(BaseScreen):
         self.player_morale -= player_damage
         self.enemy_morale -= enemy_damage
         
+        self.audio.play_game_sound('military', 'sword_clash')
+        
         self.last_action_result = (
             f"Merkez hücumu! Düşmana {enemy_damage} moral hasarı verdik. "
             f"Ancak biz de {player_damage} moral kaybettik."
@@ -336,6 +338,8 @@ class BattleScreen(BaseScreen):
         self.player_morale -= player_damage
         self.enemy_morale -= enemy_damage
         
+        self.audio.play_game_sound('military', 'charge')
+        
         self.last_action_result = (
             f"Kanat manevrası başarılı! Düşmana {enemy_damage} moral hasarı verdik. "
             f"Kayıplarımız minimal, {player_damage} moral kaybı."
@@ -348,6 +352,8 @@ class BattleScreen(BaseScreen):
         self.player_casualties += random.randint(10, 30)
         self.enemy_casualties += random.randint(20, 50)
         self.enemy_morale -= random.randint(5, 10)
+        
+        self.audio.play_game_sound('military', 'shield')
         
         self.last_action_result = (
             "Savunma pozisyonu aldık. Moralimiz yükseldi. "
@@ -371,6 +377,8 @@ class BattleScreen(BaseScreen):
         self.enemy_casualties += random.randint(100, 200)
         self.enemy_morale -= enemy_damage
         self.player_casualties += random.randint(5, 15)  # Minimal kayıp
+        
+        self.audio.play_game_sound('military', 'cannon')
         
         self.last_action_result = (
             f"Topçu bombardımanı! Güçlü etki. "
@@ -451,6 +459,17 @@ class BattleScreen(BaseScreen):
         
         gm = self.screen_manager.game_manager
         self.audio.speak(f"{ability.name_tr} kullanılıyor!", interrupt=True)
+        
+        # Yeteneğe göre ses efekti
+        ability_sounds = {
+            SpecialAbilityType.JANISSARY_VOLLEY: ('military', 'arrow'),
+            SpecialAbilityType.AKINCI_RAID: ('military', 'charge'),
+            SpecialAbilityType.CANNON_BARRAGE: ('military', 'cannon'),
+            SpecialAbilityType.CAVALRY_CHARGE: ('military', 'charge'),
+        }
+        sound = ability_sounds.get(ability_type)
+        if sound:
+            self.audio.play_game_sound(sound[0], sound[1])
         
         # Maliyet uygula
         if ability_type == SpecialAbilityType.CANNON_BARRAGE:
@@ -533,7 +552,7 @@ class BattleScreen(BaseScreen):
         self.audio.speak(self.last_action_result, interrupt=True)
         
         # Savaş sesleri çal
-        self.audio.play_ui_sound('battle_hit')
+        self.audio.play_game_sound('military', 'sword_clash')
         
         # Eğer savaş zaten bittiyse (teslim çağrısı kabul edildi vb.) düşman turu yok
         if self.battle_ended:
@@ -549,6 +568,7 @@ class BattleScreen(BaseScreen):
         if self.enemy_morale <= 0:
             self.victory = True
             self.battle_ended = True
+            self.audio.play_game_sound('military', 'victory')
             self.audio.speak("ZAFER! Düşman tamamen çöktü! Kale ele geçirildi!", interrupt=False)
             self._update_status_panel()
             self._setup_tactics_menu()
@@ -559,6 +579,7 @@ class BattleScreen(BaseScreen):
         self.is_player_turn = False
         self.enemy_action_pending = True
         self.enemy_turn_timer = 0
+        self.audio.play_game_sound('military', 'march')
         self.audio.speak("Düşman hamle yapıyor...", interrupt=False)
         
         # Panelleri güncelle
@@ -570,6 +591,7 @@ class BattleScreen(BaseScreen):
         if self.player_morale <= 0:
             self.victory = False
             self.battle_ended = True
+            self.audio.play_game_sound('military', 'defeat')
             self.audio.speak("YENİLGİ! Ordumuz dağıldı! Geri çekilmek zorundayız.", interrupt=False)
         elif self.current_round >= self.max_rounds:
             # Son tur - sonucu belirle

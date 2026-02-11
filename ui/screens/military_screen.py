@@ -133,6 +133,7 @@ class MilitaryScreen(BaseScreen):
     def on_enter(self):
         self._update_panels()
         self._setup_action_menu()
+        self.audio.play_game_sound('military', 'march')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Askeri Yönetim")
@@ -356,6 +357,7 @@ class MilitaryScreen(BaseScreen):
         gm = self.screen_manager.game_manager
         if gm:
             gm.military.recruit(unit_type, count, gm.economy)
+            self.audio.play_game_sound('military', 'recruit')
             self._update_panels()
             self._setup_action_menu()  # Menüyü güncelle
     

@@ -48,10 +48,14 @@ class DiplomacyScreen(BaseScreen):
     def on_enter(self):
         self._update_panels()
         self._setup_action_menu()
+        self.audio.play_game_sound('diplomacy', 'scroll')
     
     def announce_screen(self):
-        self.audio.announce_screen_change("Diplomasi")
         gm = self.screen_manager.game_manager
+        title_suffix = ""
+        if gm and gm.player:
+            title_suffix = f" - {gm.player.get_full_title()}"
+        self.audio.announce_screen_change(f"Diplomasi{title_suffix}")
         if gm:
             gm.diplomacy.announce_status()
     
@@ -238,7 +242,7 @@ class DiplomacyScreen(BaseScreen):
         self.sultan_panel.add_item("Prestij", f"{dip.prestige} ({dip.get_prestige_level()})")
         self.sultan_panel.add_item("", "")
         self.sultan_panel.add_item("Sadrazam İlişkisi", f"{dip.sadrazam_relation}")
-        self.sultan_panel.add_item("Defterdar İlişkisi", f"{dip.defterdar_relation}")
+        self.sultan_panel.add_item("Başdefterdar İlişkisi", f"{dip.basdefterdar_relation}")
         
         # Komşular paneli
         self.neighbors_panel.clear()
@@ -512,13 +516,15 @@ class DiplomacyScreen(BaseScreen):
         gm = self.screen_manager.game_manager
         if gm:
             gm.diplomacy.send_tribute_to_sultan(amount, gm.economy)
+            self.audio.play_game_sound('diplomacy', 'tribute')
             self._update_panels()
     
     def _send_envoy(self, target: str):
         """Elçi gönder"""
         gm = self.screen_manager.game_manager
         if gm:
-            gm.diplomacy.send_envoy(target)
+            gm.diplomacy.send_envoy(target, player=gm.player)
+            self.audio.play_game_sound('diplomacy', 'seal')
             self._update_panels()
             self._setup_action_menu()
     
@@ -526,6 +532,7 @@ class DiplomacyScreen(BaseScreen):
         """Evlilik teklifi - Müzakere ekranını aç"""
         from ui.screens.negotiation_screen import NegotiationType
         
+        self.audio.play_game_sound('diplomacy', 'alliance')
         neg_screen = self.screen_manager.screens.get(ScreenType.NEGOTIATION)
         if neg_screen:
             neg_screen.setup_negotiation(NegotiationType.MARRIAGE, target)
@@ -535,6 +542,7 @@ class DiplomacyScreen(BaseScreen):
         """Haraç talep et - Müzakere ekranını aç"""
         from ui.screens.negotiation_screen import NegotiationType
         
+        self.audio.play_game_sound('diplomacy', 'war_declare')
         neg_screen = self.screen_manager.screens.get(ScreenType.NEGOTIATION)
         if neg_screen:
             neg_screen.setup_negotiation(NegotiationType.TRIBUTE, target)

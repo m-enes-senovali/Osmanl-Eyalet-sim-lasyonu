@@ -56,6 +56,7 @@ class EconomyScreen(BaseScreen):
     
     def on_enter(self):
         self._update_panels()
+        self.audio.play_game_sound('economy', 'coin')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Ekonomi Yönetimi")
@@ -225,6 +226,7 @@ class EconomyScreen(BaseScreen):
         if gm:
             new_rate = min(0.40, gm.economy.tax_rate + 0.05)
             gm.economy.set_tax_rate(new_rate)
+            self.audio.play_game_sound('economy', 'tax')
             self._update_panels()
     
     def _decrease_tax(self):
@@ -233,6 +235,7 @@ class EconomyScreen(BaseScreen):
         if gm:
             new_rate = max(0.05, gm.economy.tax_rate - 0.05)
             gm.economy.set_tax_rate(new_rate)
+            self.audio.play_game_sound('economy', 'tax')
             self._update_panels()
     
     def _go_back(self):

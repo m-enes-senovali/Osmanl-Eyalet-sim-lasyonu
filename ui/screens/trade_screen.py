@@ -47,6 +47,7 @@ class TradeScreen(BaseScreen):
     def on_enter(self):
         self._update_panels()
         self._setup_action_menu()
+        self.audio.play_ambient('market')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Ticaret Yönetimi")
@@ -157,6 +158,7 @@ class TradeScreen(BaseScreen):
             return
         
         gm.trade.send_caravan(route_id, gm.economy)
+        self.audio.play_game_sound('economy', 'trade')
         self._update_panels()
         self._setup_action_menu()
     

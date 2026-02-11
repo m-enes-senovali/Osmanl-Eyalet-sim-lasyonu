@@ -225,7 +225,15 @@ class GameManager:
         # Ticaret bonusu uygula (mevsimsel modifier ile)
         # Bonus daha dengeli hesaplama: /500 ile azalan getiri
         trade_bonus = self.construction.get_total_trade_bonus()
-        self.economy.trade_modifier = (1.0 + (trade_bonus / 500)) * seasonal_trade_mod
+        trade_mod = (1.0 + (trade_bonus / 500)) * seasonal_trade_mod
+        
+        # Kadın karakter: Tekstil ticareti bonusu (+%15)
+        if self.player:
+            textile_bonus = self.player.get_bonus('textile_trade')
+            if textile_bonus > 0:
+                trade_mod *= (1.0 + textile_bonus)
+        
+        self.economy.trade_modifier = trade_mod
         
         net_income = self.economy.process_turn(
             population=self.population.population.total,
@@ -254,7 +262,32 @@ class GameManager:
         
         # Han bonusu nüfus artışına ekle
         pop_growth_bonus = self.construction.get_population_growth_bonus()
-        self.population.growth_rate = 0.02 + pop_growth_bonus
+        base_growth = 0.02 + pop_growth_bonus
+        
+        # Kadın karakter: Nüfus artışı bonusu (+%10)
+        if self.player:
+            pop_bonus = self.player.get_bonus('population_growth')
+            if pop_bonus > 0:
+                base_growth *= (1.0 + pop_bonus)
+        
+        self.population.growth_rate = base_growth
+        
+        # === KADIN MALUS: Bey sadakati → huzur düşüşü ===
+        if self.player:
+            bey_malus = self.player.get_malus('bey_loyalty')  # -%20 → 0 arası
+            if bey_malus < 0:
+                # Her 5 turda bir malus etkisi (sürekli değil, periyodik)
+                if self.turn_count % 5 == 0:
+                    happiness_penalty = int(abs(bey_malus) * 10)  # Max -%20*10 = -2
+                    self.population.happiness = max(0, self.population.happiness - happiness_penalty)
+        
+        # === KADIN MALUS: Ulema desteği → sadakat düşüşü ===
+        if self.player:
+            ulema_malus = self.player.get_malus('ulema_support')  # -%15 → 0 arası
+            if ulema_malus < 0:
+                if self.turn_count % 5 == 0:
+                    loyalty_penalty = int(abs(ulema_malus) * 10)  # Max -%15*10 = -1
+                    self.diplomacy.sultan_loyalty = max(0, self.diplomacy.sultan_loyalty - loyalty_penalty)
         
         # YENİ: Nüfus kapasitesi hesapla
         population_capacity = self.construction.get_population_capacity()
@@ -292,6 +325,13 @@ class GameManager:
         # 6. Askeri
         self.military.process_turn()
         
+        # Erkek karakter: Yeniçeri sadakat bonusu (+%15)
+        # Her 3 turda +1 moral (0.15 * 3 turda bir = sürekli küçük etki)
+        if self.player:
+            janissary_bonus = self.player.get_bonus('janissary_loyalty')
+            if janissary_bonus > 0 and self.turn_count % 3 == 0:
+                self.military.morale = min(100, self.military.morale + 1)
+        
         # 7. Topçu üretimi (Topçu Ocağı)
         self.artillery.process_production()
         
@@ -313,6 +353,12 @@ class GameManager:
         siege_bonus = self.artillery.get_siege_bonus()
         naval_power = self.naval.get_fleet_power() if self.province.is_coastal else 0
         
+        # Erkek karakter: Kuşatma saldırı bonusu (+%10)
+        if self.player:
+            siege_attack_bonus = self.player.get_bonus('siege_attack')
+            if siege_attack_bonus > 0:
+                siege_bonus = int(siege_bonus * (1.0 + siege_attack_bonus))
+        
         battle_results = self.warfare.process_battles(
             self.military,
             artillery_power=artillery_power,
@@ -320,8 +366,16 @@ class GameManager:
             naval_power=naval_power
         )
         for result in battle_results:
+            loyalty_change = result.loyalty_change
+            
+            # Erkek karakter: Askeri prestij bonusu (+%10 sadakat kazancı)
+            if self.player and result.victory:
+                prestige_bonus = self.player.get_bonus('military_prestige')
+                if prestige_bonus > 0 and loyalty_change > 0:
+                    loyalty_change = int(loyalty_change * (1.0 + prestige_bonus))
+            
             self.diplomacy.sultan_loyalty = max(0, min(100, 
-                self.diplomacy.sultan_loyalty + result.loyalty_change))
+                self.diplomacy.sultan_loyalty + loyalty_change))
             if result.loot_gold > 0:
                 self.economy.add_resources(gold=result.loot_gold)
         
@@ -342,12 +396,27 @@ class GameManager:
         # 14. Din ve Kültür (YENİ)
         religion_result = self.religion.process_turn(self.economy)
         
-        # 15. Olaylar
+        # 15. Vakıf bonusu (Kadın karakter: +%30 vakıf etkisi)
+        # Her 3 turda +1 huzur (küçük ama birikimli etki)
+        if self.player:
+            vakif_bonus = self.player.get_bonus('vakif_effect')
+            if vakif_bonus > 0 and self.turn_count % 3 == 0:
+                self.population.happiness = min(100, self.population.happiness + 1)
+                # Her 10 turda +1 sadakat (vakıf padişahı da etkiler)
+                if self.turn_count % 10 == 0:
+                    self.diplomacy.sultan_loyalty = min(100, self.diplomacy.sultan_loyalty + 1)
+        
+        # 16. Oyuncu karakter tur güncellemesi (malus azalması vb.)
+        if self.player:
+            self.player.process_turn()
+        
+        # 17. Olaylar
         game_state = {
             'happiness': self.population.happiness,
             'at_war': len(self.warfare.active_battles) > 0,
             'loyalty': self.diplomacy.sultan_loyalty,
-            'player_gender': self.player.gender.value if self.player else 'male'  # YENİ
+            'player_gender': self.player.gender.value if self.player else 'male',
+            'player_title': self.player.get_full_title() if self.player else None
         }
         
         event = self.events.check_for_event(self.current_year, game_state)

@@ -52,6 +52,7 @@ class ReligionScreen(BaseScreen):
     def on_enter(self):
         self._update_panels()
         self._setup_action_menu()
+        self.audio.play_game_sound('religion', 'prayer')
     
     def announce_screen(self):
         self.audio.announce_screen_change("Din ve Kültür")
@@ -120,6 +121,9 @@ class ReligionScreen(BaseScreen):
         # === 1. ULEMA ATAMA ===
         ulema_items = []
         for rank in UlemaRank:
+            # Şeyhülislam yalnızca Padişah tarafından atanır, listede gösterme
+            if rank == UlemaRank.SEYHULISLAM:
+                continue
             stats = ULEMA_DEFINITIONS[rank]
             current = len([u for u in rel.ulema if u.rank == rank])
             if current < stats.max_count:
