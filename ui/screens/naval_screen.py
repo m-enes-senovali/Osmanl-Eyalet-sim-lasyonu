@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Deniz Kuvvetleri Ekranı
 Tersane ve filo yönetimi
@@ -7,7 +7,7 @@ Tersane ve filo yönetimi
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.systems.naval import ShipType, SHIP_DEFINITIONS
 
 
@@ -57,7 +57,7 @@ class NavalScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -295,7 +295,7 @@ class NavalScreen(BaseScreen):
         self.shipyard_panel.draw(surface)
         self.queue_panel.draw(surface)
         
-        small_font = pygame.font.Font(None, FONTS['subheader'])
+        small_font = get_font(FONTS['subheader'])
         
         if self.menu_mode == "build":
             # İnşa menüsü

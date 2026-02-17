@@ -299,6 +299,10 @@ class HTTPNetworkClient:
     def end_turn(self, player_state: dict = None) -> bool:
         """Turu bitir"""
         try:
+            # State'i de senkronize et
+            if player_state:
+                self.sync_state(player_state)
+            
             r = requests.post(
                 f"{self.server_url}/room/{self.room_code}/end_turn",
                 json={'player_id': self.player_id, 'state': player_state or {}},
@@ -313,6 +317,43 @@ class HTTPNetworkClient:
             self.last_error = str(e)
         
         return False
+    
+    def sync_state(self, state: dict) -> bool:
+        """Genişletilmiş oyuncu durumunu senkronize et"""
+        try:
+            r = requests.post(
+                f"{self.server_url}/room/{self.room_code}/sync_state",
+                json={'player_id': self.player_id, 'state': state},
+                timeout=5
+            )
+            return r.status_code == 200
+        except Exception:
+            return False
+    
+    def build_state_from_game(self, game_manager) -> dict:
+        """game_manager'dan sunucuya gönderilecek state sözlüğü oluştur"""
+        gm = game_manager
+        state = {
+            'gold': getattr(gm.economy, 'gold', 0) if hasattr(gm, 'economy') else 0,
+            'military_power': gm.military.get_total_power() if hasattr(gm, 'military') else 0,
+            'total_soldiers': gm.military.get_total_soldiers() if hasattr(gm, 'military') else 0,
+            'population': gm.population.total if hasattr(gm, 'population') else 0,
+            'happiness': gm.population.happiness if hasattr(gm, 'population') else 50,
+        }
+        
+        # Genişletilmiş alanlar (varsa)
+        if hasattr(gm, 'naval'):
+            state['naval_power'] = gm.naval.get_fleet_power()
+        if hasattr(gm, 'guild_system'):
+            state['guild_count'] = len(gm.guild_system.guilds)
+        if hasattr(gm, 'warfare'):
+            state['warfare_status'] = 'war' if gm.warfare.active_battles else 'peace'
+        if hasattr(gm, 'loyalty_system'):
+            state['loyalty'] = getattr(gm.loyalty_system, 'padisah_loyalty', 50)
+        if hasattr(gm, 'economy'):
+            state['tax_income'] = getattr(gm.economy, 'last_tax_income', 0)
+        
+        return state
     
     def send_chat(self, message: str):
         """Sohbet mesajı gönder"""

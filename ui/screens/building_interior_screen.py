@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Bina İç Ekranı
 Binaya girerek üretim, yönetim ve yükseltme işlemleri
@@ -9,7 +9,7 @@ from typing import Optional
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from game.systems.construction import BuildingType, BUILDING_DEFINITIONS
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class BuildingInteriorScreen(BaseScreen):
@@ -49,7 +49,7 @@ class BuildingInteriorScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def set_building(self, building_type: BuildingType, level: int):
@@ -289,7 +289,12 @@ class BuildingInteriorScreen(BaseScreen):
         
         from game.systems.military import UnitType, UNIT_DEFINITIONS
         
+        # Deniz birlikleri kışlada eğitilmez (Tersane gerekir)
+        naval_units = {UnitType.KADIRGA, UnitType.LEVENT}
+        
         for ut in UnitType:
+            if ut in naval_units:
+                continue
             unit = UNIT_DEFINITIONS[ut]
             self.action_menu.add_item(
                 f"Eğit: 10 {unit.name_tr} ({unit.cost_gold * 10} altın)",

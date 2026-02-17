@@ -39,6 +39,11 @@ class Territory:
     is_coastal: bool = False
     starting_population: int = 15000
     special_resources: List[str] = None
+    # Vergi/gelir tipi — Simülasyonun temel ekonomik parametresi
+    # "salyanesiz" = Tımar sistemi (askeri güç sağlar, dirlik dağıtımı)
+    # "salyaneli"  = Yıllık nakit vergi (altın sağlar, hazineye aktarılır)
+    # "karma"      = Her ikisinin karışımı (Cezayir-i Bahr-i Sefid gibi)
+    tax_type: str = "salyanesiz"
     # Komşular: (yön, bölge_adı) şeklinde
     neighbors_north: List[str] = None
     neighbors_south: List[str] = None
@@ -542,6 +547,7 @@ TERRITORIES: Dict[str, Territory] = {
         is_coastal=True,
         starting_population=80000,
         special_resources=["tahıl", "pamuk", "baharat"],
+        tax_type="salyaneli",  # Yıllık nakit vergi — donanma finansmanı
         neighbors_north=["Şam Eyaleti"],
         neighbors_south=[],
         neighbors_east=[],
@@ -556,6 +562,7 @@ TERRITORIES: Dict[str, Territory] = {
         is_coastal=True,
         starting_population=15000,
         special_resources=["tuz"],
+        tax_type="salyaneli",  # Garp Ocakları — nakit vergi
         neighbors_north=["Venedik"],  # Deniz
         neighbors_south=[],
         neighbors_east=["Mısır Eyaleti"],
@@ -570,6 +577,7 @@ TERRITORIES: Dict[str, Territory] = {
         is_coastal=True,
         starting_population=20000,
         special_resources=["korsanlık"],
+        tax_type="karma",  # Hem donanma hem korsanlık geliri — karma sistem
         neighbors_north=["İspanya"],  # Deniz
         neighbors_south=[],
         neighbors_east=["Trablusgarp Eyaleti"],
@@ -823,6 +831,72 @@ TERRITORIES: Dict[str, Territory] = {
 
 
 # Oynanabilir bölgeler listesi (çok oyunculu için)
+
+# ════════════════════════════════════════════════════════════
+# VASAL DEVLET HARAÇ VERİLERİ (1520-1566 Dönemi)
+# Kaynak: Osmanlı Maliye Defterleri, Diplomatik Yazışmalar
+# ════════════════════════════════════════════════════════════
+VASSAL_TRIBUTE_DATA = {
+    "Kırım Hanlığı": {
+        "ruler_title": "Han",
+        "tribute_min_gold": 0,
+        "tribute_max_gold": 0,
+        "military_obligation": True,
+        "obligation_details": "Seferlere 50.000+ süvari ile katılım",
+        "emtia_obligations": ["at", "esir"],
+        "strategic_role": "Kuzey sınır güvenliği, Lehistan/Rusya tamponu",
+        "special_ability": "slave_trade",
+        "political_risk": "low",
+        "historical_note": "Giray hanedanı — haraç ödemez, askeri güç sağlar. Osmanlı'nın en güçlü vasalı."
+    },
+    "Eflak Voyvodalığı": {
+        "ruler_title": "Voyvoda",
+        "tribute_min_gold": 14000,
+        "tribute_max_gold": 24000,
+        "military_obligation": True,
+        "obligation_details": "Savaş zamanı asker ve zahire sağlama",
+        "emtia_obligations": ["bal", "balmumu", "at", "tuz", "kereste"],
+        "strategic_role": "Macaristan/Avusturya tamponu",
+        "political_risk": "high",  # Boyar İsyanları ve Avusturya Etkisi
+        "historical_note": "Haraç 14.000-24.000 Duka arası. Voyvoda İstanbul'dan atanır. Boyar isyanları riski yüksek."
+    },
+    "Boğdan Voyvodalığı": {
+        "ruler_title": "Voyvoda",
+        "tribute_min_gold": 4000,
+        "tribute_max_gold": 12000,
+        "military_obligation": True,
+        "obligation_details": "Karadeniz güvenliği, zahire sağlama",
+        "emtia_obligations": ["sığır", "koyun", "buğday"],
+        "strategic_role": "Karadeniz güvenliği",
+        "political_risk": "medium",  # Lehistan Etkisi ve Kazak Saldırıları
+        "historical_note": "Yıllık 500-1000 baş sığır yükümlülüğü. Lehistan etkisi ve Kazak saldırıları riski."
+    },
+    "Erdel Prensliği": {
+        "ruler_title": "Prens",
+        "tribute_min_gold": 10000,
+        "tribute_max_gold": 15000,
+        "military_obligation": True,
+        "obligation_details": "Seferde askeri destek, maden cevheri ve tuz sağlama",
+        "emtia_obligations": ["maden_cevheri", "tuz"],
+        "strategic_role": "Habsburg Avusturya'ya karşı denge unsuru",
+        "political_risk": "medium_high",  # Habsburg Sınır Çatışmaları
+        "historical_note": "1526 Mohaç sonrası vasal. Altın, gümüş, tuz madenleri stratejik önemde."
+    },
+    "Ragusa Cumhuriyeti": {
+        "ruler_title": "Rektör",
+        "tribute_min_gold": 12500,
+        "tribute_max_gold": 12500,
+        "military_obligation": False,
+        "obligation_details": "Askeri yükümlülük yok",
+        "emtia_obligations": [],
+        "strategic_role": "Adriyatik istihbarat kaynağı",
+        "special_ability": "spy_master",
+        "privileges": ["Gümrüksüz ticaret (%2 muafiyet)", "İç işlerinde özerklik"],
+        "political_risk": "low",  # Sadık Ticari Ortak
+        "historical_note": "Sabit 12.500 Duka (750.000 Akçe). Venedik ve Avrupa saraylarından istihbarat toplar."
+    }
+}
+
 PLAYABLE_TERRITORIES = [
     name for name, t in TERRITORIES.items()
     if t.territory_type in [TerritoryType.OSMANLI_EYALET, TerritoryType.OSMANLI_SANCAK, TerritoryType.VASAL]

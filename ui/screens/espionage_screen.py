@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Casusluk Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Casusluk Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, HierarchicalMenu
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.systems.espionage import SpyType, OperationType, SPY_DEFINITIONS, OPERATION_DEFINITIONS
 
 
@@ -43,7 +43,7 @@ class EspionageScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):

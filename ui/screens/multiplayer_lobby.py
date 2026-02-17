@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Çok Oyunculu Lobi Ekranı
 Oda oluşturma, katılma ve oyuncu bekleme
@@ -8,7 +8,7 @@ import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from ui.text_input import AccessibleTextInput
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, MULTIPLAYER
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, MULTIPLAYER, get_font
 
 
 class MultiplayerLobbyScreen(BaseScreen):
@@ -89,7 +89,7 @@ class MultiplayerLobbyScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -558,7 +558,7 @@ class MultiplayerLobbyScreen(BaseScreen):
             surface.blit(title, (200, 100))
             
             # Mevcut ayarlar
-            font = pygame.font.Font(None, FONTS['body'])
+            font = get_font(FONTS['body'])
             info = font.render(f"İsim: {self.player_name} | Sunucu: {self.server_ip}", True, COLORS['text'])
             surface.blit(info, (200, 150))
             
@@ -598,7 +598,7 @@ class MultiplayerLobbyScreen(BaseScreen):
         
         # Hata mesajı
         if self.error_message:
-            font = pygame.font.Font(None, FONTS['body'])
+            font = get_font(FONTS['body'])
             error = font.render(self.error_message, True, (255, 100, 100))
             surface.blit(error, (200, 550))
         

@@ -416,12 +416,21 @@ class GameManager:
             'at_war': len(self.warfare.active_battles) > 0,
             'loyalty': self.diplomacy.sultan_loyalty,
             'player_gender': self.player.gender.value if self.player else 'male',
-            'player_title': self.player.get_full_title() if self.player else None
+            'player_title': self.player.get_full_title() if self.player else None,
+            'turn_count': self.turn_count
         }
         
         event = self.events.check_for_event(self.current_year, game_state)
         if event:
             self.events.announce_event()
+        
+        # 18. Başarı kontrolü
+        try:
+            from game.systems.achievements import get_achievement_system
+            achievement_system = get_achievement_system()
+            achievement_system.on_turn_end(self)
+        except Exception:
+            pass  # Başarı sistemi yüklenemezse oyunu etkilemesin
         
         # === OYUN SONU KONTROL ===
         self._check_game_over()
@@ -566,10 +575,11 @@ class GameManager:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         save_data = {
-            'version': '1.0',
+            'version': '1.1',
             'game_id': self.game_id,
             'save_slot': slot,
             'auto_save': True,  # Otomatik kayıt işareti
+            'player': self.player.to_dict() if self.player else None,
             'province': {
                 'name': self.province.name,
                 'capital': self.province.capital,
@@ -579,6 +589,7 @@ class GameManager:
             'time': {
                 'year': self.current_year,
                 'month': self.current_month,
+                'day': self.current_day,
                 'turn': self.turn_count
             },
             'economy': self.economy.to_dict(),
@@ -591,7 +602,9 @@ class GameManager:
             'trade': self.trade.to_dict(),
             'workers': self.workers.to_dict(),
             'naval': self.naval.to_dict(),
-            'artillery': self.artillery.to_dict()
+            'artillery': self.artillery.to_dict(),
+            'espionage': self.espionage.to_dict(),
+            'religion': self.religion.to_dict(),
         }
         
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -717,6 +730,7 @@ class GameManager:
             'time': {
                 'year': self.current_year,
                 'month': self.current_month,
+                'day': self.current_day,
                 'turn': self.turn_count
             },
             'economy': self.economy.to_dict(),
@@ -789,6 +803,7 @@ class GameManager:
             
             self.current_year = save_data['time']['year']
             self.current_month = save_data['time']['month']
+            self.current_day = save_data['time'].get('day', 1)
             self.turn_count = save_data['time']['turn']
             
             self.economy = EconomySystem.from_dict(save_data['economy'])

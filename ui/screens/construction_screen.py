@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - İnşaat Ekranı
 """
@@ -7,7 +7,7 @@ import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from game.systems.construction import BuildingType, BuildingCategory, BUILDING_DEFINITIONS
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class ConstructionScreen(BaseScreen):
@@ -42,7 +42,7 @@ class ConstructionScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -514,7 +514,7 @@ class ConstructionScreen(BaseScreen):
         self.queue_panel.draw(surface)
         
         # İnşaat menüsü başlığı
-        small_font = pygame.font.Font(None, FONTS['subheader'])
+        small_font = get_font(FONTS['subheader'])
         build_title = small_font.render("İnşa / Yükselt", True, COLORS['gold'])
         surface.blit(build_title, (490, 275))
         self.build_menu.draw(surface)
@@ -553,8 +553,8 @@ class ConstructionScreen(BaseScreen):
         stats = BUILDING_DEFINITIONS[building_type]
         con = gm.construction
         
-        font = pygame.font.Font(None, FONTS['body'])
-        small_font = pygame.font.Font(None, FONTS['small'])
+        font = get_font(FONTS['body'])
+        small_font = get_font(FONTS['small'])
         
         # Kategori ve bina adı
         cat_names = {

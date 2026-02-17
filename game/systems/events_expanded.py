@@ -199,6 +199,152 @@ HISTORICAL_EVENTS = [
         ],
         min_turn=12
     ),
+    
+    # ── İkinci Rapor Kaynaklı Yeni Tarihsel Olaylar ──
+    
+    Event(
+        id="canberdi_revolt",
+        title="Canberdi Gazali İsyanı",
+        description="1521 — Yavuz Sultan Selim'in ölümünden cesaret alan eski Memlûk komutanı "
+                    "Canberdi Gazali, Şam'da isyan bayrağı açtı. Memlûk Devleti'ni diriltme "
+                    "girişiminde bulunuyor. Mısır ve Şam eyaletlerinde sadakat sarsılıyor.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.CRITICAL,
+        choices=[
+            EventChoice(
+                text="Derhal cezai sefer düzenle",
+                effects={'gold': -8000, 'army_strength': -500, 'loyalty': 10, 'prestige': 15},
+                description="İsyan bastırılır, otoriteniz güçlenir."
+            ),
+            EventChoice(
+                text="Diplomatik çözüm ara, af teklif et",
+                effects={'gold': -3000, 'loyalty': -10, 'prestige': -5, 'stability': 5},
+                description="Kan dökülmez ama zayıflık olarak algılanır."
+            ),
+            EventChoice(
+                text="Mısır Beylerbeyi'ne görev ver",
+                effects={'gold': -2000, 'loyalty': 5, 'administration': 5},
+                description="Taşra gücüne güven, merkezi yükü azalt."
+            ),
+        ],
+        min_turn=3,
+        max_year=1522,
+        chain_id="post_selim_crises"
+    ),
+    
+    Event(
+        id="vienna_siege",
+        title="Viyana Kuşatması",
+        description="1529 — Ordu Viyana surlarına ulaştı. Ancak kış yaklaşıyor, ağır toplar "
+                    "çamurda kaldı. Lojistik sınırlar zorlanıyor. 'General Winter' etkisi "
+                    "hissediliyor.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.CRITICAL,
+        choices=[
+            EventChoice(
+                text="Kuşatmaya devam et — zafer yakın",
+                effects={'gold': -25000, 'army_strength': -3000, 'prestige': -15},
+                description="Kışta kuşatma riski çok yüksek. Kayıplar büyük olabilir."
+            ),
+            EventChoice(
+                text="Akıllıca geri çekil — prestij koru",
+                effects={'gold': -5000, 'prestige': -10, 'stability': 10},
+                description="Ordunu koru, gelecek sefere hazırlan."
+            ),
+            EventChoice(
+                text="Taktik değiştir — Akıncı baskınları yap",
+                effects={'gold': -8000, 'loot': 3000, 'prestige': 5},
+                description="Viyana'yı alamasan da Avusturya'yı yıprat."
+            ),
+        ],
+        min_turn=20,
+        condition_func=has_strong_army,
+        chain_id="hungarian_campaign"
+    ),
+    
+    Event(
+        id="irakeyn_campaign",
+        title="Irakeyn Seferi — Bağdat'ın Fethi",
+        description="1534 — Safevi İmparatorluğu'na karşı büyük doğu seferi. Tebriz geçici "
+                    "olarak alındı, asıl hedef Bağdat. Hz. Hüseyin ve İmam-ı Azam türbeleri "
+                    "Osmanlı korumasına alınacak. İpek Yolu kontrolü ele geçecek.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MAJOR,
+        choices=[
+            EventChoice(
+                text="Tam kuvvetle Bağdat'a yürü",
+                effects={'gold': -20000, 'army_strength': -1500, 'prestige': 30, 'trade_income': 15},
+                description="Bağdat fethedilir, İpek Yolu senin!"
+            ),
+            EventChoice(
+                text="Safevilerle barış yap",
+                effects={'gold': -5000, 'diplomacy_points': 15, 'stability': 10},
+                description="Sınırı koru, barışı tercih et."
+            ),
+        ],
+        min_turn=30,
+        condition_func=has_strong_army,
+        chain_id="eastern_wars"
+    ),
+    
+    Event(
+        id="prince_mustafa_execution",
+        title="Şehzade Mustafa'nın İdamı",
+        description="1553 — Konya Ereğlisi'nde Şehzade Mustafa, padişahın huzuruna çağrılarak "
+                    "boğduruldu. Orduda büyük infial var. Yeniçeriler isyan tehdidinde. "
+                    "Halk arasında 'Düzmece Mustafa' hareketleri baş gösterebilir.",
+        event_type=EventType.POPULATION,
+        severity=EventSeverity.CRITICAL,
+        choices=[
+            EventChoice(
+                text="Orduya bahşiş dağıt, morali topla",
+                effects={'gold': -15000, 'military_morale': 10, 'loyalty': -15, 'stability': -10},
+                description="Yeniçeriler yatışır ama halk tedirgin."
+            ),
+            EventChoice(
+                text="Sert tedbirler al, muhalefeti bastır",
+                effects={'order': 20, 'loyalty': -25, 'stability': -20},
+                description="Düzen sağlanır ama derin yaralar açılır."
+            ),
+            EventChoice(
+                text="Rüstem Paşa'yı görevden al, günah keçisi yap",
+                effects={'loyalty': 5, 'administration': -10, 'prestige': -5},
+                description="Halkın öfkesini yönlendir."
+            ),
+        ],
+        min_turn=65,
+        chain_id="succession_crisis"
+    ),
+    
+    Event(
+        id="prince_bayezid_revolt",
+        title="Şehzade Bayezid İsyanı",
+        description="1559 — Kardeşi Selim ile taht kavgasını kaybeden Bayezid, Anadolu'da isyan "
+                    "bayrağı açtı. Konya yakınlarında mağlup olunca Safevi Şahı Tahmasb'a sığındı. "
+                    "İran ile diplomatik kriz — yüklü altın bedeli isteniyor.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.CRITICAL,
+        choices=[
+            EventChoice(
+                text="Safevilerle müzakere et, Bayezid'i geri iste",
+                effects={'gold': -30000, 'diplomacy_points': -10, 'stability': 15},
+                description="Çok pahalı ama çözüm sağlar."
+            ),
+            EventChoice(
+                text="Safeviye savaş ilan et, Bayezid'i zorla al",
+                effects={'gold': -20000, 'army_strength': -2000, 'prestige': 10},
+                description="Askeri çözüm ama iki cephe riski."
+            ),
+            EventChoice(
+                text="Bayezid'in iadesini diplomatik yollarla sağla",
+                effects={'gold': -20000, 'diplomacy_points': 5, 'stability': 10},
+                description="Sabırlı diplomasi."
+            ),
+        ],
+        min_turn=78,
+        chain_id="succession_crisis",
+        triggers_event="prince_mustafa_execution"
+    ),
 ]
 
 

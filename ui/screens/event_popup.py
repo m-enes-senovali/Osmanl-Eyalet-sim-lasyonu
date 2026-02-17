@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Olay Popup Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Olay Popup Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class EventPopupScreen(BaseScreen):
@@ -38,12 +38,12 @@ class EventPopupScreen(BaseScreen):
     
     def get_title_font(self):
         if self._title_font is None:
-            self._title_font = pygame.font.Font(None, FONTS['header'])
+            self._title_font = get_font(FONTS['header'])
         return self._title_font
     
     def get_body_font(self):
         if self._body_font is None:
-            self._body_font = pygame.font.Font(None, FONTS['body'])
+            self._body_font = get_font(FONTS['body'])
         return self._body_font
     
     def on_enter(self):
@@ -68,11 +68,18 @@ class EventPopupScreen(BaseScreen):
             return
         
         event = gm.events.current_event
-        for i, choice in enumerate(event.choices):
+        if event.choices:
+            for i, choice in enumerate(event.choices):
+                self.choices_menu.add_item(
+                    choice.text,
+                    lambda idx=i: self._make_choice(idx),
+                    str(i + 1) if i < 9 else None
+                )
+        else:
+            # Seçeneği olmayan olaylar için kapat butonu ekle
             self.choices_menu.add_item(
-                choice.text,
-                lambda idx=i: self._make_choice(idx),
-                str(i + 1) if i < 9 else None
+                "Olayı Kapat (F1 ile tekrar okuyabilirsiniz)",
+                self._close
             )
     
     def announce_screen(self):
@@ -245,7 +252,7 @@ class EventPopupScreen(BaseScreen):
             'critical': 'KRİTİK'
         }
         severity_text = severity_names.get(event.severity.value, '')
-        small_font = pygame.font.Font(None, FONTS['small'])
+        small_font = get_font(FONTS['small'])
         severity_label = small_font.render(f"[{severity_text}]", True, border_color)
         severity_rect = severity_label.get_rect(centerx=SCREEN_WIDTH // 2, top=box_rect.top + 70)
         surface.blit(severity_label, severity_rect)

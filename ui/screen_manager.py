@@ -44,6 +44,7 @@ class ScreenType(Enum):
     NAVAL = "naval"  # Deniz kuvvetleri ekranı (YENİ)
     ARTILLERY = "artillery"  # Topçu ekranı (YENİ)
     CHARACTER_CREATION = "character_creation"  # Karakter oluşturma (YENİ)
+    GUILD = "guild"  # Lonca yönetim ekranı (YENİ)
 
 
 class BaseScreen:

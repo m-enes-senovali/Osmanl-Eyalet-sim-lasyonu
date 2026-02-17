@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Büyük Osmanlı Haritası
 Yön tabanlı navigasyon ile tüm bölgeler (territories.py verisi)
@@ -7,7 +7,7 @@ Yön tabanlı navigasyon ile tüm bölgeler (territories.py verisi)
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.data.territories import (
     TERRITORIES, Territory, TerritoryType, Region,
     get_territory, get_neighbors_with_direction, get_all_neighbors
@@ -67,12 +67,12 @@ class MapScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def get_map_font(self):
         if self._map_font is None:
-            self._map_font = pygame.font.Font(None, 20)
+            self._map_font = get_font(20)
         return self._map_font
     
     def on_enter(self):

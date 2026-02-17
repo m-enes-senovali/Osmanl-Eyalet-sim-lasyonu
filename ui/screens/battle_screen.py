@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - İnteraktif Savaş Ekranı
 Kuşatma ve büyük savaşlarda taktiksel kararlar + Özel Yetenekler
@@ -8,7 +8,7 @@ import pygame
 import random
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.systems.warfare import (
     BattleType, BattlePhase, SiegePhase, TerrainType, WeatherType,
     SPECIAL_ABILITIES, SpecialAbilityType, TERRAIN_MODIFIERS, WEATHER_MODIFIERS
@@ -67,7 +67,7 @@ class BattleScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def set_battle_data(self, battle_data: dict):
@@ -712,12 +712,12 @@ class BattleScreen(BaseScreen):
         
         # Danışman tavsiyesi
         if self.advisor_tip:
-            font = pygame.font.Font(None, FONTS['body'])
+            font = get_font(FONTS['body'])
             tip_render = font.render(self.advisor_tip[:80], True, COLORS['text'])
             surface.blit(tip_render, (50, 250))
         
         # Taktik menüsü başlığı
-        font = pygame.font.Font(None, FONTS['subheader'])
+        font = get_font(FONTS['subheader'])
         if self.battle_ended:
             menu_title = "Savaş Sona Erdi - " + ("ZAFER!" if self.victory else "YENİLGİ")
         else:
@@ -729,7 +729,7 @@ class BattleScreen(BaseScreen):
         
         # Son eylem sonucu
         if self.last_action_result:
-            result_font = pygame.font.Font(None, FONTS['body'])
+            result_font = get_font(FONTS['body'])
             result_render = result_font.render(
                 self.last_action_result[:90] + "..." if len(self.last_action_result) > 90 else self.last_action_result,
                 True, COLORS['text']

@@ -116,7 +116,10 @@ class UpdateChecker:
             }
             
         except HTTPError as e:
-            self.error_message = f"GitHub hatası: {e.code}"
+            if e.code == 404:
+                self.error_message = "Henüz bir güncelleme yayınlanmamış"
+            else:
+                self.error_message = f"GitHub hatası: {e.code}"
         except URLError as e:
             self.error_message = f"Bağlantı hatası: {e.reason}"
         except json.JSONDecodeError:

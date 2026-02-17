@@ -6,6 +6,7 @@ Ekran okuyucu uyumlu metin kutusu
 
 import pygame
 from audio.audio_manager import get_audio_manager
+from config import get_font
 
 # Clipboard desteği
 try:
@@ -42,7 +43,7 @@ class AccessibleTextInput:
     
     def get_font(self):
         if self._font is None:
-            self._font = pygame.font.Font(None, 24)
+            self._font = get_font(24)
         return self._font
     
     def focus(self):

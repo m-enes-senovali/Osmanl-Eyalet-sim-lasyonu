@@ -9,7 +9,7 @@
     "prestige": 50,
     "experience": 0,
     "background": "default",
-    "turns_as_governor": 0
+    "turns_as_governor": 5
   },
   "province": {
     "name": "Rum Eyaleti",
@@ -20,15 +20,16 @@
   "time": {
     "year": 1521,
     "month": 12,
-    "turn": 78
+    "day": 6,
+    "turn": 83
   },
   "economy": {
     "resources": {
-      "gold": 133510,
-      "food": 241929,
-      "wood": 62400,
-      "iron": 38192,
-      "stone": 875,
+      "gold": 146203,
+      "food": 266260,
+      "wood": 67650,
+      "iron": 41482,
+      "stone": 870,
       "rope": 500,
       "tar": 300,
       "sailcloth": 200
@@ -77,10 +78,10 @@
   },
   "population": {
     "population": {
-      "farmers": 26710,
-      "merchants": 8882,
-      "artisans": 6648,
-      "soldiers": 2193,
+      "farmers": 29494,
+      "merchants": 9809,
+      "artisans": 7342,
+      "soldiers": 2423,
       "scholars": 200
     },
     "happiness": 100,
@@ -145,7 +146,16 @@
         "personality": "mercantile"
       }
     },
-    "active_missions": [],
+    "active_missions": [
+      {
+        "type": "tribute",
+        "title": "Haraç Talebi",
+        "description": "Padişah hazineye 2000 altın katkı bekliyor",
+        "target": 2000,
+        "reward_loyalty": 15,
+        "turns_remaining": 2
+      }
+    ],
     "envoy_cooldown": 0,
     "vassals": [],
     "marriage_alliances": [],
@@ -162,13 +172,13 @@
       "skilled_craftsman",
       "earthquake"
     ],
-    "events_this_year": 3,
-    "current_event_id": null,
+    "events_this_year": 4,
+    "current_event_id": "famine_threat",
     "event_memory": {},
     "pending_triggers": []
   },
   "warfare": {
-    "war_weariness": 20,
+    "war_weariness": 0,
     "battle_counter": 1,
     "war_history": [],
     "player_tactic_history": []
@@ -244,7 +254,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -253,7 +263,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -262,7 +272,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -271,7 +281,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -280,7 +290,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -289,7 +299,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -298,7 +308,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -307,7 +317,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -316,7 +326,7 @@
         "skill": 5,
         "task": "construction",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -325,7 +335,7 @@
         "skill": 5,
         "task": "trading",
         "efficiency": 1.5,
-        "turns": 5493,
+        "turns": 5498,
         "experience": 100
       },
       {
@@ -334,7 +344,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 755,
+        "turns": 760,
         "experience": 100
       }
     ],
@@ -356,16 +366,24 @@
         "name": "Kolunburna #1",
         "condition": 100,
         "shots_fired": 0
-      }
-    ],
-    "production_queue": [
+      },
       {
+        "cannon_id": "cannon_2",
+        "cannon_type": "darbzen",
+        "name": "Darbzen #2",
+        "condition": 100,
+        "shots_fired": 0
+      },
+      {
+        "cannon_id": "cannon_3",
         "cannon_type": "sahi",
-        "turns_remaining": 3,
-        "custom_name": ""
+        "name": "Şahi #3",
+        "condition": 100,
+        "shots_fired": 0
       }
     ],
-    "total_cannons_produced": 1,
+    "production_queue": [],
+    "total_cannons_produced": 3,
     "cannons_destroyed": 0
   },
   "espionage": {
@@ -374,7 +392,7 @@
     "spy_counter": 0,
     "mission_counter": 0,
     "intelligence_level": 0,
-    "security_level": 50,
+    "security_level": 45,
     "known_enemy_spies": 0,
     "successful_missions": 0,
     "failed_missions": 0,
@@ -383,31 +401,31 @@
   "religion": {
     "millet_states": {
       "muslim": {
-        "loyalty": 80,
+        "loyalty": 85,
         "population": 0,
         "unrest": 0,
         "autonomy": 0
       },
       "rum": {
-        "loyalty": 50,
+        "loyalty": 55,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "ermeni": {
-        "loyalty": 60,
+        "loyalty": 65,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "yahudi": {
-        "loyalty": 70,
+        "loyalty": 75,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "suryani": {
-        "loyalty": 55,
+        "loyalty": 60,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
@@ -417,10 +435,10 @@
     "vakifs": [],
     "ulema_counter": 0,
     "vakif_counter": 0,
-    "piety": 50,
+    "piety": 30,
     "legitimacy": 70,
     "tolerance": 60,
-    "education_level": 30,
+    "education_level": 20,
     "kizilbas_threat": 15,
     "kizilbas_suppressed": false,
     "has_seyhulislam": true,

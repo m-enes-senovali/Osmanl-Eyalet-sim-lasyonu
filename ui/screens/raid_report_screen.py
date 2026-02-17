@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Akın Rapor Ekranı
 Akın sonuçlarını canlı hikaye anlatımıyla sunar.
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Panel
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 @dataclass
@@ -82,12 +82,12 @@ class RaidReportScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def get_text_font(self):
         if self._text_font is None:
-            self._text_font = pygame.font.Font(None, FONTS['body'])
+            self._text_font = get_font(FONTS['body'])
         return self._text_font
     
     def set_raid_story(self, story: RaidStory):
@@ -365,6 +365,6 @@ class RaidReportScreen(BaseScreen):
             self.result_panel.draw(surface)
         
         # Kontrol bilgisi
-        small_font = pygame.font.Font(None, FONTS['small'])
+        small_font = get_font(FONTS['small'])
         controls = small_font.render("Enter: Kapat | S: Atla", True, COLORS['text_dark'])
         surface.blit(controls, (50, SCREEN_HEIGHT - 40))

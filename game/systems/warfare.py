@@ -35,10 +35,19 @@ class BattlePhase(Enum):
 
 
 class SiegePhase(Enum):
-    """Kuşatma aşamaları - profesyonel kuşatma mekaniği"""
-    BLOCKADE = "blockade"        # Abluka - tedarik kes, açlıkla teslim
-    BOMBARDMENT = "bombardment"  # Bombardıman - surları yık
-    ASSAULT = "assault"          # Genel Hücum - kaleye gir
+    """
+    Kuşatma aşamaları — Osmanlı kuşatma doktrini
+    Rapor referansı: Rodos (1522), Budin (1541), Zigetvar (1566)
+    """
+    BLOCKADE = "blockade"        # 1. Abluka ve İhata — tedarik kesilir
+    VIRE = "vire"                # 2. Vire (Eman) Teklifi — teslim çağrısı
+                                 #    Kabul: Düşük ganimet, yüksek prestij, hızlı fetih
+                                 #    Red: Yağma serbest, kuşatma devam
+    TRENCHING = "trenching"      # 3. Metris — sıçan yolu (zigzag hendek) ve gabion
+    BOMBARDMENT = "bombardment"  # 4. Top Dövmesi — surda gedik açma (Şahi/Darbzen)
+    MINING = "mining"            # 5. Lağım — sur altına tünel + barut
+                                 #    Risk: Karşı-lağım ile lağımcılar ölebilir
+    ASSAULT = "assault"          # 6. Umumi Hücum — gedikten Yeniçeri saldırısı
 
 
 class UnitType(Enum):

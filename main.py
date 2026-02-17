@@ -253,6 +253,13 @@ class Game:
             ScreenType.CHARACTER_CREATION,
             CharacterCreationScreen(self.screen_manager)
         )
+        
+        # Lonca yönetim ekranı (YENİ)
+        from ui.screens.guild_screen import GuildScreen
+        self.screen_manager.register_screen(
+            ScreenType.GUILD,
+            GuildScreen(self.screen_manager)
+        )
     
     def _load_sounds(self):
         """Ses dosyalarını yükle"""

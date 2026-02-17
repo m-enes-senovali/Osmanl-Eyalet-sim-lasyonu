@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Çok Oyunculu Oyun Ekranı
 Multiplayer oyun modu ana ekranı
@@ -8,7 +8,7 @@ import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from ui.text_input import AccessibleTextInput
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class MultiplayerGameScreen(BaseScreen):
@@ -59,12 +59,12 @@ class MultiplayerGameScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def get_info_font(self):
         if self._info_font is None:
-            self._info_font = pygame.font.Font(None, FONTS['body'])
+            self._info_font = get_font(FONTS['body'])
         return self._info_font
     
     def on_enter(self):

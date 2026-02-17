@@ -95,6 +95,52 @@ FONTS = {
     'tooltip': 16,
 }
 
+# ── Türkçe Karakter Destekli Font Yardımcısı ──
+# pygame.font.Font(None, size) Türkçe ğ, ş, ç, ı, ö, ü karakterlerini
+# render edemez. Bu yardımcı Windows sistem fontlarını kullanır.
+_font_cache = {}
+
+def get_font(size: int):
+    """
+    Türkçe destekli pygame fontu döndürür.
+    Önbellek kullanır, aynı boyut tekrar istendiğinde yeni Font oluşturmaz.
+    
+    Kullanım:
+        from config import get_font, FONTS
+        font = get_font(FONTS['header'])
+    """
+    if size in _font_cache:
+        return _font_cache[size]
+    
+    import pygame
+    # Türkçe karakter destekli font sırası (Windows → cross-platform)
+    turkish_fonts = [
+        "segoeui",       # Windows 10/11 varsayılan — en iyi Türkçe desteği
+        "arial",         # Tüm Windows sürümlerinde mevcut
+        "tahoma",        # Eski Windows uyumluluğu
+        "verdana",       # Alternatif
+        "dejavusans",    # Linux/cross-platform
+        "freesans",      # Son çare
+    ]
+    
+    font = None
+    for font_name in turkish_fonts:
+        try:
+            font = pygame.font.SysFont(font_name, size)
+            # Türkçe karakter testi — font render edebiliyor mu?
+            test_surface = font.render("şğçıöüŞĞÇİÖÜ", True, (255, 255, 255))
+            if test_surface.get_width() > 0:
+                break
+        except Exception:
+            continue
+    
+    if font is None:
+        # Hiçbir sistem fontu bulunamazsa varsayılana düş
+        font = pygame.font.Font(None, size)
+    
+    _font_cache[size] = font
+    return font
+
 # Çok Oyunculu Ayarları (HTTP Polling)
 MULTIPLAYER = {
     # Varsayılan sunucu - VDS IP adresinizi buraya yazın

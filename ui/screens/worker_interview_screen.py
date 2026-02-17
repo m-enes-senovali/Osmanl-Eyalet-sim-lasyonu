@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - İşçi Görüşme Ekranı
 İnteraktif iş görüşmesi sistemi
@@ -8,7 +8,7 @@ import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from ui.text_input import AccessibleTextInput
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.systems.workers import WorkerType, Worker
 from game.systems.worker_hiring_events import (
     get_random_candidate, CandidateProfile, InterviewState
@@ -90,7 +90,7 @@ class WorkerInterviewScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -379,7 +379,7 @@ class WorkerInterviewScreen(BaseScreen):
         # Aşamaya göre içerik
         if self.stage == "type_select":
             # Tür seçim menüsü
-            small_font = pygame.font.Font(None, FONTS['subheader'])
+            small_font = get_font(FONTS['subheader'])
             info = small_font.render("Hangi alanda çalışacak bir işçi arıyorsunuz?", True, COLORS['text'])
             surface.blit(info, (20, 100))
             self.type_menu.draw(surface)
@@ -389,7 +389,7 @@ class WorkerInterviewScreen(BaseScreen):
             self.candidate_panel.draw(surface)
             
             # Seçenekler
-            small_font = pygame.font.Font(None, FONTS['subheader'])
+            small_font = get_font(FONTS['subheader'])
             info = small_font.render("Ne yapmak istiyorsunuz?", True, COLORS['text'])
             surface.blit(info, (20, 395))
             self.choice_menu.draw(surface)
@@ -399,7 +399,7 @@ class WorkerInterviewScreen(BaseScreen):
             self.candidate_panel.draw(surface)
             
             # İsim girişi
-            small_font = pygame.font.Font(None, FONTS['subheader'])
+            small_font = get_font(FONTS['subheader'])
             info = small_font.render("İşçiye bir isim verin:", True, COLORS['text'])
             surface.blit(info, (20, 395))
             self.name_input.draw(surface)

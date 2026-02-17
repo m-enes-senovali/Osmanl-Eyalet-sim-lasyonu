@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Ayarlar Ekranı
 """
@@ -7,7 +7,7 @@ import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from game.game_settings import get_settings, get_text, t
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, VERSION
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, VERSION, get_font
 from updater import get_updater
 from audio.music_manager import get_music_manager
 
@@ -57,7 +57,7 @@ class SettingsScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -212,7 +212,9 @@ class SettingsScreen(BaseScreen):
         name = t('music_volume') if 'music' in volume_key else t('sfx_volume')
         self.audio.speak(f"{name}: {new_value} yüzde", interrupt=True)
         
+        saved_index = self.settings_menu.selected_index
         self._setup_settings_menu()
+        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
         self._update_panels()
     
     def _toggle_setting(self, setting_key: str):
@@ -227,7 +229,9 @@ class SettingsScreen(BaseScreen):
         status = t('enabled') if not current else t('disabled')
         self.audio.speak(f"{status}", interrupt=True)
         
+        saved_index = self.settings_menu.selected_index
         self._setup_settings_menu()
+        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
         self._update_panels()
     
     def _change_interval(self):
@@ -244,7 +248,9 @@ class SettingsScreen(BaseScreen):
         self.settings.set('auto_save_interval', new_interval)
         self.audio.speak(f"Her {new_interval} turda kaydet", interrupt=True)
         
+        saved_index = self.settings_menu.selected_index
         self._setup_settings_menu()
+        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
         self._update_panels()
     
     def _toggle_language(self):
@@ -259,7 +265,9 @@ class SettingsScreen(BaseScreen):
             self.audio.speak("Dil Türkçe olarak değiştirildi", interrupt=True)
         
         # Menüyü ve panelleri güncelle (yeni dilde)
+        saved_index = self.settings_menu.selected_index
         self._setup_settings_menu()
+        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
         self._update_panels()
     
     def _check_updates(self):
@@ -393,7 +401,9 @@ class SettingsScreen(BaseScreen):
         name = t('music_volume') if 'music' in key else t('sfx_volume')
         self.audio.speak(f"{new_value}", interrupt=True)
         
+        saved_index = self.settings_menu.selected_index
         self._setup_settings_menu()
+        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
         self._update_panels()
     
     def _announce_settings(self):
@@ -436,7 +446,7 @@ class SettingsScreen(BaseScreen):
         self.back_button.draw(surface)
         
         # Yardım metni
-        small_font = pygame.font.Font(None, FONTS['small'])
+        small_font = get_font(FONTS['small'])
         help_text = "Sol/Sağ ok: Değer değiştir | Enter: Seçenekleri değiştir | F1: Oku"
         help_surface = small_font.render(help_text, True, COLORS['text'])
         surface.blit(help_surface, (20, SCREEN_HEIGHT - 100))

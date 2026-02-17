@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Ekonomi Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Ekonomi Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, ProgressBar, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class EconomyScreen(BaseScreen):
@@ -51,7 +51,7 @@ class EconomyScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -151,7 +151,7 @@ class EconomyScreen(BaseScreen):
         self._draw_net_indicator(surface)
         
         # Vergi menüsü
-        small_font = pygame.font.Font(None, FONTS['subheader'])
+        small_font = get_font(FONTS['subheader'])
         tax_title = small_font.render("Vergi Ayarları", True, COLORS['gold'])
         surface.blit(tax_title, (20, 370))
         self.tax_menu.draw(surface)
@@ -176,11 +176,11 @@ class EconomyScreen(BaseScreen):
         color = COLORS['success'] if net >= 0 else COLORS['danger']
         pygame.draw.rect(surface, color, rect, width=3, border_radius=10)
         
-        font = pygame.font.Font(None, FONTS['subheader'])
+        font = get_font(FONTS['subheader'])
         label = font.render("Net Gelir/Tur:", True, COLORS['text'])
         surface.blit(label, (rect.x + 20, rect.y + 15))
         
-        value_font = pygame.font.Font(None, FONTS['header'])
+        value_font = get_font(FONTS['header'])
         sign = "+" if net >= 0 else ""
         value = value_font.render(f"{sign}{net:,}", True, color)
         surface.blit(value, (rect.x + 20, rect.y + 45))
@@ -197,7 +197,7 @@ class EconomyScreen(BaseScreen):
         pygame.draw.rect(surface, COLORS['panel_bg'], rect, border_radius=10)
         pygame.draw.rect(surface, COLORS['panel_border'], rect, width=2, border_radius=10)
         
-        font = pygame.font.Font(None, FONTS['body'])
+        font = get_font(FONTS['body'])
         
         # Mevcut vergi
         tax_text = font.render(

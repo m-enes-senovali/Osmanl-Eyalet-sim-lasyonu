@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Eyalet Seçim Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Eyalet Seçim Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.data.territories import TERRITORIES, TerritoryType, Region
 
 
@@ -104,7 +104,7 @@ class ProvinceSelectScreen(BaseScreen):
     
     def get_title_font(self):
         if self._title_font is None:
-            self._title_font = pygame.font.Font(None, FONTS['header'])
+            self._title_font = get_font(FONTS['header'])
         return self._title_font
     
     def _setup_menu(self):
@@ -112,7 +112,7 @@ class ProvinceSelectScreen(BaseScreen):
         self.province_menu.clear()
         
         for i, province in enumerate(AVAILABLE_PROVINCES):
-            coastal_text = "[Kiyi]" if province["is_coastal"] else "[Ic]"
+            coastal_text = "[Kıyı]" if province["is_coastal"] else "[İç]"
             text = f"{province['name']} ({province['difficulty']}) - {coastal_text}"
             self.province_menu.add_item(
                 text,
@@ -201,14 +201,14 @@ class ProvinceSelectScreen(BaseScreen):
     def draw(self, surface: pygame.Surface):
         # Başlık
         title_font = self.get_title_font()
-        title = title_font.render("EYALET SECIMI", True, COLORS['gold'])
+        title = title_font.render("EYALET SEÇİMİ", True, COLORS['gold'])
         title_rect = title.get_rect(centerx=SCREEN_WIDTH // 2, top=40)
         surface.blit(title, title_rect)
         
         # Alt başlık
-        subtitle_font = pygame.font.Font(None, FONTS['body'])
+        subtitle_font = get_font(FONTS['body'])
         subtitle = subtitle_font.render(
-            "Yonetmek istediginiz eyaleti secin. [Kiyi] = Tersane, [Ic] = Ic bolge",
+            "Yönetmek istediğiniz eyaleti seçin. [Kıyı] = Tersane, [İç] = İç bölge",
             True, COLORS['text']
         )
         subtitle_rect = subtitle.get_rect(centerx=SCREEN_WIDTH // 2, top=100)
@@ -238,7 +238,7 @@ class ProvinceSelectScreen(BaseScreen):
             pygame.draw.rect(surface, COLORS['panel_bg'], detail_rect, border_radius=10)
             pygame.draw.rect(surface, COLORS['panel_border'], detail_rect, width=2, border_radius=10)
             
-            font = pygame.font.Font(None, FONTS['body'])
+            font = get_font(FONTS['body'])
             
             # Başkent
             capital_text = font.render(f"Başkent: {p['capital']}", True, COLORS['gold'])

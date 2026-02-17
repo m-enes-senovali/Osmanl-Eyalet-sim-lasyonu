@@ -448,8 +448,10 @@ class TradeSystem:
         # Sonuçları duyur
         audio = get_audio_manager()
         if results['income'] > 0:
+            audio.play_game_sound('economy', 'trade')  # Kervan varış sesi
             audio.speak(f"Ticaret geliri: {results['income']} altın", interrupt=False)
         if results['lost_caravans'] > 0:
+            audio.play_game_sound('events', 'bad')  # Kayıp kervan sesi
             audio.speak(f"Kayıp kervan: {results['lost_caravans']}", interrupt=False)
         
         return results

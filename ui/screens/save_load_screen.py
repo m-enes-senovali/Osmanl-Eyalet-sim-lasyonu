@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Kayıt Yuvası Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Kayıt Yuvası Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, MenuList, Panel
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class SaveLoadScreen(BaseScreen):
@@ -43,7 +43,7 @@ class SaveLoadScreen(BaseScreen):
     
     def get_title_font(self):
         if self._title_font is None:
-            self._title_font = pygame.font.Font(None, FONTS['header'])
+            self._title_font = get_font(FONTS['header'])
         return self._title_font
     
     def set_mode(self, mode: str):
@@ -177,7 +177,7 @@ class SaveLoadScreen(BaseScreen):
         surface.blit(title, title_rect)
         
         # Alt başlık
-        subtitle_font = pygame.font.Font(None, FONTS['body'])
+        subtitle_font = get_font(FONTS['body'])
         subtitle = subtitle_font.render("Bir kayıt yuvası seçin", True, COLORS['text'])
         subtitle_rect = subtitle.get_rect(centerx=SCREEN_WIDTH // 2, top=150)
         surface.blit(subtitle, subtitle_rect)
@@ -192,7 +192,7 @@ class SaveLoadScreen(BaseScreen):
         if self.mode == 'save':
             gm = self.screen_manager.game_manager
             if gm and gm.save_slot:
-                info_font = pygame.font.Font(None, FONTS['small'])
+                info_font = get_font(FONTS['small'])
                 info = info_font.render(
                     f"Mevcut oyun: Yuva {gm.save_slot}",
                     True, COLORS['gold']

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Müzakere Ekranı
 Diplomatik eylemler için pazarlık arayüzü
@@ -7,7 +7,7 @@ Diplomatik eylemler için pazarlık arayüzü
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from enum import Enum
 
 
@@ -83,7 +83,7 @@ class NegotiationScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def setup_negotiation(self, negotiation_type: NegotiationType, target: str):
@@ -531,7 +531,7 @@ class NegotiationScreen(BaseScreen):
         surface.blit(title, (50, 30))
         
         # Alt başlık
-        small_font = pygame.font.Font(None, FONTS['small'])
+        small_font = get_font(FONTS['small'])
         help_text = small_font.render(
             "Tab: Sonraki alan | Sol/Sağ: Değer değiştir | F1: Özet | Enter: Gönder | Esc: İptal",
             True, COLORS['text_dim']
@@ -573,6 +573,6 @@ class NegotiationScreen(BaseScreen):
         pygame.draw.rect(surface, color, bar_rect, border_radius=5)
         
         # Label
-        font = pygame.font.Font(None, FONTS['small'])
+        font = get_font(FONTS['small'])
         label = font.render(f"Kabul Şansı: %{acceptance}", True, COLORS['text'])
         surface.blit(label, (rect.x + 10, rect.y + 5))

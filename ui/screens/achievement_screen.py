@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Başarı Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Başarı Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.systems.achievements import (
     get_achievement_system, AchievementCategory, Achievement
 )
@@ -59,7 +59,7 @@ class AchievementScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -212,9 +212,6 @@ class AchievementScreen(BaseScreen):
             if self.achievement_menu.handle_event(event):
                 return True
         
-        if self.back_button.handle_event(event):
-            return True
-        
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_BACKSPACE:
                 if self.active_menu == 'achievement':
@@ -238,6 +235,9 @@ class AchievementScreen(BaseScreen):
                     self.active_menu = 'category'
                     self.audio.speak("Kategoriler", interrupt=True)
                 return True
+        
+        if self.back_button.handle_event(event):
+            return True
         
         return False
     

@@ -10,6 +10,10 @@ from typing import Dict, List, Callable, Optional, Any
 from enum import Enum
 from datetime import datetime
 from audio.audio_manager import get_audio_manager
+try:
+    from game.systems.military import UnitType
+except ImportError:
+    UnitType = None
 
 
 class AchievementCategory(Enum):
@@ -325,6 +329,7 @@ class AchievementSystem:
             'negotiations_completed': 0,
             'raids_completed': 0,
             'rebellions_crushed': 0,
+            'defense_victories': 0,
             'turns_played': 0,
             'turns_without_war': 0,
             'turns_without_tax': 0,
@@ -440,79 +445,87 @@ class AchievementSystem:
         return newly_unlocked
     
     def _check_condition(self, ach: Achievement, gm) -> bool:
-        """Başarı koşulunu kontrol et"""
+        """Başarı koşulunu kontrol et — tüm erişimler güvenli"""
         key = ach.condition_key
         
-        # Ekonomik
-        if key == "gold_100k":
-            return gm.economy.gold >= 100000
-        elif key == "trade_routes_5":
-            return len(gm.trade.active_routes) >= 5
-        elif key == "buildings_50":
-            return self.stats['buildings_built'] >= 50
-        elif key == "high_tax_no_revolt":
-            tax_rate = gm.economy.tax_rate
-            loyalty = gm.population.loyalty
-            return tax_rate >= 0.20 and loyalty >= 70
-        elif key == "income_10k":
-            return gm.economy.last_income >= 10000
-        elif key == "workers_100":
-            total_workers = sum(len(ws) for ws in gm.workers.worker_assignments.values())
-            return total_workers >= 100
-        
-        # Askeri
-        elif key == "victories_10":
-            return self.stats['battles_won'] >= 10
-        elif key == "ships_50":
-            return gm.naval.total_ships >= 50
-        elif key == "cannons_100":
-            return gm.artillery.total_cannons >= 100
-        elif key == "janissaries_10k":
-            yeniceris = gm.military.units.get('yeniceris', {}).get('count', 0)
-            return yeniceris >= 10000
-        elif key == "defense_wins_5":
-            return gm.warfare.defense_victories >= 5
-        elif key == "raids_20":
-            return self.stats['raids_completed'] >= 20
-        
-        # Diplomatik
-        elif key == "alliances_5":
-            alliances = sum(1 for r in gm.diplomacy.relations.values() if r.get('alliance', False))
-            return alliances >= 5
-        elif key == "spy_missions_20":
-            return gm.espionage.successful_missions >= 20
-        elif key == "negotiations_10":
-            return self.stats['negotiations_completed'] >= 10
-        elif key == "tributes_3":
-            tributes = sum(1 for r in gm.diplomacy.relations.values() if r.get('tribute', 0) > 0)
-            return tributes >= 3
-        
-        # Sosyal
-        elif key == "population_100k":
-            return gm.population.population.total >= 100000
-        elif key == "all_millets_loyal":
-            for state in gm.religion.millet_states.values():
-                if state.get('loyalty', 0) < 80:
+        try:
+            # Ekonomik
+            if key == "gold_100k":
+                return gm.economy.resources.gold >= 100000
+            elif key == "trade_routes_5":
+                return len(getattr(gm.economy, 'active_trade_routes', [])) >= 5
+            elif key == "buildings_50":
+                return self.stats['buildings_built'] >= 50
+            elif key == "high_tax_no_revolt":
+                tax_rate = getattr(gm.economy, 'tax_rate', 0)
+                happiness = getattr(gm.population, 'happiness', 0)
+                return tax_rate >= 0.20 and happiness >= 70
+            elif key == "income_10k":
+                # Gelir hesapla
+                try:
+                    income = gm.economy.calculate_tax_income() + gm.economy.calculate_trade_income()
+                    return income >= 10000
+                except Exception:
                     return False
-            return True
-        elif key == "ulema_10":
-            return len(gm.religion.ulema) >= 10
-        elif key == "vakifs_20":
-            return len(gm.religion.vakifs) >= 20
-        elif key == "education_80":
-            return gm.religion.education_level >= 80
-        elif key == "happiness_90":
-            return gm.population.happiness >= 90
-        
-        # Gizli
-        elif key == "turns_100":
-            return self.stats['turns_played'] >= 100
-        elif key == "no_war_50_turns":
-            return self.stats['turns_without_war'] >= 50
-        elif key == "no_tax_10_turns":
-            return self.stats['turns_without_tax'] >= 10
-        elif key == "crush_5_rebellions":
-            return self.stats['rebellions_crushed'] >= 5
+            elif key == "workers_100":
+                return len(gm.workers.workers) >= 100
+            
+            # Askeri
+            elif key == "victories_10":
+                return self.stats['battles_won'] >= 10
+            elif key == "ships_50":
+                return len(getattr(gm.naval, 'ships', [])) >= 50
+            elif key == "cannons_100":
+                return len(getattr(gm.artillery, 'cannons', [])) >= 100
+            elif key == "janissaries_10k":
+                if UnitType:
+                    return gm.military.units.get(UnitType.YENICHERI, 0) >= 10000
+                return False
+            elif key == "defense_wins_5":
+                return self.stats.get('defense_victories', 0) >= 5
+            elif key == "raids_20":
+                return self.stats['raids_completed'] >= 20
+            
+            # Diplomatik
+            elif key == "alliances_5":
+                alliances = len(getattr(gm.diplomacy, 'marriage_alliances', []))
+                return alliances >= 5
+            elif key == "spy_missions_20":
+                return getattr(gm.espionage, 'successful_missions', 0) >= 20
+            elif key == "negotiations_10":
+                return self.stats['negotiations_completed'] >= 10
+            elif key == "tributes_3":
+                vassals = len(getattr(gm.diplomacy, 'vassals', []))
+                return vassals >= 3
+            
+            # Sosyal
+            elif key == "population_100k":
+                return gm.population.population.total >= 100000
+            elif key == "all_millets_loyal":
+                for state in gm.religion.millet_states.values():
+                    if state.get('loyalty', 0) < 80:
+                        return False
+                return True
+            elif key == "ulema_10":
+                return len(gm.religion.ulema) >= 10
+            elif key == "vakifs_20":
+                return len(gm.religion.vakifs) >= 20
+            elif key == "education_80":
+                return gm.religion.education_level >= 80
+            elif key == "happiness_90":
+                return gm.population.happiness >= 90
+            
+            # Gizli
+            elif key == "turns_100":
+                return self.stats['turns_played'] >= 100
+            elif key == "no_war_50_turns":
+                return self.stats['turns_without_war'] >= 50
+            elif key == "no_tax_10_turns":
+                return self.stats['turns_without_tax'] >= 10
+            elif key == "crush_5_rebellions":
+                return self.stats['rebellions_crushed'] >= 5
+        except Exception:
+            pass
         
         return False
     
@@ -525,29 +538,74 @@ class AchievementSystem:
         return (current / ach.target_value) * 100.0
     
     def _get_current_value(self, ach: Achievement, gm) -> int:
-        """Mevcut değeri al"""
+        """Mevcut değeri al — tüm başarılar için"""
         key = ach.condition_key
         
-        if key == "gold_100k":
-            return int(gm.economy.gold)
-        elif key == "trade_routes_5":
-            return len(gm.trade.active_routes)
-        elif key == "buildings_50":
-            return self.stats['buildings_built']
-        elif key == "victories_10":
-            return self.stats['battles_won']
-        elif key == "ships_50":
-            return gm.naval.total_ships
-        elif key == "cannons_100":
-            return gm.artillery.total_cannons
-        elif key == "janissaries_10k":
-            return gm.military.units.get('yeniceris', {}).get('count', 0)
-        elif key == "population_100k":
-            return gm.population.population.total
-        elif key == "spy_missions_20":
-            return gm.espionage.successful_missions
-        elif key == "turns_100":
-            return self.stats['turns_played']
+        try:
+            # Ekonomik
+            if key == "gold_100k":
+                return int(gm.economy.resources.gold)
+            elif key == "trade_routes_5":
+                return len(getattr(gm.economy, 'active_trade_routes', []))
+            elif key == "buildings_50":
+                return self.stats['buildings_built']
+            elif key == "income_10k":
+                try:
+                    return int(gm.economy.calculate_tax_income() + gm.economy.calculate_trade_income())
+                except Exception:
+                    return 0
+            elif key == "workers_100":
+                return len(gm.workers.workers)
+            
+            # Askeri
+            elif key == "victories_10":
+                return self.stats['battles_won']
+            elif key == "ships_50":
+                return len(getattr(gm.naval, 'ships', []))
+            elif key == "cannons_100":
+                return len(getattr(gm.artillery, 'cannons', []))
+            elif key == "janissaries_10k":
+                if UnitType:
+                    return gm.military.units.get(UnitType.YENICHERI, 0)
+                return 0
+            elif key == "defense_wins_5":
+                return self.stats.get('defense_victories', 0)
+            elif key == "raids_20":
+                return self.stats['raids_completed']
+            
+            # Diplomatik
+            elif key == "alliances_5":
+                return len(getattr(gm.diplomacy, 'marriage_alliances', []))
+            elif key == "spy_missions_20":
+                return getattr(gm.espionage, 'successful_missions', 0)
+            elif key == "negotiations_10":
+                return self.stats['negotiations_completed']
+            elif key == "tributes_3":
+                return len(getattr(gm.diplomacy, 'vassals', []))
+            
+            # Sosyal
+            elif key == "population_100k":
+                return gm.population.population.total
+            elif key == "ulema_10":
+                return len(gm.religion.ulema)
+            elif key == "vakifs_20":
+                return len(gm.religion.vakifs)
+            elif key == "education_80":
+                return int(gm.religion.education_level)
+            elif key == "happiness_90":
+                return int(gm.population.happiness)
+            
+            # Gizli
+            elif key == "turns_100":
+                return self.stats['turns_played']
+            elif key == "no_war_50_turns":
+                return self.stats['turns_without_war']
+            elif key == "no_tax_10_turns":
+                return self.stats['turns_without_tax']
+            elif key == "crush_5_rebellions":
+                return self.stats['rebellions_crushed']
+        except Exception:
+            pass
         
         return 0
     
@@ -573,16 +631,23 @@ class AchievementSystem:
         self.stats['turns_played'] += 1
         
         # Savaşsız tur kontrolü
-        if not game_manager.warfare.is_at_war:
+        try:
+            at_war = len(game_manager.warfare.active_battles) > 0
+            if not at_war:
+                self.stats['turns_without_war'] += 1
+            else:
+                self.stats['turns_without_war'] = 0
+        except Exception:
             self.stats['turns_without_war'] += 1
-        else:
-            self.stats['turns_without_war'] = 0
         
         # Vergisiz tur kontrolü
-        if game_manager.economy.tax_rate == 0:
-            self.stats['turns_without_tax'] += 1
-        else:
-            self.stats['turns_without_tax'] = 0
+        try:
+            if game_manager.economy.tax_rate == 0:
+                self.stats['turns_without_tax'] += 1
+            else:
+                self.stats['turns_without_tax'] = 0
+        except Exception:
+            pass
         
         # Başarıları kontrol et
         self.check_achievements(game_manager)

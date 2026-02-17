@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Ana Oyun Ekranı (Eyalet Görünümü)
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Ana Oyun Ekranı (Eyalet Görünümü)
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, ProgressBar, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, KEYBINDS
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, KEYBINDS, get_font
 from game.tutorial import get_tutorial
 
 
@@ -33,6 +33,11 @@ class ProvinceViewScreen(BaseScreen):
         self.selected_panel_index = 0
         self.panels = ['resources', 'status', 'menu']
         
+        # Erişilebilir istatistik gezinme modu
+        self._stats_mode = False
+        self._stats_items = []
+        self._stats_index = 0
+        
         # Çıkış onayı durumu
         self.exit_confirmation_pending = False
     
@@ -58,14 +63,17 @@ class ProvinceViewScreen(BaseScreen):
         
         self.side_menu.add_item("Ekonomi", lambda: self._open_screen(ScreenType.ECONOMY), "e")
         self.side_menu.add_item("Ordu", lambda: self._open_screen(ScreenType.MILITARY), "m")
-        self.side_menu.add_item("Donanma", lambda: self._open_screen(ScreenType.NAVAL), "n")
-        self.side_menu.add_item("Topçu", lambda: self._open_screen(ScreenType.ARTILLERY), "t")
         self.side_menu.add_item("İnşaat", lambda: self._open_screen(ScreenType.CONSTRUCTION), "c")
         self.side_menu.add_item("Diplomasi", lambda: self._open_screen(ScreenType.DIPLOMACY), "d")
         self.side_menu.add_item("Halk", lambda: self._open_screen(ScreenType.POPULATION), "p")
+        self.side_menu.add_item("Loncalar", lambda: self._open_screen(ScreenType.GUILD), "l")
         self.side_menu.add_item("Casusluk", lambda: self._open_screen(ScreenType.ESPIONAGE), "s")
         self.side_menu.add_item("Din", lambda: self._open_screen(ScreenType.RELIGION), "")
         self.side_menu.add_item("Başarılar", lambda: self._open_screen(ScreenType.ACHIEVEMENT), "b")
+        self.side_menu.add_item("Topçu", lambda: self._open_screen(ScreenType.ARTILLERY), "t")
+        
+        # Donanma sadece kıyı eyaletlerinde (on_enter'da eklenir)
+        self._side_menu_needs_coastal_update = True
     
     def _create_buttons(self):
         """Butonları oluştur"""
@@ -104,18 +112,33 @@ class ProvinceViewScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def get_info_font(self):
         if self._info_font is None:
-            self._info_font = pygame.font.Font(None, FONTS['body'])
+            self._info_font = get_font(FONTS['body'])
         return self._info_font
     
     def on_enter(self):
         """Ekrana girişte panelleri güncelle"""
         self._update_panels()
         self.audio.play_ambient('city')
+        
+        is_tutorial_active = False
+        try:
+            tutorial = get_tutorial()
+            is_tutorial_active = tutorial.is_active
+        except Exception:
+            pass
+        
+        # Donanma sadece kıyı eyaletlerinde
+        if self._side_menu_needs_coastal_update:
+            gm = self.screen_manager.game_manager
+            if gm and gm.province.is_coastal:
+                # Ordu'dan sonra (index 2) Donanma ekle
+                self.side_menu.items.insert(2, ("Donanma", lambda: self._open_screen(ScreenType.NAVAL), "n"))
+            self._side_menu_needs_coastal_update = False
         
         # İlk giriş rehberi
         gm = self.screen_manager.game_manager
@@ -148,16 +171,24 @@ class ProvinceViewScreen(BaseScreen):
         self.resource_panel.add_item("Kereste", f"{gm.economy.resources.wood:,}")
         self.resource_panel.add_item("Demir", f"{gm.economy.resources.iron:,}")
         
-        # Durum paneli
+        # Durum paneli — önem sırasına göre (Tab ile ilk okunanlar üstte)
         self.status_panel.clear()
         self.status_panel.add_item("Yıl", str(gm.current_year))
-        self.status_panel.add_item("Ay", str(gm.current_month))
         self.status_panel.add_item("Tur", str(gm.turn_count))
         self.status_panel.add_item("", "")  # boşluk
-        self.status_panel.add_item("Nüfus", f"{gm.population.population.total:,}")
-        self.status_panel.add_item("Memnuniyet", f"%{gm.population.happiness}")
-        self.status_panel.add_item("Askeri Güç", f"{gm.military.get_total_power():,}")
         self.status_panel.add_item("Padişah Sadakati", f"%{gm.diplomacy.sultan_loyalty}")
+        self.status_panel.add_item("Halk Memnuniyeti", f"%{gm.population.happiness}")
+        self.status_panel.add_item("Nüfus", f"{gm.population.population.total:,}")
+        self.status_panel.add_item("Askeri Güç", f"{gm.military.get_total_power():,}")
+        
+        # Vergi tipi gösterimi
+        tax_labels = {
+            "salyanesiz": "Salyanesiz (Tımar)",
+            "salyaneli": "Salyaneli (Nakit)",
+            "karma": "Karma",
+        }
+        tax_type = getattr(gm.province, 'tax_type', 'salyanesiz')
+        self.status_panel.add_item("Vergi Tipi", tax_labels.get(tax_type, tax_type))
         
         # Karakter bonusları gösterimi
         if gm.player:
@@ -183,6 +214,35 @@ class ProvinceViewScreen(BaseScreen):
             self.status_panel.add_item("⚠ DURUM", "İSYAN VAR!")
     
     def handle_event(self, event) -> bool:
+        # İstatistik gezinme modu aktifse
+        if self._stats_mode:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_DOWN:
+                    self._stats_index = min(self._stats_index + 1, len(self._stats_items) - 1)
+                    self.audio.speak(self._stats_items[self._stats_index], interrupt=True)
+                    return True
+                elif event.key == pygame.K_UP:
+                    self._stats_index = max(self._stats_index - 1, 0)
+                    self.audio.speak(self._stats_items[self._stats_index], interrupt=True)
+                    return True
+                elif event.key == pygame.K_HOME:
+                    self._stats_index = 0
+                    self.audio.speak(self._stats_items[0], interrupt=True)
+                    return True
+                elif event.key == pygame.K_END:
+                    self._stats_index = len(self._stats_items) - 1
+                    self.audio.speak(self._stats_items[self._stats_index], interrupt=True)
+                    return True
+                elif event.key in (pygame.K_ESCAPE, pygame.K_TAB):
+                    self._close_stats_mode()
+                    return True
+                elif event.key == pygame.K_SPACE:
+                    # Space tuşuyla tur bitirme stats modunda da çalışsın
+                    self._close_stats_mode()
+                    self._on_next_turn()
+                    return True
+            return True  # Stats modundayken diğer tuşları engelle
+        
         # Çıkış onayı bekleniyorsa
         if self.exit_confirmation_pending:
             if event.type == pygame.KEYDOWN:
@@ -329,16 +389,12 @@ class ProvinceViewScreen(BaseScreen):
                 self.audio.speak(f"Müzik sesi: yüzde {int(new_vol * 100)}", interrupt=True)
                 return True
             
-            # Tab - Panel değiştir
+            # Tab - Erişilebilir istatistik paneli aç/kapat
             if event.key == pygame.K_TAB:
-                self.selected_panel_index = (self.selected_panel_index + 1) % len(self.panels)
-                panel_name = self.panels[self.selected_panel_index]
-                if panel_name == 'resources':
-                    self.resource_panel.announce_content()
-                elif panel_name == 'status':
-                    self.status_panel.announce_content()
-                elif panel_name == 'menu':
-                    self.audio.speak("Eylem Menüsü. Yukarı/aşağı ok tuşlarıyla gezinin.")
+                if self._stats_mode:
+                    self._close_stats_mode()
+                else:
+                    self._open_stats_mode()
                 return True
         
         return False
@@ -355,6 +411,7 @@ class ProvinceViewScreen(BaseScreen):
         self.audio.speak(f"Zahire: {res.food:,}", interrupt=False)
         self.audio.speak(f"Kereste: {res.wood:,}", interrupt=False)
         self.audio.speak(f"Demir: {res.iron:,}", interrupt=False)
+        self.audio.speak(f"Taş: {res.stone:,}", interrupt=False)
     
     def _announce_status(self):
         """Durum özetini oku"""
@@ -367,6 +424,117 @@ class ProvinceViewScreen(BaseScreen):
         self.audio.speak(f"Halk Memnuniyeti: yüzde {gm.population.happiness}", interrupt=False)
         self.audio.speak(f"Askeri Güç: {gm.military.get_total_power():,}", interrupt=False)
         self.audio.speak(f"Padişah Sadakati: yüzde {gm.diplomacy.sultan_loyalty}", interrupt=False)
+    
+    # ===== ERİŞİLEBİLİR İSTATİSTİK GEZİNME PANELİ =====
+    
+    def _open_stats_mode(self):
+        """İstatistik gezinme modunu aç — Tab ile aktifleştir"""
+        self._stats_items = self._build_stats_items()
+        if not self._stats_items:
+            self.audio.speak("İstatistik bilgisi yok.", interrupt=True)
+            return
+        self._stats_mode = True
+        self._stats_index = 0
+        self.audio.speak(
+            f"İstatistik Paneli. {len(self._stats_items)} madde. "
+            f"Yukarı-Aşağı oklarla gezinin. Tab veya Escape ile kapatın.",
+            interrupt=True
+        )
+        self.audio.speak(self._stats_items[0], interrupt=False)
+    
+    def _close_stats_mode(self):
+        """İstatistik gezinme modundan çık"""
+        self._stats_mode = False
+        self._stats_items = []
+        self._stats_index = 0
+        self.audio.speak("İstatistik paneli kapatıldı.", interrupt=True)
+    
+    def _build_stats_items(self):
+        """Tüm önemli istatistikleri liste olarak döndür"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return []
+        
+        items = []
+        
+        # --- Genel Bilgi ---
+        items.append(f"Yıl: {gm.current_year}, {gm.current_month}. ay")
+        items.append(f"Tur: {gm.turn_count}")
+        items.append(f"Eyalet: {gm.province.name}")
+        
+        # --- Karakter ---
+        if gm.player:
+            items.append(f"Karakter: {gm.player.get_full_title()}")
+        
+        # --- Kaynaklar ---
+        items.append(f"Altın: {gm.economy.resources.gold:,}")
+        items.append(f"Zahire: {gm.economy.resources.food:,}")
+        items.append(f"Kereste: {gm.economy.resources.wood:,}")
+        items.append(f"Demir: {gm.economy.resources.iron:,}")
+        
+        # --- Gelir/Gider ---
+        try:
+            report = gm.economy.get_income_report()
+            items.append(f"Gelir: {report.get('total_income', 0):,} altın")
+            items.append(f"Gider: {report.get('total_expense', 0):,} altın")
+            net = report.get('total_income', 0) - report.get('total_expense', 0)
+            items.append(f"Net: {'+' if net >= 0 else ''}{net:,} altın")
+        except Exception:
+            pass
+        
+        # --- Sadakat ve Memnuniyet ---
+        items.append(f"Padişah Sadakati: yüzde {gm.diplomacy.sultan_loyalty}")
+        items.append(f"Halk Memnuniyeti: yüzde {gm.population.happiness}")
+        
+        # --- Nüfus ---
+        items.append(f"Nüfus: {gm.population.population.total:,}")
+        
+        # --- Askeri Güç ---
+        items.append(f"Askeri Güç: {gm.military.get_total_power():,}")
+        try:
+            items.append(f"Yeniçeri: {gm.military.janissary_count:,}")
+            items.append(f"Sipahi: {gm.military.sipahi_count:,}")
+            items.append(f"Azap: {gm.military.azap_count:,}")
+        except Exception:
+            pass
+        
+        # --- Donanma ---
+        try:
+            if gm.province.is_coastal and hasattr(gm, 'naval'):
+                items.append(f"Donanma Gücü: {gm.naval.get_total_power():,}")
+        except Exception:
+            pass
+        
+        # --- Topçu ---
+        try:
+            if hasattr(gm, 'artillery'):
+                items.append(f"Top Sayısı: {gm.artillery.get_total_cannons()}")
+        except Exception:
+            pass
+        
+        # --- Vergi ---
+        tax_labels = {
+            "salyanesiz": "Salyanesiz (Tımar)",
+            "salyaneli": "Salyaneli (Nakit)",
+            "karma": "Karma",
+        }
+        tax_type = getattr(gm.province, 'tax_type', 'salyanesiz')
+        items.append(f"Vergi Tipi: {tax_labels.get(tax_type, tax_type)}")
+        
+        # --- İşçiler ---
+        try:
+            items.append(f"Toplam İşçi: {len(gm.workers.workers)}")
+            idle = gm.workers.get_idle_count()
+            if idle > 0:
+                items.append(f"Boşta İşçi: {idle}")
+        except Exception:
+            pass
+        
+        # --- İsyan ---
+        if gm.population.active_revolt:
+            items.append("⚠ UYARI: İSYAN VAR!")
+        
+        return items
     
     def _announce_income(self):
         """Gelir/gider özetini oku"""
@@ -466,11 +634,12 @@ class ProvinceViewScreen(BaseScreen):
             ("Zahire", gm.economy.resources.food, COLORS['success']),
             ("Kereste", gm.economy.resources.wood, (139, 90, 43)),
             ("Demir", gm.economy.resources.iron, (150, 150, 160)),
+            ("Tas", gm.economy.resources.stone, (180, 170, 150)),
         ]
         
         font = self.get_info_font()
         x_start = 50
-        spacing = (SCREEN_WIDTH - 100) // 4
+        spacing = (SCREEN_WIDTH - 100) // len(resources)
         
         for i, (name, value, color) in enumerate(resources):
             x = x_start + i * spacing
@@ -480,7 +649,7 @@ class ProvinceViewScreen(BaseScreen):
             surface.blit(name_surface, (x, 40))
             
             # Değer
-            value_font = pygame.font.Font(None, FONTS['subheader'])
+            value_font = get_font(FONTS['subheader'])
             value_surface = value_font.render(f"{value:,}", True, color)
             surface.blit(value_surface, (x, 70))
     
@@ -493,7 +662,7 @@ class ProvinceViewScreen(BaseScreen):
         font = self.get_info_font()
         
         # Başlık
-        title_font = pygame.font.Font(None, FONTS['subheader'])
+        title_font = get_font(FONTS['subheader'])
         title = title_font.render(f"📍 {gm.province.name}", True, COLORS['gold'])
         surface.blit(title, (410, 420))
         
@@ -531,7 +700,7 @@ class ProvinceViewScreen(BaseScreen):
         pygame.draw.rect(surface, COLORS['warning'], rect, border_radius=8)
         pygame.draw.rect(surface, COLORS['gold'], rect, width=3, border_radius=8)
         
-        font = pygame.font.Font(None, FONTS['body'])
+        font = get_font(FONTS['body'])
         
         # Başlık
         title = font.render("⚠ OLAY!", True, COLORS['text_dark'])
@@ -542,7 +711,7 @@ class ProvinceViewScreen(BaseScreen):
         surface.blit(event_name, (rect.x + 20, rect.y + 45))
         
         # Talimat
-        small_font = pygame.font.Font(None, FONTS['small'])
+        small_font = get_font(FONTS['small'])
         instruction = small_font.render("O tuşuna basarak olayı görüntüle", True, COLORS['text_dark'])
         surface.blit(instruction, (rect.x + 20, rect.y + 85))
     

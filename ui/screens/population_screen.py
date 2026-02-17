@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Halk/Nüfus Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Halk/Nüfus Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, ProgressBar
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class PopulationScreen(BaseScreen):
@@ -50,7 +50,7 @@ class PopulationScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -180,8 +180,8 @@ class PopulationScreen(BaseScreen):
         pygame.draw.rect(surface, COLORS['panel_bg'], rect, border_radius=10)
         pygame.draw.rect(surface, COLORS['panel_border'], rect, width=2, border_radius=10)
         
-        font = pygame.font.Font(None, FONTS['body'])
-        small_font = pygame.font.Font(None, FONTS['small'])
+        font = get_font(FONTS['body'])
+        small_font = get_font(FONTS['small'])
         
         # Başlık
         title = font.render("Memnuniyet Etkenleri", True, COLORS['gold'])
@@ -237,7 +237,7 @@ class PopulationScreen(BaseScreen):
         pygame.draw.rect(surface, COLORS['danger'], rect, border_radius=10)
         pygame.draw.rect(surface, (255, 200, 200), rect, width=3, border_radius=10)
         
-        font = pygame.font.Font(None, FONTS['subheader'])
+        font = get_font(FONTS['subheader'])
         text = font.render("⚠ HALK İSYAN HALİNDE! ⚠", True, COLORS['text'])
         text_rect = text.get_rect(center=rect.center)
         surface.blit(text, text_rect)

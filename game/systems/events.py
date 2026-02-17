@@ -1451,7 +1451,7 @@ class EventSystem:
         self.current_stage: Optional[str] = None  # Çok aşamalı olaylar için
         self.event_history: List[str] = []
         self.events_this_year: int = 0
-        self.max_events_per_year: int = 3
+        self.max_events_per_year: int = 5
         
         # YENİ: Olay hafızası - seçimlerin kalıcı etkileri
         self.event_memory: Dict[str, any] = {}
@@ -1493,8 +1493,8 @@ class EventSystem:
         if self.events_this_year >= self.max_events_per_year:
             return None
         
-        # Olay şansı (%30 base + duruma göre)
-        base_chance = 30
+        # Olay şansı (%40 base + duruma göre)
+        base_chance = 40
         
         # Düşük memnuniyet daha fazla olay
         if game_state.get('happiness', 70) < 50:
@@ -1513,13 +1513,15 @@ class EventSystem:
         # Bu türden uygun olay seç (hafıza koşullarını da kontrol et)
         # Oyuncu cinsiyetini ve unvanını al
         player_gender = game_state.get('player_gender', 'male')
+        current_turn = game_state.get('turn_count', 0)
         self.player_title = game_state.get('player_title', None)
         
         candidates = [
             e for e in EVENT_POOL 
             if e.event_type == event_type
             and e.min_year <= year <= e.max_year
-            and e.id not in self.event_history[-10:]  # Son 10 olayda tekrar yok
+            and e.min_turn <= current_turn  # Minimum tur kontrolü
+            and e.id not in self.event_history[-5:]  # Son 5 olayda tekrar yok
             and self._check_memory_requirements(e)  # Hafıza koşulları
             and (e.gender_filter is None or e.gender_filter == player_gender)  # Cinsiyet filtresi
         ]

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Ticaret Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Ticaret Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class TradeScreen(BaseScreen):
@@ -41,7 +41,7 @@ class TradeScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -185,7 +185,7 @@ class TradeScreen(BaseScreen):
         self.caravans_panel.draw(surface)
         
         # Eylem menüsü başlığı
-        small_font = pygame.font.Font(None, FONTS['subheader'])
+        small_font = get_font(FONTS['subheader'])
         action_title = small_font.render("Kervan Gönder", True, COLORS['gold'])
         surface.blit(action_title, (450, 75))
         self.action_menu.draw(surface)

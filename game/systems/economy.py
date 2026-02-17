@@ -69,40 +69,44 @@ class Expense:
 @dataclass
 class MarketPrices:
     """
-    Dinamik pazar fiyatları - Arz-talep mekaniği
-    Osmanlı ticaretinin temel malları
-    """
-    # Temel fiyatlar (altın cinsinden)
-    grain_price: float = 1.0      # Zahire (buğday, arpa)
-    silk_price: float = 10.0      # İpek (İpek Yolu)
-    spice_price: float = 15.0     # Baharat (Hint-Arap ticareti)
-    cloth_price: float = 5.0      # Kumaş
-    salt_price: float = 2.0       # Tuz
-    copper_price: float = 3.0     # Bakır
+    Dinamik pazar fiyatları — 1520 Narh Defteri bazlı
     
-    # Fiyat değişim sınırları
-    MIN_PRICE_MULT: float = 0.5   # Minimum %50
-    MAX_PRICE_MULT: float = 2.0   # Maximum %200
+    Tarihsel bağlam: Osmanlı'da fiyatlar "Narh" sistemiyle kontrol edilirdi.
+    Kadılar, İhtisab Ağası aracılığıyla pazar fiyatlarını denetlerdi.
+    
+    Birimler: Oyun içi altın (~ Akçe ölçeğinde, 1520 dönemi)
+    Referans: İstanbul Narh Defterleri, Mahkeme Kayıtları
+    """
+    # Temel fiyatlar (1520 Narh değerleri, oyun ölçeğinde)
+    grain_price: float = 20.0     # Zahire (buğday) — 1 kile (~25kg) = 15-20 akçe
+    silk_price: float = 800.0     # İpek — 1 zira = 800-1000 akçe (lüks)
+    spice_price: float = 120.0    # Baharat — 1 okka = 100-150 akçe
+    cloth_price: float = 50.0     # Kumaş (yerli) — 1 zira = 40-60 akçe
+    salt_price: float = 8.0       # Tuz — 1 okka = 6-10 akçe
+    copper_price: float = 15.0    # Bakır — 1 okka = 12-18 akçe
+    
+    # Fiyat Devrimi (Price Revolution) sınırları
+    # 1560 sonrası fiyatlar %200-300 artabilir
+    MIN_PRICE_MULT: float = 0.5   # Minimum %50 (bolluk)
+    MAX_PRICE_MULT: float = 3.0   # Maximum %300 (Fiyat Devrimi etkisi)
     
     def adjust_price(self, good: str, supply: int, demand: int):
-        """Arz-talep dengesine göre fiyat ayarla"""
+        """Arz-talep dengesine göre fiyat ayarla (Narh sistemi)"""
         if supply <= 0:
             supply = 1
         
         ratio = demand / supply
-        # Talep > Arz: fiyat artar
-        # Arz > Talep: fiyat düşer
         
         price_attr = f"{good}_price"
         if hasattr(self, price_attr):
             base_prices = {
-                'grain': 1.0, 'silk': 10.0, 'spice': 15.0,
-                'cloth': 5.0, 'salt': 2.0, 'copper': 3.0
+                'grain': 20.0, 'silk': 800.0, 'spice': 120.0,
+                'cloth': 50.0, 'salt': 8.0, 'copper': 15.0
             }
             base = base_prices.get(good, 1.0)
             new_price = base * ratio
             
-            # Sınırları uygula
+            # Narh sınırlarını uygula
             new_price = max(base * self.MIN_PRICE_MULT, 
                           min(base * self.MAX_PRICE_MULT, new_price))
             setattr(self, price_attr, round(new_price, 2))
@@ -125,13 +129,95 @@ class MarketPrices:
     @classmethod
     def from_dict(cls, data: Dict) -> 'MarketPrices':
         return cls(
-            grain_price=data.get('grain_price', 1.0),
-            silk_price=data.get('silk_price', 10.0),
-            spice_price=data.get('spice_price', 15.0),
-            cloth_price=data.get('cloth_price', 5.0),
-            salt_price=data.get('salt_price', 2.0),
-            copper_price=data.get('copper_price', 3.0)
+            grain_price=data.get('grain_price', 20.0),
+            silk_price=data.get('silk_price', 800.0),
+            spice_price=data.get('spice_price', 120.0),
+            cloth_price=data.get('cloth_price', 50.0),
+            salt_price=data.get('salt_price', 8.0),
+            copper_price=data.get('copper_price', 15.0)
         )
+
+
+# ════════════════════════════════════════════════════════════
+# ZANAAT KOLLARI VE NARH FİYATLARI (1550 Ortalamaları)
+# Kaynak: İstanbul Narh Defterleri, Şer'iyye Sicilleri
+# Referans: 1 Akçe ≈ 2.5 kg ekmek ≈ 1 kg koyun eti (Alım Gücü)
+# Süleymaniye inşaatı işçi yevmiyesi: 8 akçe/gün
+# ════════════════════════════════════════════════════════════
+CRAFT_SECTORS = {
+    "debbag": {
+        "name_tr": "Debbağlar (Tabaklama)",
+        "product": "İşlenmiş deri (Gön, Sahtiyan)",
+        "narh_price_akce": 25,       # 20-30 akçe
+        "daily_wage_akce": 8,
+        "sector_type": "military",   # Askeri teçhizat: zırh, çizme, matara
+        "effect": "military_supply",
+        "historical_note": "Ahi Evran'ın mesleği. Askeri deri teçhizat üretimi için kritik."
+    },
+    "sarac": {
+        "name_tr": "Saraçlar (Eyer/Koşum)",
+        "product": "At takımı, eyer, koşum",
+        "narh_price_akce": 200,      # 100-300 akçe (eyer)
+        "daily_wage_akce": 10,
+        "sector_type": "military",   # Süvari lojistiği
+        "effect": "cavalry_speed",
+        "historical_note": "Sipahi hareket kabiliyetinin bel kemiği."
+    },
+    "kassab": {
+        "name_tr": "Kasaplar",
+        "product": "Koyun eti",
+        "narh_price_akce": 3,        # 2-4 akçe/kıyye (~1.28 kg)
+        "daily_wage_akce": 6,
+        "sector_type": "civilian",   # Şehir iaşesi
+        "effect": "city_happiness",
+        "historical_note": "Koyun eti en temel protein kaynağı. İaşe eksikliği isyan tetikler."
+    },
+    "nanpaz": {
+        "name_tr": "Ekmekçiler (Nan-pazlar)",
+        "product": "Ekmek (Has ve Harcî)",
+        "narh_price_akce": 1.5,      # 1-2 akçe/kıyye
+        "daily_wage_akce": 5,
+        "sector_type": "civilian",   # Kıtlık isyan riski
+        "effect": "famine_prevention",
+        "historical_note": "Kıtlıkta en yüksek isyan riski taşıyan kalem. Narh ihlali ağır cezalı."
+    },
+    "dulger": {
+        "name_tr": "Dülgerler (Marangozlar)",
+        "product": "İnşaat, gemi, araba",
+        "narh_price_akce": 10,       # 8-12 akçe/gün (yevmiye)
+        "daily_wage_akce": 10,
+        "sector_type": "construction",  # İnşaat hızı
+        "effect": "build_speed",
+        "historical_note": "Bina ve gemi inşaatı. Seferlerde köprü yapımı için orduya alınırlar."
+    },
+    "kuyumcu": {
+        "name_tr": "Kuyumcular",
+        "product": "Altın/Gümüş işçiliği",
+        "narh_price_akce": 500,      # Lüks, değişken
+        "daily_wage_akce": 15,
+        "sector_type": "luxury",     # Lüks tüketim vergisi
+        "effect": "prestige_income",
+        "historical_note": "Lüks tüketim vergisi ve saray prestiji kaynağı."
+    },
+    "demirci": {
+        "name_tr": "Demirciler",
+        "product": "Alet, silah, nal",
+        "narh_price_akce": 3,        # Nal çift: 2-4, Kılıç: 50-200+
+        "daily_wage_akce": 8,
+        "sector_type": "military",   # Ordu donatımı
+        "effect": "weapon_production",
+        "historical_note": "Ordu donatımının temeli. Sefer sırasında lojistik destek sağlar."
+    },
+    "simkes": {
+        "name_tr": "Simkeşler (Gümüş Tel)",
+        "product": "Sırma, işleme, dokuma",
+        "narh_price_akce": 80,       # Değişken, lüks
+        "daily_wage_akce": 12,
+        "sector_type": "luxury",     # İhracat geliri
+        "effect": "trade_export",
+        "historical_note": "Dokuma sanayii ve lüks ihracat. Avrupa'ya sırma ve kumaş ihraç edilir."
+    }
+}
 
 
 class EconomySystem:

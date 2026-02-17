@@ -8,7 +8,7 @@ from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from ui.text_input import AccessibleTextInput
 from game.systems.workers import WorkerType, TaskType
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class WorkersScreen(BaseScreen):
@@ -57,7 +57,20 @@ class WorkersScreen(BaseScreen):
         
         self._header_font = None
         self.selected_worker = None
-        self.menu_mode = "workers"  # "workers", "tasks", veya "rename"
+        self.menu_mode = "workers"  # "workers", "tasks", "bulk_type", "bulk_qty", veya "rename"
+        
+        # Toplu işçi alımı state
+        self._bulk_type = None
+        self._bulk_count = 1
+        self._bulk_max = 10
+        
+        # Toplu alım menüsü
+        self.bulk_menu = MenuList(
+            x=490,
+            y=250,
+            width=380,
+            item_height=40
+        )
         
         # İsim değiştirme için AccessibleTextInput
         self.rename_input = AccessibleTextInput(
@@ -73,7 +86,7 @@ class WorkersScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -121,11 +134,15 @@ class WorkersScreen(BaseScreen):
                 lambda idx=i: self._open_task_menu(idx)
             )
         
-        # Ayırıcı ve işe alım butonu
+        # Ayırıcı ve işe alım butonları
         self.worker_menu.add_item("", None)  # Boş satır
         self.worker_menu.add_item(
-            "YENİ İŞÇİ İSTİHDAM ET",
+            "YENİ İŞÇİ İSTİHDAM ET (Görüşme)",
             self._open_interview_screen
+        )
+        self.worker_menu.add_item(
+            "TOPLU İŞÇİ AL (Hızlı)",
+            self._open_bulk_hire
         )
     
     def _setup_hire_menu(self):
@@ -134,9 +151,126 @@ class WorkersScreen(BaseScreen):
         
         # İnteraktif görüşme sistemi
         self.hire_menu.add_item(
-            "YENİ İŞÇİ İSTİHDAM ET",
+            "YENİ İŞÇİ İSTİHDAM ET (Görüşme)",
             self._open_interview_screen
         )
+        self.hire_menu.add_item(
+            "TOPLU İŞÇİ AL (Hızlı)",
+            self._open_bulk_hire
+        )
+    
+    # ===== TOPLU İŞÇİ ALIM SİSTEMİ =====
+    
+    def _open_bulk_hire(self):
+        """Toplu işçi alım menüsünü aç — tür seçimi"""
+        self.menu_mode = "bulk_type"
+        self._setup_bulk_type_menu()
+        self.audio.speak("Toplu İşçi Alımı. İşçi türünü seçin.", interrupt=True)
+    
+    def _setup_bulk_type_menu(self):
+        """Toplu alım için tür seçim menüsü"""
+        gm = self.screen_manager.game_manager
+        self.bulk_menu.clear()
+        self.bulk_menu.add_item("<- Geri", self._close_bulk_hire)
+        self.bulk_menu.add_item("", None)
+        
+        types = [
+            (WorkerType.FARMER, "Çiftçi"),
+            (WorkerType.MINER, "Madenci"),
+            (WorkerType.LUMBERJACK, "Oduncu"),
+            (WorkerType.CRAFTSMAN, "Usta"),
+            (WorkerType.MERCHANT, "Tüccar"),
+            (WorkerType.ENVOY, "Elçi"),
+        ]
+        
+        for wtype, name in types:
+            cost = gm.workers.get_hire_cost(wtype) if gm else 100
+            self.bulk_menu.add_item(
+                f"{name} — birim {cost} altın",
+                lambda t=wtype: self._select_bulk_type(t)
+            )
+    
+    def _select_bulk_type(self, worker_type: WorkerType):
+        """Tür seçildi, adet seçimine geç"""
+        self._bulk_type = worker_type
+        self._bulk_count = 1
+        self.menu_mode = "bulk_qty"
+        
+        gm = self.screen_manager.game_manager
+        cost = gm.workers.get_hire_cost(worker_type) if gm else 100
+        
+        type_names = {
+            WorkerType.FARMER: "Çiftçi", WorkerType.MINER: "Madenci",
+            WorkerType.LUMBERJACK: "Oduncu", WorkerType.CRAFTSMAN: "Usta",
+            WorkerType.MERCHANT: "Tüccar", WorkerType.ENVOY: "Elçi"
+        }
+        name = type_names.get(worker_type, "İşçi")
+        
+        self.audio.speak(
+            f"{name} seçildi. Birim maliyet {cost} altın. "
+            f"Yukarı-Aşağı ok tuşlarıyla miktar seçin, Enter ile onaylayın.",
+            interrupt=True
+        )
+    
+    def _announce_bulk_qty(self):
+        """Mevcut adet ve toplam maliyeti duyur"""
+        gm = self.screen_manager.game_manager
+        if not gm or not self._bulk_type:
+            return
+        
+        cost = gm.workers.get_hire_cost(self._bulk_type)
+        total = cost * self._bulk_count
+        gold = gm.economy.resources.gold
+        
+        affordable = "Yeterli altın var" if gold >= total else "Altın yetersiz!"
+        self.audio.speak(
+            f"{self._bulk_count} adet, toplam {total} altın. Kasada {gold} altın. {affordable}",
+            interrupt=True
+        )
+    
+    def _confirm_bulk_hire(self):
+        """Toplu alımı onayla ve gerçekleştir"""
+        gm = self.screen_manager.game_manager
+        if not gm or not self._bulk_type:
+            return
+        
+        cost_per = gm.workers.get_hire_cost(self._bulk_type)
+        total_cost = cost_per * self._bulk_count
+        
+        if gm.economy.resources.gold < total_cost:
+            self.audio.speak(
+                f"Yeterli altın yok! {total_cost} altın gerekli, kasada {gm.economy.resources.gold} altın var.",
+                interrupt=True
+            )
+            return
+        
+        # Ödeme ve alım
+        gm.economy.resources.gold -= total_cost
+        hired = gm.workers.hire_workers_bulk(self._bulk_type, self._bulk_count)
+        
+        type_names = {
+            WorkerType.FARMER: "Çiftçi", WorkerType.MINER: "Madenci",
+            WorkerType.LUMBERJACK: "Oduncu", WorkerType.CRAFTSMAN: "Usta",
+            WorkerType.MERCHANT: "Tüccar", WorkerType.ENVOY: "Elçi"
+        }
+        name = type_names.get(self._bulk_type, "İşçi")
+        
+        self.audio.play_ui_sound('click')
+        self.audio.speak(
+            f"{len(hired)} {name} işe alındı! Toplam {total_cost} altın harcandı.",
+            interrupt=True
+        )
+        
+        self._update_panels()
+        self._setup_worker_menu()
+        self._close_bulk_hire()
+    
+    def _close_bulk_hire(self):
+        """Toplu alımdan çık"""
+        self.menu_mode = "workers"
+        self._bulk_type = None
+        self._bulk_count = 1
+        self.audio.speak("İşçi listesine dönüldü.", interrupt=True)
     
     def _open_task_menu(self, worker_index: int):
         """Seçili işçi için görev menüsünü aç"""
@@ -308,10 +442,9 @@ class WorkersScreen(BaseScreen):
     def handle_event(self, event) -> bool:
         # İsim değiştirme modu - AccessibleTextInput kullan
         if self.rename_input_mode:
-            if self.rename_input.handle_event(event):
-                # Enter pressed - confirm rename
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    self._finish_rename()
+            # Enter pressed - confirm rename (önce kontrol et)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                self._finish_rename()
                 return True
             # Escape pressed - cancel rename
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -320,6 +453,8 @@ class WorkersScreen(BaseScreen):
                 self.rename_input.text = ""
                 self.audio.speak("İsim değiştirme iptal edildi.", interrupt=True)
                 return True
+            # Diğer tuşları text input'a yönlendir
+            self.rename_input.handle_event(event)
             return True
         
         # Görev menüsü aktifse
@@ -336,6 +471,44 @@ class WorkersScreen(BaseScreen):
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self._close_task_menu()
                 return True
+        
+        elif self.menu_mode == "bulk_type":
+            # Tür seçim menüsü
+            if self.bulk_menu.handle_event(event):
+                return True
+            if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                self._close_bulk_hire()
+                return True
+        
+        elif self.menu_mode == "bulk_qty":
+            # Adet seçim modu
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    self._bulk_count = min(self._bulk_count + 1, self._bulk_max)
+                    self._announce_bulk_qty()
+                    return True
+                elif event.key == pygame.K_DOWN:
+                    self._bulk_count = max(self._bulk_count - 1, 1)
+                    self._announce_bulk_qty()
+                    return True
+                elif event.key == pygame.K_PAGEUP:
+                    self._bulk_count = min(self._bulk_count + 5, self._bulk_max)
+                    self._announce_bulk_qty()
+                    return True
+                elif event.key == pygame.K_PAGEDOWN:
+                    self._bulk_count = max(self._bulk_count - 5, 1)
+                    self._announce_bulk_qty()
+                    return True
+                elif event.key == pygame.K_RETURN:
+                    self._confirm_bulk_hire()
+                    return True
+                elif event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                    # Tür seçimine geri dön
+                    self.menu_mode = "bulk_type"
+                    self._setup_bulk_type_menu()
+                    self.audio.speak("Tür seçimine geri dönüldü.", interrupt=True)
+                    return True
+        
         else:
             # İşçi menüsü
             if self.worker_menu.handle_event(event):
@@ -349,22 +522,24 @@ class WorkersScreen(BaseScreen):
             return True
         
         if event.type == pygame.KEYDOWN:
-            # Backspace veya Escape - Geri dÃ¶n
+            # Backspace veya Escape - Geri dön
             if event.key in (pygame.K_BACKSPACE, pygame.K_ESCAPE):
                 if self.menu_mode == "tasks":
                     self._close_task_menu()
+                elif self.menu_mode in ("bulk_type", "bulk_qty"):
+                    self._close_bulk_hire()
                 else:
                     self._go_back()
                 return True
             
-            # F1 - Ã–zet
+            # F1 - Özet
             if event.key == pygame.K_F1:
                 gm = self.screen_manager.game_manager
                 if gm:
                     gm.workers.announce_workers()
                 return True
             
-            # Tab - MenÃ¼ler arasÄ± geÃ§iÅŸ
+            # Tab - Menüler arası geçiş
             if event.key == pygame.K_TAB:
                 self._announce_next_panel()
                 return True
@@ -479,15 +654,53 @@ class WorkersScreen(BaseScreen):
         # Paneller
         self.production_panel.draw(surface)
         
-        small_font = pygame.font.Font(None, FONTS['subheader'])
+        small_font = get_font(FONTS['subheader'])
         
         if self.menu_mode == "tasks":
-            # GÃ¶rev atama menÃ¼sÃ¼
+            # Görev atama menüsü
             task_title = small_font.render("Görev Seç", True, COLORS['gold'])
             surface.blit(task_title, (490, 235))
             self.task_menu.draw(surface)
+        elif self.menu_mode == "bulk_type":
+            # Toplu alım — tür seçimi
+            bulk_title = small_font.render("TOPLU İŞÇİ ALIMI — Tür Seçin", True, COLORS['gold'])
+            surface.blit(bulk_title, (490, 225))
+            self.bulk_menu.draw(surface)
+        elif self.menu_mode == "bulk_qty":
+            # Toplu alım — adet seçimi
+            gm = self.screen_manager.game_manager
+            type_names = {
+                WorkerType.FARMER: "Çiftçi", WorkerType.MINER: "Madenci",
+                WorkerType.LUMBERJACK: "Oduncu", WorkerType.CRAFTSMAN: "Usta",
+                WorkerType.MERCHANT: "Tüccar", WorkerType.ENVOY: "Elçi"
+            }
+            name = type_names.get(self._bulk_type, "İşçi")
+            cost = gm.workers.get_hire_cost(self._bulk_type) if gm else 100
+            total = cost * self._bulk_count
+            gold = gm.economy.resources.gold if gm else 0
+            
+            qty_title = small_font.render(f"TOPLU ALIM — {name}", True, COLORS['gold'])
+            surface.blit(qty_title, (490, 225))
+            
+            body_font = get_font(FONTS['body'])
+            info_lines = [
+                f"Miktar: {self._bulk_count}",
+                f"Birim maliyet: {cost} altın",
+                f"Toplam: {total} altın",
+                f"Kasadaki altın: {gold}",
+                "",
+                "Yukarı/Aşağı: ±1",
+                "PageUp/PageDown: ±5",
+                "Enter: Onayla",
+                "Escape: İptal"
+            ]
+            
+            for i, line in enumerate(info_lines):
+                color = COLORS['danger'] if i == 3 and gold < total else COLORS['text']
+                text = body_font.render(line, True, color)
+                surface.blit(text, (500, 270 + i * 28))
         else:
-            # Ä°ÅŸÃ§i listesi menÃ¼sÃ¼
+            # İşçi listesi menüsü
             worker_title = small_font.render("İşçiler (Seçmek için tıklayın)", True, COLORS['gold'])
             surface.blit(worker_title, (20, 175))
             self.worker_menu.draw(surface)

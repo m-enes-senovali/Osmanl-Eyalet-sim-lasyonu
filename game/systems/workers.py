@@ -11,13 +11,13 @@ from audio.audio_manager import get_audio_manager
 
 
 class WorkerType(Enum):
-    """İşçi türleri"""
-    FARMER = "farmer"           # Çiftçi - yiyecek üretimi
-    MINER = "miner"             # Madenci - demir üretimi
-    LUMBERJACK = "lumberjack"   # Oduncu - kereste üretimi
-    CRAFTSMAN = "craftsman"     # Usta - inşaat hızlandırma
-    MERCHANT = "merchant"       # Tüccar - ticaret bonusu
-    ENVOY = "envoy"             # Elçi - diplomasi
+    """İşçi türleri — 16. yy Osmanlı zanaat sınıfları"""
+    FARMER = "farmer"           # Çiftçi (reaya) — yevmiye: 3-5 akçe/gün
+    MINER = "miner"             # Madenci — yevmiye: 5-8 akçe/gün
+    LUMBERJACK = "lumberjack"   # Baltacı (oduncu) — yevmiye: 4-6 akçe/gün
+    CRAFTSMAN = "craftsman"     # Usta (taşçı/neccar) — yevmiye: 10-20 akçe/gün
+    MERCHANT = "merchant"       # Tüccar (bezirgan) — ticaret bonusu
+    ENVOY = "envoy"             # Çavuş/Elçi — diplomasi
 
 
 class TaskType(Enum):
@@ -110,21 +110,51 @@ class Worker:
         return bonuses
 
 
-# Türk isimleri - Erkek
-TURKISH_MALE_NAMES = [
-    "Ahmet", "Mehmet", "Mustafa", "Ali", "Hüseyin",
-    "Hasan", "Osman", "Yusuf", "İbrahim", "Mahmut",
-    "Süleyman", "Halil", "Recep", "Kemal", "Cemal",
-    "Fatih", "Serkan", "Emre", "Murat", "Can"
+# ═══════════════════════════════════════════════════════════════
+# 16. YÜZYIL OSMANLI İSİMLERİ
+# Kaynak: Tahrir defterleri, Şer'iyye sicilleri, vakfiyeler
+# ═══════════════════════════════════════════════════════════════
+
+# Erkek isimleri — Kırsal/Türkmen (reaya köylüler)
+_MALE_RURAL_TURKIC = [
+    "Satılmış", "Dursun", "Durmuş", "Tanrıverdi", "Veli",
+    "Budak", "Korkut", "Turgut", "Timurtaş", "Gündüz",
+    "Umur", "Karaca", "Doğan", "Bayram", "Hızır",
 ]
 
-# Türk isimleri - Kadın
-TURKISH_FEMALE_NAMES = [
-    "Fatma", "Ayşe", "Hatice", "Zeynep", "Emine",
-    "Meryem", "Hacer", "Hanife", "Şerife", "Havva",
-    "Sultan", "Esma", "Güler", "Nuriye", "Halime",
-    "Selma", "Safiye", "Zeliha", "Rukiye", "Saliha"
+# Erkek isimleri — Şehirli/İslami (medreseli, esnaf, bürokrat)
+_MALE_URBAN_ISLAMIC = [
+    "Mehmed", "Ahmed", "Mustafa", "Süleyman", "İbrahim",
+    "Yusuf", "Halil", "Mahmud", "Abdülkerim", "Abdurrahman",
+    "Kasım", "Selim", "Haydar", "Cafer", "Hamza",
 ]
+
+# Erkek isimleri — Devşirme kökenli (saray ve ordu)
+_MALE_DEVSHIRME = [
+    "Hüsrev", "Rüstem", "Ferhad", "Lütfi", "Sinan",
+    "İskender", "Davud", "Piyale", "Sokullu", "Pertev",
+    "Kara", "Hadım", "Gedik", "Özdemir", "Nasuh",
+]
+
+# Tüm erkek isimleri (birleşik havuz)
+TURKISH_MALE_NAMES = _MALE_RURAL_TURKIC + _MALE_URBAN_ISLAMIC + _MALE_DEVSHIRME
+
+# Kadın isimleri — Saray/Farsça kökenli
+_FEMALE_PALACE = [
+    "Hürrem", "Mahidevran", "Nurbanu", "Gülbahar", "Mihrimah",
+    "Gevherhan", "Şahhuban", "Nilüfer", "Gülruh", "Hümaşah",
+    "Raziye", "Dilşad", "Gülşen", "Safiye", "Hafsa",
+]
+
+# Kadın isimleri — Reaya (halk) kadınları
+_FEMALE_REAYA = [
+    "Fatma", "Ayşe", "Emine", "Hatice", "Havva",
+    "Hacer", "Şerife", "Hanife", "Zeliha", "Rukiye",
+    "Halime", "Saliha", "Meryem", "Esma", "Ümmügülsüm",
+]
+
+# Tüm kadın isimleri (birleşik havuz)
+TURKISH_FEMALE_NAMES = _FEMALE_PALACE + _FEMALE_REAYA
 
 # Geriye uyumluluk için
 TURKISH_NAMES = TURKISH_MALE_NAMES
@@ -180,6 +210,15 @@ class WorkerSystem:
         self._auto_assign_task(worker)
         
         return worker
+    
+    def hire_workers_bulk(self, worker_type: WorkerType, count: int, skill: int = 1) -> List[Worker]:
+        """Toplu işçi kirala — N adet aynı türden işçi"""
+        hired = []
+        for _ in range(count):
+            worker = self.hire_worker(worker_type, skill)
+            if worker:
+                hired.append(worker)
+        return hired
     
     def _auto_assign_task(self, worker: Worker):
         """Otomatik görev atama"""

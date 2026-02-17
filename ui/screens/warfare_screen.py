@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Savaş Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Savaş Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class WarfareScreen(BaseScreen):
@@ -41,7 +41,7 @@ class WarfareScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -92,7 +92,7 @@ class WarfareScreen(BaseScreen):
             for neighbor in gm.diplomacy.neighbors.keys():
                 self.action_menu.add_item(
                     f"Kuşatma: {neighbor} (1500 altın)",
-                    lambda n=neighbor: self._start_siege(n)
+                    lambda n=neighbor: self._show_siege_tactics(n)
                 )
             
             # Deniz akını - sadece kıyı eyaletlerinde
@@ -104,11 +104,11 @@ class WarfareScreen(BaseScreen):
                 if warship_count > 0:
                     for neighbor in gm.diplomacy.neighbors.keys():
                         self.action_menu.add_item(
-                            f"Deniz Akini: {neighbor} (500 altin)",
+                            f"Deniz Akını: {neighbor} (500 altın)",
                             lambda n=neighbor: self._start_naval_raid(n)
                         )
                 else:
-                    self.action_menu.add_item("Deniz akini icin savas gemisi gerekli", None)
+                    self.action_menu.add_item("Deniz akını için savaş gemisi gerekli", None)
         else:
             self.action_menu.add_item(f"⚠ {reason}", None)
         
@@ -196,14 +196,62 @@ class WarfareScreen(BaseScreen):
         self._update_panels()
         self._setup_action_menu()
     
-    def _start_siege(self, target: str):
-        """Kuşatma başlat"""
+    def _show_siege_tactics(self, target: str):
+        """Kuşatma taktiği seçim menüsünü göster"""
+        self.action_menu.clear()
+        
+        self.audio.speak(
+            f"{target} kuşatması için taktik seçin.",
+            interrupt=True
+        )
+        
+        self.action_menu.add_item(
+            "<- Geri",
+            lambda: self._setup_action_menu()
+        )
+        self.action_menu.add_item("", None)
+        
+        # Klasik kuşatma
+        self.action_menu.add_item(
+            f"Klasik Kuşatma: {target} (1500 altın)",
+            lambda n=target: self._start_siege(n, "KLASIK")
+        )
+        
+        # Vire = Yoğun hücum
+        self.action_menu.add_item(
+            f"Vire (Yoğun Hücum): {target} (2000 altın, +%30 güç, +%20 kayıp)",
+            lambda n=target: self._start_siege(n, "VIRE")
+        )
+        
+        # Lağım = Tünel kazma
+        self.action_menu.add_item(
+            f"Lağım (Tünel): {target} (1800 altın, surları zayıflatır)",
+            lambda n=target: self._start_siege(n, "MINING")
+        )
+        
+        # Metris = Sipere girme
+        self.action_menu.add_item(
+            f"Metris (Siper): {target} (1600 altın, kayıp -%30)",
+            lambda n=target: self._start_siege(n, "TRENCHING")
+        )
+    
+    def _start_siege(self, target: str, tactic: str = "KLASIK"):
+        """Kuşatma başlat — seçilen taktikle"""
         gm = self.screen_manager.game_manager
         if not gm:
             return
         
+        # Taktik açıklamaları
+        tactic_names = {
+            "KLASIK": "Klasik kuşatma",
+            "VIRE": "Vire (yoğun hücum)",
+            "MINING": "Lağım (tünel kazma)",
+            "TRENCHING": "Metris (siper inşası)",
+        }
+        
         success, message = gm.warfare.start_siege(target, gm.military, gm.economy, gm.turn_count)
-        self.audio.speak(message, interrupt=True)
+        tactic_text = tactic_names.get(tactic, tactic)
+        self.audio.speak(f"Taktik: {tactic_text}. {message}", interrupt=True)
         self._update_panels()
         self._setup_action_menu()
     
@@ -243,7 +291,7 @@ class WarfareScreen(BaseScreen):
         self.battles_panel.draw(surface)
         
         # Eylem menüsü başlığı
-        small_font = pygame.font.Font(None, FONTS['subheader'])
+        small_font = get_font(FONTS['subheader'])
         action_title = small_font.render("Savaş Eylemleri", True, COLORS['gold'])
         surface.blit(action_title, (450, 75))
         self.action_menu.draw(surface)

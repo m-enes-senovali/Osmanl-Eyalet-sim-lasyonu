@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Karakter Oluşturma Ekranı
 İsim ve cinsiyet seçimi
@@ -8,7 +8,7 @@ import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from ui.text_input import AccessibleTextInput
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.player import PlayerCharacter, Gender
 
 
@@ -89,12 +89,12 @@ class CharacterCreationScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def get_subheader_font(self):
         if self._subheader_font is None:
-            self._subheader_font = pygame.font.Font(None, FONTS['subheader'])
+            self._subheader_font = get_font(FONTS['subheader'])
         return self._subheader_font
     
     def _setup_gender_menu(self):
@@ -233,18 +233,17 @@ class CharacterCreationScreen(BaseScreen):
             gender=self.selected_gender
         )
         
-        # Game Manager'a kaydet ve oyunu başlat
+        # Game Manager'a kaydet (oyun başlatmayı eyalet seçiminden sonra yap)
         gm = self.screen_manager.game_manager
         if gm:
             gm.player = character
-            gm.new_game()  # Oyun sistemlerini initialize et
             
             # Başlangıç hikayesini duyur
             self.audio.speak(character.get_background_story(), interrupt=True)
         
-        # Oyuna başla
-        self.audio.speak("Oyun başlıyor! İyi şanslar!", interrupt=False)
-        self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
+        # Eyalet seçimine yönlendir
+        self.audio.speak("Şimdi yönetmek istediğiniz eyaleti seçin.", interrupt=False)
+        self.screen_manager.change_screen(ScreenType.PROVINCE_SELECT)
     
     def handle_event(self, event) -> bool:
         if self.stage == "gender":
@@ -325,7 +324,7 @@ class CharacterCreationScreen(BaseScreen):
             self.gender_menu.draw(surface)
             
             # Bilgi metni
-            info_font = pygame.font.Font(None, 24)
+            info_font = get_font(24)
             info1 = info_font.render(
                 "Erkek: Askeri güç, akın ve savaş avantajı",
                 True, COLORS['text']

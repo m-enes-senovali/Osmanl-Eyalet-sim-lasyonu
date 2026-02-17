@@ -5,7 +5,7 @@ Erişilebilirlik destekli butonlar, paneller ve diğer UI öğeleri.
 """
 
 import pygame
-from config import COLORS, FONTS, ACCESSIBILITY
+from config import COLORS, FONTS, ACCESSIBILITY, get_font
 from audio.audio_manager import get_audio_manager
 
 
@@ -32,7 +32,7 @@ class Button:
     
     def get_font(self):
         if self._font is None:
-            self._font = pygame.font.Font(None, FONTS['body'])
+            self._font = get_font(FONTS['body'])
         return self._font
     
     def handle_event(self, event) -> bool:
@@ -150,7 +150,7 @@ class Button:
         
         # Kısayol göstergesi
         if self.shortcut and self.enabled:
-            shortcut_font = pygame.font.Font(None, FONTS['small'])
+            shortcut_font = get_font(FONTS['small'])
             shortcut_text = f"[{self.shortcut.upper()}]"
             shortcut_surface = shortcut_font.render(shortcut_text, True, COLORS['gold'])
             shortcut_rect = shortcut_surface.get_rect(
@@ -173,12 +173,12 @@ class Panel:
     
     def get_title_font(self):
         if self._title_font is None:
-            self._title_font = pygame.font.Font(None, FONTS['subheader'])
+            self._title_font = get_font(FONTS['subheader'])
         return self._title_font
     
     def get_content_font(self):
         if self._content_font is None:
-            self._content_font = pygame.font.Font(None, FONTS['body'])
+            self._content_font = get_font(FONTS['body'])
         return self._content_font
     
     def set_content(self, items: list):
@@ -265,7 +265,7 @@ class ProgressBar:
     
     def get_font(self):
         if self._font is None:
-            self._font = pygame.font.Font(None, FONTS['small'])
+            self._font = get_font(FONTS['small'])
         return self._font
     
     def set_value(self, value: float):
@@ -329,7 +329,7 @@ class MenuList:
     
     def get_font(self):
         if self._font is None:
-            self._font = pygame.font.Font(None, FONTS['body'])
+            self._font = get_font(FONTS['body'])
         return self._font
     
     def add_item(self, text: str, callback=None, shortcut: str = None):
@@ -498,7 +498,7 @@ class MenuList:
             
             # Kısayol
             if shortcut:
-                shortcut_font = pygame.font.Font(None, FONTS['small'])
+                shortcut_font = get_font(FONTS['small'])
                 shortcut_text = f"[{shortcut.upper()}]"
                 shortcut_surface = shortcut_font.render(shortcut_text, True, COLORS['gold'])
                 shortcut_rect = shortcut_surface.get_rect(
@@ -519,7 +519,7 @@ class Tooltip:
     
     def get_font(self):
         if self._font is None:
-            self._font = pygame.font.Font(None, FONTS['tooltip'])
+            self._font = get_font(FONTS['tooltip'])
         return self._font
     
     def show(self, text: str, position: tuple):
@@ -597,7 +597,7 @@ class HierarchicalMenu:
     
     def get_font(self):
         if self._font is None:
-            self._font = pygame.font.Font(None, FONTS['body'])
+            self._font = get_font(FONTS['body'])
         return self._font
     
     def set_menu(self, items: list):

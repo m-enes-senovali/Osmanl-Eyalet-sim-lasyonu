@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Ana Menü Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Ana Menü Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import MenuList, Button
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, KEYBINDS
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, KEYBINDS, get_font
 
 
 class MainMenuScreen(BaseScreen):
@@ -38,12 +38,12 @@ class MainMenuScreen(BaseScreen):
     
     def get_title_font(self):
         if self._title_font is None:
-            self._title_font = pygame.font.Font(None, FONTS['title'])
+            self._title_font = get_font(FONTS['title'])
         return self._title_font
     
     def get_subtitle_font(self):
         if self._subtitle_font is None:
-            self._subtitle_font = pygame.font.Font(None, FONTS['subheader'])
+            self._subtitle_font = get_font(FONTS['subheader'])
         return self._subtitle_font
     
     def on_enter(self):
@@ -97,7 +97,7 @@ class MainMenuScreen(BaseScreen):
         self.menu.draw(surface)
         
         # Alt bilgi
-        info_font = pygame.font.Font(None, FONTS['small'])
+        info_font = get_font(FONTS['small'])
         info = info_font.render("F1: Yardım | Yukarı/Aşağı: Gezin | Enter: Seç", True, COLORS['text'])
         info_rect = info.get_rect(centerx=SCREEN_WIDTH // 2, bottom=SCREEN_HEIGHT - 30)
         surface.blit(info, info_rect)

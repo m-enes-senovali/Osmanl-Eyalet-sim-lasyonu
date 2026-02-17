@@ -12,13 +12,14 @@ from audio.audio_manager import get_audio_manager
 
 class ShipType(Enum):
     """Gemi türleri"""
-    # Ticaret Gemileri
-    MAVNA = "mavna"           # Küçük yük gemisi
+    # Ticaret / Lojistik Gemileri
+    MAVNA = "mavna"           # Ağır top taşıma + yük gemisi (dual-role)
     KALYON = "kalyon"         # Büyük ticaret gemisi
     FIRKATEYN = "firkateyn"   # Hızlı koruma gemisi
     
     # Savaş Gemileri
     KADIRGA = "kadirga"       # Kürekli savaş gemisi
+    BASTARDA = "bastarda"     # Kapudan Paşa amiral gemisi (flagship)
     MAHON = "mahon"           # Ağır savaş gemisi (galleass)
 
 
@@ -52,20 +53,21 @@ SHIP_DEFINITIONS: Dict[ShipType, ShipDefinition] = {
     ShipType.MAVNA: ShipDefinition(
         ship_type=ShipType.MAVNA,
         name="Mavna",
-        description="Küçük yük gemisi, kısa mesafe kıyı ticareti için ideal",
-        gold_cost=500,
-        wood_cost=50,
-        iron_cost=10,
-        rope_cost=20,
-        tar_cost=15,
-        sailcloth_cost=10,
-        build_time=3,
-        crew_required=15,
-        cargo_capacity=50,
-        combat_power=0,
-        speed=4,
-        is_warship=False,
-        maintenance=5  # Küçük gemi
+        description="İki direkli, geniş gövdeli ağır gemi — top taşıma ve yük lojistiği. "
+                    "Kıyı bombardımanı ve kuşatma desteğinde kullanılır.",
+        gold_cost=600,
+        wood_cost=80,
+        iron_cost=30,
+        rope_cost=30,
+        tar_cost=20,
+        sailcloth_cost=20,
+        build_time=5,
+        crew_required=40,
+        cargo_capacity=80,         # Yüksek yük + top kapasitesi
+        combat_power=20,           # Top ateşi desteği — savaş rolü
+        speed=3,                   # Ağır ve yavaş
+        is_warship=True,           # Askeri rol de var
+        maintenance=15             # Orta bakım
     ),
     
     ShipType.KALYON: ShipDefinition(
@@ -123,6 +125,26 @@ SHIP_DEFINITIONS: Dict[ShipType, ShipDefinition] = {
         speed=7,
         is_warship=True,
         maintenance=50  # Büyük mürettebat
+    ),
+    
+    ShipType.BASTARDA: ShipDefinition(
+        ship_type=ShipType.BASTARDA,
+        name="Baştarda",
+        description="Kapudan Paşa'nın amiral gemisi — 26-36 oturak, kadırgadan büyük ve gösterişli. "
+                    "Donanma savaşında moral etkisi sağlar.",
+        gold_cost=4000,
+        wood_cost=250,
+        iron_cost=100,
+        rope_cost=100,
+        tar_cost=60,
+        sailcloth_cost=50,
+        build_time=15,
+        crew_required=250,
+        cargo_capacity=30,
+        combat_power=80,           # Yüksek savaş gücü + moral bonusu
+        speed=6,                   # Kadırgadan biraz yavaş
+        is_warship=True,
+        maintenance=60             # Amiral gemisi — yüksek bakım
     ),
     
     ShipType.MAHON: ShipDefinition(

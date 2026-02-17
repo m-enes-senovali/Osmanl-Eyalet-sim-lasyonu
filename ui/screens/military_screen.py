@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Askeri Ekran
 """
@@ -7,7 +7,7 @@ import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, HierarchicalMenu
 from game.systems.military import UnitType, UNIT_DEFINITIONS
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class MilitaryScreen(BaseScreen):
@@ -127,7 +127,7 @@ class MilitaryScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -334,8 +334,8 @@ class MilitaryScreen(BaseScreen):
         stats = UNIT_DEFINITIONS[unit_type]
         current_count = gm.military.units.get(unit_type, 0)
         
-        font = pygame.font.Font(None, FONTS['body'])
-        small_font = pygame.font.Font(None, FONTS['small'])
+        font = get_font(FONTS['body'])
+        small_font = get_font(FONTS['small'])
         
         # Birim adı ve mevcut sayı
         name = font.render(f"{stats.name_tr} - Mevcut: {current_count}", True, COLORS['gold'])

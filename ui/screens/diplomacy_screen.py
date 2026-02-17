@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Diplomasi Ekranı
 """
@@ -6,7 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Diplomasi Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, HierarchicalMenu
-from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT
+from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
 class DiplomacyScreen(BaseScreen):
@@ -42,7 +42,7 @@ class DiplomacyScreen(BaseScreen):
     
     def get_header_font(self):
         if self._header_font is None:
-            self._header_font = pygame.font.Font(None, FONTS['header'])
+            self._header_font = get_font(FONTS['header'])
         return self._header_font
     
     def on_enter(self):
@@ -102,19 +102,25 @@ class DiplomacyScreen(BaseScreen):
         
         # === 2. EVLİLİK İTTİFAKLARI ===
         evlilik_items = []
-        for neighbor in dip.neighbors:
-            is_married = any(m['partner'] == neighbor for m in dip.marriage_alliances)
-            relation = dip.neighbors[neighbor]
-            if not is_married:
-                evlilik_items.append({
-                    'text': f"{neighbor} (İlişki: {relation.value})",
-                    'callback': lambda n=neighbor: self._propose_marriage(n)
-                })
-            else:
-                evlilik_items.append({
-                    'text': f"[Evli] {neighbor}",
-                    'callback': None
-                })
+        if not dip.neighbors:
+            evlilik_items.append({
+                'text': 'Komşu eyalet bulunmuyor',
+                'callback': None
+            })
+        else:
+            for neighbor in dip.neighbors:
+                is_married = any(m['partner'] == neighbor for m in dip.marriage_alliances)
+                relation = dip.neighbors[neighbor]
+                if not is_married:
+                    evlilik_items.append({
+                        'text': f"{neighbor} (İlişki: {relation.value})",
+                        'callback': lambda n=neighbor: self._propose_marriage(n)
+                    })
+                else:
+                    evlilik_items.append({
+                        'text': f"[Evli] {neighbor}",
+                        'callback': None
+                    })
         
         self.action_menu.add_category("Evlilik İttifakları (10000 Altın)", evlilik_items)
         
@@ -507,7 +513,7 @@ class DiplomacyScreen(BaseScreen):
         pygame.draw.rect(surface, color, bar_rect, border_radius=5)
         
         # Label
-        font = pygame.font.Font(None, FONTS['small'])
+        font = get_font(FONTS['small'])
         label = font.render(f"Padişah Sadakati: %{loyalty}", True, COLORS['text'])
         surface.blit(label, (rect.x + 20, rect.y + 10))
     

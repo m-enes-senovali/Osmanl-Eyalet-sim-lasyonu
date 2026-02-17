@@ -32,6 +32,8 @@ class UnitType(Enum):
     
     # Donanma
     KADIRGA = "kadirga"             # Kadırga - Ana savaş gemisi
+    BASTARDA = "bastarda"           # Baştarda - Kapudan Paşa gemisi (amiral)
+    MAVNA = "mavna"                 # Mavna - Ağır top taşıma gemisi
     LEVENT = "levent"               # Levent - Deniz piyadeleri
 
 
@@ -56,6 +58,9 @@ class UnitStats:
     
 
 # 1520 Dönemi Birim Tanımları
+# Maliyet referansı: Günlük ulufeler ve Narh defterleri
+# Yeniçeri ulufesi: 5-8 akçe/gün = 450-720/çeyrek
+# Azap yevmiyesi: 3 akçe/gün = 270/çeyrek
 UNIT_DEFINITIONS = {
     # === KAPIKULU ORDUSU (Merkezi) ===
     UnitType.YENICHERI: UnitStats(
@@ -65,13 +70,13 @@ UNIT_DEFINITIONS = {
         attack=20,
         defense=15,
         speed=4,
-        cost_gold=150,
-        cost_food=60,
-        maintenance=6,
-        train_time=3,
-        requires_devshirme=True,  # Devşirme ile Hristiyan ailelerden toplanan çocuklar
-        special_ability="tufek",  # Tüfek kullanır - savunmada bonus
-        historical_note="Devşirme sistemiyle Hristiyan ailelerden toplanan, Müslüman yapılıp yetiştirilen kapıkulu piyadesi"
+        cost_gold=250,         # Eğitim maliyeti yüksek (Devşirme + Acemi Ocağı)
+        cost_food=80,
+        maintenance=8,         # Ulufe: 5-8 akçe/gün
+        train_time=4,          # Uzun eğitim süreci
+        requires_devshirme=True,
+        special_ability="tufek",
+        historical_note="Devşirme ile toplanan, Acemi Ocağı'nda yetişen elit tüfekli piyade. Cülus bahşişi ve sefer bahşişi talep eder."
     ),
     UnitType.KAPIKULU_SIPAHI: UnitStats(
         name="Kapikulu Cavalry",
@@ -80,13 +85,13 @@ UNIT_DEFINITIONS = {
         attack=18,
         defense=12,
         speed=7,
-        cost_gold=180,
-        cost_food=70,
-        maintenance=7,
-        train_time=3,
-        requires_devshirme=True,  # Devşirme kökenli saray süvarileri
-        special_ability="zirh",  # Ağır zırhlı
-        historical_note="Devşirme kökenli, Padişah'ın özel muhafız süvarileri (Sipahi, Silahtar, Ulufeciler, Gurebalar)"
+        cost_gold=300,         # En pahalı kara birimi
+        cost_food=90,
+        maintenance=10,        # Yüksek ulufeli saray süvarisi
+        train_time=4,
+        requires_devshirme=True,
+        special_ability="zirh",
+        historical_note="Sipahi, Silahtar, Ulufeciler, Gurebalar — Padişah'ın özel muhafız süvarileri (6 bölük)"
     ),
     UnitType.TOPCU: UnitStats(
         name="Artillery",
@@ -95,12 +100,12 @@ UNIT_DEFINITIONS = {
         attack=35,
         defense=5,
         speed=1,
-        cost_gold=350,
+        cost_gold=500,         # Top dökümü çok pahalı (Tophane-i Amire)
         cost_food=80,
-        maintenance=12,
-        train_time=4,
-        special_ability="kusatma",  # Kuşatmada çok güçlü
-        historical_note="Kuşatma savaşının uzmanları - İstanbul'u fetheden toplar bu ocağın eseri. Meydan muharebesinden çok kale kuşatmasında etkili"
+        maintenance=15,        # Barut + bakım
+        train_time=5,
+        special_ability="kusatma",
+        historical_note="Kuşatma savaşının uzmanları — İstanbul'u fetheden toplar bu ocağın eseri. Şahi topları 17 ton ağırlığında."
     ),
     UnitType.CEBECI: UnitStats(
         name="Armorer Corps",
@@ -109,12 +114,12 @@ UNIT_DEFINITIONS = {
         attack=8,
         defense=8,
         speed=3,
-        cost_gold=100,
+        cost_gold=120,         # Silah zanaatkarı
         cost_food=40,
-        maintenance=4,
+        maintenance=5,
         train_time=2,
-        special_ability="bakim",  # Diğer birimlerin bakım maliyetini düşürür
-        historical_note="Silah ve cephane üretimi/bakımı yapan ocak"
+        special_ability="bakim",
+        historical_note="Silah ve cephane üretimi/bakımı yapan ocak. Ordunun lojistik bel kemiği."
     ),
     
     # === EYALET KUVVETLERİ (Tımarlı) ===
@@ -125,13 +130,13 @@ UNIT_DEFINITIONS = {
         attack=14,
         defense=10,
         speed=7,
-        cost_gold=0,          # Tımar karşılığı - altın maliyeti yok
-        cost_food=30,
-        maintenance=0,        # Tımardan geçinir
+        cost_gold=0,           # Tımar topraktan geçinir — hazineye maliyeti YOK
+        cost_food=30,          # Sadece sefer sırasında iaşe
+        maintenance=0,         # Tımarından geçinir
         train_time=1,
-        requires_timar=True,  # Tımar sahipliği gerektirir
-        special_ability="timar",  # Savaşa çağrılır
-        historical_note="Tımar sahipleri - barışta çiftçi, savaşta asker"
+        requires_timar=True,
+        special_ability="timar",
+        historical_note="Tımar sahibi — barışta çiftçi, savaşta süvari. Her 3000 akçelik tımar için 1 cebelü (atlı asker) besler."
     ),
     UnitType.AKINCI: UnitStats(
         name="Akinci Raider",
@@ -140,12 +145,12 @@ UNIT_DEFINITIONS = {
         attack=10,
         defense=4,
         speed=10,
-        cost_gold=60,
+        cost_gold=80,
         cost_food=30,
-        maintenance=2,
+        maintenance=3,
         train_time=1,
-        special_ability="akin",  # Keşif ve yağma
-        historical_note="Sınır boylarında yaşayan hafif süvariler"
+        special_ability="akin",
+        historical_note="Sınır boylarının hafif süvarileri — keşif, yağma ve düşman moralini bozma. Mihaloğlu, Turahanlı aileleri ünlü akıncı beyleri."
     ),
     UnitType.AZAP: UnitStats(
         name="Azap Infantry",
@@ -154,12 +159,12 @@ UNIT_DEFINITIONS = {
         attack=8,
         defense=6,
         speed=5,
-        cost_gold=35,
-        cost_food=25,
-        maintenance=1,
+        cost_gold=25,          # Çok ucuz — gönüllü halk piyadesi (rapordan: 200 akçe)
+        cost_food=20,
+        maintenance=1,         # Yevmiye: 3 akçe/gün
         train_time=1,
-        special_ability="gonullu",  # Ucuz ve hızlı
-        historical_note="Anadolu'dan gönüllü toplanan hafif piyadeler"
+        special_ability="gonullu",
+        historical_note="Anadolu'dan gönüllü toplanan bekar (azeb=bekar) hafif piyadeler. Garnizon ve kuşatma hizmetinde."
     ),
     
     # === DONANMA ===
@@ -170,13 +175,13 @@ UNIT_DEFINITIONS = {
         attack=25,
         defense=15,
         speed=5,
-        cost_gold=400,
-        cost_food=100,
-        maintenance=15,
-        train_time=5,
+        cost_gold=800,         # Tarihsel: ~230.000 akçe, oyun ölçeğinde yüksek
+        cost_food=150,
+        maintenance=20,        # 150-200 kürekçi mürettebat
+        train_time=6,
         requires_port=True,
-        special_ability="deniz",  # Deniz hakimiyeti
-        historical_note="Akdeniz'in ana savaş gemisi, 150-200 kürekçi"
+        special_ability="deniz",
+        historical_note="Akdeniz'in ana savaş gemisi — 150-200 kürekçi, 50-80 savaşçı. Kışın limana çekilmeli (mevsimsel kısıtlama)."
     ),
     UnitType.LEVENT: UnitStats(
         name="Marine",
@@ -185,13 +190,43 @@ UNIT_DEFINITIONS = {
         attack=12,
         defense=8,
         speed=5,
-        cost_gold=80,
-        cost_food=40,
-        maintenance=3,
+        cost_gold=100,
+        cost_food=50,
+        maintenance=4,
         train_time=2,
         requires_port=True,
-        special_ability="amfibi",  # Kara ve denizde savaşır
-        historical_note="Denizci piyadeler, gemilerde ve kıyı baskınlarında"
+        special_ability="amfibi",
+        historical_note="Denizci piyadeler — gemilerde ve kıyı baskınlarında görev yapar. Barbaros Hayreddin'in korsanları levent kökenlidir."
+    ),
+    UnitType.BASTARDA: UnitStats(
+        name="Flagship Galley",
+        name_tr="Baştarda",
+        military_class=MilitaryClass.NAVAL,
+        attack=30,
+        defense=20,
+        speed=4,
+        cost_gold=1200,        # Kapudan Paşa gemisi — en pahalı gemi
+        cost_food=200,
+        maintenance=30,        # Büyük mürettebat
+        train_time=8,
+        requires_port=True,
+        special_ability="komutan",  # Donanma morali bonusu
+        historical_note="Kapudan Paşa'nın amiral gemisi — 26-36 oturak, kadırgadan büyük ve gösterişli. Donanma savaşında moral etkisi."
+    ),
+    UnitType.MAVNA: UnitStats(
+        name="Heavy Transport",
+        name_tr="Mavna",
+        military_class=MilitaryClass.NAVAL,
+        attack=20,
+        defense=18,
+        speed=3,
+        cost_gold=600,         # Ağır lojistik gemisi
+        cost_food=120,
+        maintenance=15,
+        train_time=5,
+        requires_port=True,
+        special_ability="top_taşıma",  # Denizde top ateşi desteği
+        historical_note="İki direkli, geniş gövdeli top taşıma gemisi. Yüksek ateş gücü ve lojistik kapasitesi."
     ),
 }
 
@@ -225,6 +260,8 @@ class MilitarySystem:
             UnitType.AZAP: 80,
             # Donanma
             UnitType.KADIRGA: 0,
+            UnitType.BASTARDA: 0,
+            UnitType.MAVNA: 0,
             UnitType.LEVENT: 0,
         }
         
@@ -254,7 +291,7 @@ class MilitarySystem:
     
     def get_total_soldiers(self) -> int:
         """Toplam asker sayısı (donanma hariç)"""
-        naval_units = [UnitType.KADIRGA, UnitType.LEVENT]
+        naval_units = [UnitType.KADIRGA, UnitType.BASTARDA, UnitType.MAVNA, UnitType.LEVENT]
         return sum(c for t, c in self.units.items() if t not in naval_units)
     
     def get_total_power(self, combat_type: str = "field") -> int:
@@ -322,6 +359,8 @@ class MilitarySystem:
     def naval_strength(self) -> int:
         """Donanma gücü"""
         return (self.units.get(UnitType.KADIRGA, 0) * 40 +
+                self.units.get(UnitType.BASTARDA, 0) * 60 +
+                self.units.get(UnitType.MAVNA, 0) * 35 +
                 self.units.get(UnitType.LEVENT, 0) * 20)
     
     def can_recruit(self, unit_type: UnitType, count: int, economy) -> tuple:
@@ -414,7 +453,8 @@ class MilitarySystem:
     def fight_bandits(self) -> dict:
         """Eşkıya/isyan bastırma savaşı"""
         total_power = self.get_total_power()
-        bandit_power = 100 + (self.get_total_soldiers() // 10)
+        # Eşkıya gücü sabit + ordu boyutunun küçük bir kısmı
+        bandit_power = 100 + (self.get_total_soldiers() // 25)
         
         # Basit savaş hesabı
         victory = total_power > bandit_power * 1.2
@@ -427,23 +467,25 @@ class MilitarySystem:
         }
         
         if victory:
-            # Küçük kayıplar
-            for unit_type in self.units:
-                if self.units[unit_type] > 0:
-                    loss = max(1, self.units[unit_type] // 20)
+            # Zafer: Sadece hafif birliklerde küçük kayıplar (%2)
+            from game.systems.military import UnitType
+            light_units = {UnitType.AZAP, UnitType.AKINCI}
+            for unit_type in light_units:
+                if self.units.get(unit_type, 0) > 0:
+                    loss = max(1, self.units[unit_type] // 50)
                     self.units[unit_type] -= loss
                     result['losses'][unit_type.value] = loss
             self.total_victories += 1
             self.morale = min(100, self.morale + 10)
         else:
-            # Büyük kayıplar
+            # Yenilgi: Tüm birliklerde orta kayıplar (%10)
             for unit_type in self.units:
                 if self.units[unit_type] > 0:
-                    loss = max(1, self.units[unit_type] // 5)
+                    loss = max(1, self.units[unit_type] // 10)
                     self.units[unit_type] -= loss
                     result['losses'][unit_type.value] = loss
             self.total_losses += 1
-            self.morale = max(0, self.morale - 20)
+            self.morale = max(0, self.morale - 15)
         
         return result
     

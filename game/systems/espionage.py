@@ -264,7 +264,7 @@ class EspionageSystem:
         spy = Spy(
             spy_id=f"spy_{self.spy_counter}",
             spy_type=spy_type,
-            name=self._generate_spy_name(),
+            name=self._generate_spy_name(spy_type),
             skill=stats.skill + random.randint(-1, 2),
         )
         
@@ -278,13 +278,34 @@ class EspionageSystem:
         
         return spy
     
-    def _generate_spy_name(self) -> str:
-        """Rastgele Osmanlı ismi üret"""
-        first_names = [
-            "Mehmed", "Ahmed", "Mustafa", "Ali", "Hasan", "Hüseyin",
-            "İbrahim", "Süleyman", "Osman", "Yusuf", "Halil", "Mahmud"
-        ]
-        titles = ["Ağa", "Efendi", "Bey", "Çelebi", ""]
+    def _generate_spy_name(self, spy_type: SpyType = None) -> str:
+        """Rastgele 16. yüzyıl Osmanlı ismi üret"""
+        if spy_type == SpyType.CARIYE:
+            # Saray cariyeleri — Slav, Kafkas ve sarayda verilen isimler
+            first_names = [
+                "Hürrem", "Mahidevran", "Nurbanu", "Gülbahar", "Nilüfer",
+                "Gülfem", "Dilşad", "Gülruh", "Şahhuban", "Gevherhan",
+                "Raziye", "Hümaşah", "Gülşen", "Safiye", "Kösem",
+                "Hatice", "Mihrimah", "Fatma", "Ayşe", "Hafsa"
+            ]
+            titles = ["Hatun", "Kadın", "Sultan", ""]
+        elif spy_type == SpyType.DERVIS:
+            # Gezgin dervişler — Sufi/tasavvuf isimleri
+            first_names = [
+                "Abdülkadir", "Şeyh Bedreddin", "Hacı Bayram", "Akşemseddin",
+                "Emir Sultan", "Molla Hüsrev", "Baba İlyas", "Şeyh Vefa",
+                "Abdal Musa", "Sarı Saltuk", "Hızır", "İlyas"
+            ]
+            titles = ["Dede", "Baba", "Efendi", ""]
+        else:
+            # Devşirme/askeri kökenli casuslar
+            first_names = [
+                "Hüsrev", "Rüstem", "Ferhad", "Lütfi", "Sinan",
+                "İskender", "Davud", "Piyale", "Pertev", "Nasuh",
+                "Mehmed", "Ahmed", "Mustafa", "Ali", "Hasan",
+                "Mahmud", "Süleyman", "İbrahim", "Osman", "Kasım"
+            ]
+            titles = ["Ağa", "Efendi", "Bey", "Çelebi", ""]
         return f"{random.choice(first_names)} {random.choice(titles)}".strip()
     
     def start_mission(self, spy_id: str, operation: OperationType, 

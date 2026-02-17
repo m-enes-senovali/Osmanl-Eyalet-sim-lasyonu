@@ -360,23 +360,31 @@ class ReligionSystem:
         return ulema
     
     def _generate_ulema_name(self, rank: UlemaRank) -> str:
-        """Ulema ismi üret"""
-        first_names = ["Mehmed", "Ahmed", "Mustafa", "Ali", "Süleyman", "İbrahim"]
+        """16. yüzyıl Osmanlı ulema ismi üret"""
+        # Dönemin bilinen müderris ve kadı isimleri
+        scholar_names = [
+            "Mehmed", "Ahmed", "Mustafa", "Ali", "Süleyman", "İbrahim",
+            "Abdülkerim", "Abdurrahman", "Mahmud", "Kasım", "Haydar", "Lütfi"
+        ]
         
         if rank == UlemaRank.SEYHULISLAM:
-            # 1520 dönemi doğru isimleri (Zenbilli Ali Efendi 1503-1526 arası görevde)
-            return random.choice(["Zenbilli Ali Efendi", "Kemalpaşazade", "İbn-i Kemal"])
+            # 1520-1566 dönemi gerçek şeyhülislamları
+            return random.choice([
+                "Zenbilli Ali Efendi", "Kemalpaşazade", "İbn-i Kemal",
+                "Ebussuud Efendi", "Çivizade Muhyiddin", "Fenari Muhyiddin"
+            ])
         elif rank == UlemaRank.KADIASKER:
-            # İki ayrı makam: Rumeli ve Anadolu Kadıaskeri
             current_kadiaskers = [u.name for u in self.ulema if u.rank == UlemaRank.KADIASKER]
             if "Rumeli Kadıaskeri" not in [n.split(' - ')[0] for n in current_kadiaskers]:
-                return f"Rumeli Kadıaskeri - {random.choice(first_names)} Efendi"
+                return f"Rumeli Kadıaskeri - {random.choice(scholar_names)} Efendi"
             else:
-                return f"Anadolu Kadıaskeri - {random.choice(first_names)} Efendi"
+                return f"Anadolu Kadıaskeri - {random.choice(scholar_names)} Efendi"
         elif rank == UlemaRank.MUDERRIS:
-            return f"Molla {random.choice(first_names)}"
+            # Müderrisler — dönemin medrese hocaları
+            surnames = ["Efendi", "Molla", "Hoca"]
+            return f"{random.choice(surnames)} {random.choice(scholar_names)}"
         else:
-            return f"{random.choice(first_names)} Efendi"
+            return f"{random.choice(scholar_names)} Efendi"
     
     def build_vakif(self, vakif_type: VakifType, economy, population: int, 
                     custom_name: str = None) -> Optional[Vakif]:
@@ -411,6 +419,9 @@ class ReligionSystem:
         
         # Dindarlık artışı
         self.piety = min(100, self.piety + 3)
+        
+        # Vakıf inşaat sesi
+        audio.play_game_sound('construction', 'hammer')
         
         audio.announce_action_result(
             f"{stats.name_tr} inşası",
