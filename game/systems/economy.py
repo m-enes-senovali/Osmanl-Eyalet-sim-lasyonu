@@ -146,7 +146,7 @@ class MarketPrices:
 # ════════════════════════════════════════════════════════════
 CRAFT_SECTORS = {
     "debbag": {
-        "name_tr": "Debbağlar (Tabaklama)",
+        "name_tr": "Deri İşleme Loncası (Debbağlar)",
         "product": "İşlenmiş deri (Gön, Sahtiyan)",
         "narh_price_akce": 25,       # 20-30 akçe
         "daily_wage_akce": 8,
@@ -155,7 +155,7 @@ CRAFT_SECTORS = {
         "historical_note": "Ahi Evran'ın mesleği. Askeri deri teçhizat üretimi için kritik."
     },
     "sarac": {
-        "name_tr": "Saraçlar (Eyer/Koşum)",
+        "name_tr": "At Donatım Loncası (Saraçlar)",
         "product": "At takımı, eyer, koşum",
         "narh_price_akce": 200,      # 100-300 akçe (eyer)
         "daily_wage_akce": 10,
@@ -164,7 +164,7 @@ CRAFT_SECTORS = {
         "historical_note": "Sipahi hareket kabiliyetinin bel kemiği."
     },
     "kassab": {
-        "name_tr": "Kasaplar",
+        "name_tr": "Kasaplar Loncası",
         "product": "Koyun eti",
         "narh_price_akce": 3,        # 2-4 akçe/kıyye (~1.28 kg)
         "daily_wage_akce": 6,
@@ -173,7 +173,7 @@ CRAFT_SECTORS = {
         "historical_note": "Koyun eti en temel protein kaynağı. İaşe eksikliği isyan tetikler."
     },
     "nanpaz": {
-        "name_tr": "Ekmekçiler (Nan-pazlar)",
+        "name_tr": "Fırıncılar Loncası (Ekmekçiler)",
         "product": "Ekmek (Has ve Harcî)",
         "narh_price_akce": 1.5,      # 1-2 akçe/kıyye
         "daily_wage_akce": 5,
@@ -182,7 +182,7 @@ CRAFT_SECTORS = {
         "historical_note": "Kıtlıkta en yüksek isyan riski taşıyan kalem. Narh ihlali ağır cezalı."
     },
     "dulger": {
-        "name_tr": "Dülgerler (Marangozlar)",
+        "name_tr": "Marangozlar Loncası (Dülgerler)",
         "product": "İnşaat, gemi, araba",
         "narh_price_akce": 10,       # 8-12 akçe/gün (yevmiye)
         "daily_wage_akce": 10,
@@ -191,7 +191,7 @@ CRAFT_SECTORS = {
         "historical_note": "Bina ve gemi inşaatı. Seferlerde köprü yapımı için orduya alınırlar."
     },
     "kuyumcu": {
-        "name_tr": "Kuyumcular",
+        "name_tr": "Kuyumcular Loncası",
         "product": "Altın/Gümüş işçiliği",
         "narh_price_akce": 500,      # Lüks, değişken
         "daily_wage_akce": 15,
@@ -200,7 +200,7 @@ CRAFT_SECTORS = {
         "historical_note": "Lüks tüketim vergisi ve saray prestiji kaynağı."
     },
     "demirci": {
-        "name_tr": "Demirciler",
+        "name_tr": "Demirciler Loncası",
         "product": "Alet, silah, nal",
         "narh_price_akce": 3,        # Nal çift: 2-4, Kılıç: 50-200+
         "daily_wage_akce": 8,
@@ -209,7 +209,7 @@ CRAFT_SECTORS = {
         "historical_note": "Ordu donatımının temeli. Sefer sırasında lojistik destek sağlar."
     },
     "simkes": {
-        "name_tr": "Simkeşler (Gümüş Tel)",
+        "name_tr": "Gümüş İşleme Loncası (Simkeşler)",
         "product": "Sırma, işleme, dokuma",
         "narh_price_akce": 80,       # Değişken, lüks
         "daily_wage_akce": 12,
@@ -376,12 +376,17 @@ class EconomySystem:
         self.resources.iron -= iron
         return True
     
-    def add_resources(self, gold: int = 0, food: int = 0, wood: int = 0, iron: int = 0):
+    def add_resources(self, gold: int = 0, food: int = 0, wood: int = 0, iron: int = 0,
+                      stone: int = 0, rope: int = 0, tar: int = 0, sailcloth: int = 0):
         """Kaynak ekle"""
         self.resources.gold += gold
         self.resources.food += food
         self.resources.wood += wood
         self.resources.iron += iron
+        self.resources.stone += stone
+        self.resources.rope += rope
+        self.resources.tar += tar
+        self.resources.sailcloth += sailcloth
     
     def get_summary(self) -> dict:
         """Ekonomi özeti"""

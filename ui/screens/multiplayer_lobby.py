@@ -225,13 +225,19 @@ class MultiplayerLobbyScreen(BaseScreen):
     
     def handle_event(self, event) -> bool:
         # Erişilebilir metin girişi aktifse
+        # Erişilebilir metin girişi aktifse
         if self._input_mode == "name":
-            if self.name_input.handle_event(event):
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    self.player_name = self.name_input.get_text()
-                    self._input_mode = None
-                    self.audio.speak(f"İsim değiştirildi: {self.player_name}", interrupt=True)
+            # Enter kontrolü (handle_event False döndürdüğü için dışarıda kontrol ediyoruz)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                self.player_name = self.name_input.get_text()
+                self._input_mode = None
+                self.audio.speak(f"İsim değiştirildi: {self.player_name}", interrupt=True)
+                self.audio.play_ui_sound('enter')
                 return True
+                
+            if self.name_input.handle_event(event):
+                return True
+                
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self._input_mode = None
                 self.name_input.unfocus()
@@ -239,12 +245,15 @@ class MultiplayerLobbyScreen(BaseScreen):
             return True
         
         if self._input_mode == "room_code":
-            if self.room_code_input.handle_event(event):
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    code = self.room_code_input.get_text()
-                    self._input_mode = None
-                    self._join_room(code)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                code = self.room_code_input.get_text()
+                self._input_mode = None
+                self._join_room(code)
                 return True
+                
+            if self.room_code_input.handle_event(event):
+                return True
+                
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self._input_mode = None
                 self.room_code_input.unfocus()
@@ -252,15 +261,18 @@ class MultiplayerLobbyScreen(BaseScreen):
             return True
         
         if self._input_mode == "chat":
-            if self.chat_input.handle_event(event):
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    message = self.chat_input.get_text()
-                    if message and self.network:
-                        self.network.send_chat(message)
-                        self.audio.speak("Mesaj gönderildi.", interrupt=True)
-                    self._input_mode = None
-                    self.chat_input.clear()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                message = self.chat_input.get_text()
+                if message and self.network:
+                    self.network.send_chat(message)
+                    self.audio.speak("Mesaj gönderildi.", interrupt=True)
+                self._input_mode = None
+                self.chat_input.clear()
                 return True
+                
+            if self.chat_input.handle_event(event):
+                return True
+                
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self._input_mode = None
                 self.chat_input.unfocus()

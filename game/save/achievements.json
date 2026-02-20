@@ -1,0 +1,176 @@
+{
+  "stats": {
+    "total_gold_earned": 0,
+    "buildings_built": 0,
+    "battles_won": 0,
+    "ships_built": 0,
+    "cannons_produced": 0,
+    "spy_missions_completed": 0,
+    "alliances_formed": 0,
+    "negotiations_completed": 0,
+    "raids_completed": 0,
+    "rebellions_crushed": 0,
+    "defense_victories": 0,
+    "turns_played": 1,
+    "turns_without_war": 1,
+    "turns_without_tax": 0
+  },
+  "achievements": {
+    "treasury_master": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 15.658,
+      "current_value": 15658
+    },
+    "trade_emperor": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 20.0,
+      "current_value": 1
+    },
+    "master_builder": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "tax_reformer": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "wealthy_province": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "worker_army": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 10.0,
+      "current_value": 10
+    },
+    "conqueror": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "sea_lord": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "artillery_master": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "janissary_aga": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.3,
+      "current_value": 30
+    },
+    "defender": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "raider": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "peacemaker": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "spy_master": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "negotiator": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "tribute_collector": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "peoples_sultan": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 10.381,
+      "current_value": 10381
+    },
+    "millet_father": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "religious_leader": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "philanthropist": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "educator": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 25.0,
+      "current_value": 20
+    },
+    "happy_realm": {
+      "unlocked": true,
+      "unlock_date": "2026-02-19 23:05",
+      "progress": 100.0,
+      "current_value": 90
+    },
+    "survivor": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 1.0,
+      "current_value": 1
+    },
+    "pacifist": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 2.0,
+      "current_value": 1
+    },
+    "generous": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    },
+    "iron_fist": {
+      "unlocked": false,
+      "unlock_date": null,
+      "progress": 0.0,
+      "current_value": 0
+    }
+  }
+}

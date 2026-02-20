@@ -154,15 +154,19 @@ class EspionageScreen(BaseScreen):
                             })
                     
                     if op_items:
+                        # Alt menü sonuna Geri butonu ekle
+                        op_items.append({'text': '-- Geri --', 'callback': None, 'submenu': None, 'is_back': True})
                         target_items.append({
                             'text': target_info['name'],
-                            'children': op_items
+                            'submenu': op_items
                         })
                 
                 if target_items:
+                    # Alt menü sonuna Geri butonu ekle
+                    target_items.append({'text': '-- Geri --', 'callback': None, 'submenu': None, 'is_back': True})
                     mission_items.append({
                         'text': f'{spy.name} ({spy_stats.name_tr})',
-                        'children': target_items
+                        'submenu': target_items
                     })
             
             if mission_items:
@@ -205,16 +209,23 @@ class EspionageScreen(BaseScreen):
         self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
     
     def handle_event(self, event):
+        # Önce menü navigasyonu
+        result = self.action_menu.handle_event(event)
+        
+        # result == True -> Menü içi bir olay işlendi
+        if result is True:
+            return True
+        # result == False -> Ana ekrana dön (kök menüde geri basıldı)
+        elif result is False:
+            self._go_back()
+            return True
+            
+        # Menü dışında başka tuşlar
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_BACKSPACE or event.key == pygame.K_ESCAPE:
                 self._go_back()
                 return True
-            
-            # Menü navigasyonu
-            result = self.action_menu.handle_event(event)
-            if result is not None:
-                return result
-        
+                
         return False
     
     def update(self, dt: float):

@@ -260,6 +260,13 @@ class Game:
             ScreenType.GUILD,
             GuildScreen(self.screen_manager)
         )
+        
+        # Geçmiş olaylar ekranı (YENİ)
+        from ui.screens.history_screen import HistoryScreen
+        self.screen_manager.register_screen(
+            ScreenType.HISTORY,
+            HistoryScreen(self.screen_manager)
+        )
     
     def _load_sounds(self):
         """Ses dosyalarını yükle"""

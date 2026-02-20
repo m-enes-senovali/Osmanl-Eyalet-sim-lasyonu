@@ -33,6 +33,10 @@ class MilitaryScreen(BaseScreen):
     
     def _setup_action_menu(self):
         """Hiyerarşik askeri menüyü ayarla"""
+        # Mevcut menü durumunu kaydet (başlıklar listesi)
+        saved_stack_titles = [m['title'] for m in self.action_menu.menu_stack]
+        saved_index = self.action_menu.selected_index
+        
         self.action_menu.clear()
         gm = self.screen_manager.game_manager
         if not gm:
@@ -124,15 +128,47 @@ class MilitaryScreen(BaseScreen):
         
         # === GERİ BUTONU ===
         self.action_menu.add_back_button()
-    
-    def get_header_font(self):
-        if self._header_font is None:
-            self._header_font = get_font(FONTS['header'])
-        return self._header_font
-    
+        
+        # Durumu geri yükle
+        self._restore_menu_state(saved_stack_titles, saved_index)
+
+    def _restore_menu_state(self, stack_titles, saved_index):
+        """Menü durumunu başlık eşleşmesiyle geri yükle"""
+        current_menu = self.action_menu.root_menu
+        
+        for title in stack_titles:
+            # Bu başlıklı öğeyi bul
+            found = False
+            for item in current_menu:
+                # İsim eşleşmesi (kısmi eşleşme çünkü sayılar değişebilir "Yeniçeri (100)" -> "Yeniçeri (110)")
+                # Parantez öncesi kısmı kontrol et
+                item_text = item.get('text', '').split('(')[0].strip()
+                target_title = title.split('(')[0].strip()
+                
+                if item_text == target_title and item.get('submenu'):
+                    self.action_menu.menu_stack.append({
+                        'title': item['text'],
+                        'items': item['submenu']
+                    })
+                    current_menu = item['submenu']
+                    found = True
+                    break
+            
+            if not found:
+                break
+        
+        # İndeksi geri yükle (eğer geçerliyse)
+        if saved_index < len(current_menu):
+            self.action_menu.selected_index = saved_index
+        else:
+            self.action_menu.selected_index = 0
+
     def on_enter(self):
         self._update_panels()
+        # İlk girişte temiz kurulum
+        self.action_menu.clear()
         self._setup_action_menu()
+        # Stack temizlendiği için restore çalışmayacak, bu doğru
         self.audio.play_game_sound('military', 'march')
     
     def announce_screen(self):

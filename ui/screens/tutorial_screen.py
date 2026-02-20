@@ -126,9 +126,20 @@ class TutorialScreen(BaseScreen):
             
             self.chapter_menu.add_item(
                 f"{prefix}{chapter_names[chapter]} ({completed}/{total})",
-                None,
+                lambda c=chapter: self._jump_to_chapter(c),
                 ""
             )
+
+    def _jump_to_chapter(self, chapter: TutorialChapter):
+        """Seçilen bölüme atla"""
+        self.tutorial.current_chapter = chapter
+        # Bölümün ilk adımını bul
+        steps = self.tutorial.get_steps_by_chapter(chapter)
+        if steps:
+            self.tutorial.current_step_index = self.tutorial.steps.index(steps[0])
+            self._update_panels()
+            self._setup_chapter_menu()
+            self.audio.speak(f"{chapter.value} bölümüne geçildi.", interrupt=True)
     
     def _update_panels(self):
         """Panelleri güncelle"""
@@ -171,18 +182,14 @@ class TutorialScreen(BaseScreen):
         """Ana menüye dön"""
         self.screen_manager.change_screen(ScreenType.MAIN_MENU)
     
-    def handle_event(self, event) -> bool:
-        if self.continue_button.handle_event(event):
+    def handle_event(self, event):
+        if self.chapter_menu.handle_event(event):
             return True
-        
-        if self.skip_button.handle_event(event):
-            return True
-        
-        if self.back_button.handle_event(event):
-            return True
-        
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
+                # Menüden seçim yapıldıysa handle_event zaten yakalar, 
+                # ama burada "Devam Et" butonu için ektra kontrol
                 self._continue_tutorial()
                 return True
             elif event.key == pygame.K_ESCAPE:
@@ -190,6 +197,18 @@ class TutorialScreen(BaseScreen):
                 return True
             elif event.key == pygame.K_BACKSPACE:
                 self._go_back()
+                return True
+            
+            # Sağ/Sol ok ile adımlar arası gez (Bölüm içi)
+            elif event.key == pygame.K_RIGHT:
+                self.tutorial.advance()
+                self._update_panels()
+                self._setup_chapter_menu()
+                return True
+            elif event.key == pygame.K_LEFT:
+                # Geri gitme mantığı (basitçe bir önceki adıma)
+                # Şu anki sistemde doğrudan 'prev_step' yok, ama bölüm başı kontrolü yapılabilir
+                self.audio.speak("Geri gitme henüz aktif değil", interrupt=True)
                 return True
             
             # F1 ile mevcut adımı tekrar duyur

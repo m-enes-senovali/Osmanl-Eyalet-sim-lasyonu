@@ -69,6 +69,7 @@ class ConstructionScreen(BaseScreen):
         
         # Kategori sırası
         category_order = [
+            BuildingCategory.IDARI,
             BuildingCategory.DINI,
             BuildingCategory.ASKERI,
             BuildingCategory.EKONOMI,
@@ -76,6 +77,7 @@ class ConstructionScreen(BaseScreen):
             BuildingCategory.SOSYAL
         ]
         category_labels = {
+            BuildingCategory.IDARI: "═══ İdari Yapılar ═══",
             BuildingCategory.DINI: "═══ Dinî Yapılar ═══",
             BuildingCategory.ASKERI: "═══ Askerî Yapılar ═══",
             BuildingCategory.EKONOMI: "═══ Ekonomik Yapılar ═══",
@@ -93,7 +95,7 @@ class ConstructionScreen(BaseScreen):
                 stats = BUILDING_DEFINITIONS[building_type]
                 # Ön koşul durumunu kontrol et
                 prereq_met, _ = con.check_prerequisite(building_type)
-                prereq_marker = "" if prereq_met else "🔒 "
+                prereq_marker = "" if prereq_met else "[KİLİTLİ] "
                 self.build_menu.add_item(
                     f"İnşa: {prereq_marker}{stats.name_tr}",
                     lambda bt=building_type: self._build(bt)
@@ -106,7 +108,7 @@ class ConstructionScreen(BaseScreen):
             if building.level < stats.max_level:
                 # Sinerji göstergesi
                 synergy_mult = con.get_synergy_multiplier(building_type)
-                synergy_text = f" ✨+%{int((synergy_mult-1.0)*100)}" if synergy_mult > 1.0 else ""
+                synergy_text = f" (Sinerji +%{int((synergy_mult-1.0)*100)})" if synergy_mult > 1.0 else ""
                 self.build_menu.add_item(
                     f"Yükselt: {stats.name_tr} ({level_name}){synergy_text}",
                     lambda bt=building_type: self._upgrade(bt)
@@ -134,7 +136,7 @@ class ConstructionScreen(BaseScreen):
                 
                 # Sinerji göstergesi
                 synergy_mult = con.get_synergy_multiplier(building_type)
-                synergy_text = f" ✨%{int((synergy_mult-1.0)*100)}" if synergy_mult > 1.0 else ""
+                synergy_text = f" (Sinerji %{int((synergy_mult-1.0)*100)})" if synergy_mult > 1.0 else ""
                 
                 self.buildings_panel.add_item(
                     f"{stats.name_tr} ({level_name}){synergy_text}",
@@ -160,7 +162,7 @@ class ConstructionScreen(BaseScreen):
         if con.construction_queue:
             for item in con.construction_queue:
                 stats = BUILDING_DEFINITIONS[item.building_type]
-                action = "⬆" if item.is_upgrade else "🔨"
+                action = "[YÜKSELT]" if item.is_upgrade else "[İNŞA]"
                 self.queue_panel.add_item(
                     f"{action} {stats.name_tr}",
                     f"{item.turns_remaining} tur"

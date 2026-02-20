@@ -266,17 +266,21 @@ class MultiplayerGameScreen(BaseScreen):
     
     def handle_event(self, event) -> bool:
         # Sohbet modu
+        # Sohbet modu
         if self.chat_mode:
-            if self.chat_input.handle_event(event):
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    message = self.chat_input.get_text()
-                    if message and self.network:
-                        self.network.send_chat(message)
-                        self.audio.speak("Mesaj gönderildi.", interrupt=True)
-                    self.chat_mode = False
-                    self.chat_input.clear()
-                    self.chat_input.unfocus()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                message = self.chat_input.get_text()
+                if message and self.network:
+                    self.network.send_chat(message)
+                    self.audio.speak("Mesaj gönderildi.", interrupt=True)
+                self.chat_mode = False
+                self.chat_input.clear()
+                self.chat_input.unfocus()
                 return True
+                
+            if self.chat_input.handle_event(event):
+                return True
+                
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self.chat_mode = False
                 self.chat_input.unfocus()

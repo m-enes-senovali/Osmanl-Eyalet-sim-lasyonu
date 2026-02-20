@@ -9,6 +9,7 @@ from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.systems.guilds import GuildSystem, GuildType, GuildRank, GUILD_HIERARCHY
+from game.systems.economy import CRAFT_SECTORS
 
 
 class GuildScreen(BaseScreen):
@@ -148,12 +149,27 @@ class GuildScreen(BaseScreen):
         self.guild_menu.add_item("<- Geri", lambda: self._setup_guild_menu())
         self.guild_menu.add_item("", None)
         
-        for guild_type in GuildType:
-            name = guild_type.value.title()
-            self.guild_menu.add_item(
-                f"Kur: {name}",
-                lambda gt=guild_type: self._create_guild(gt)
-            )
+        guild_system = self._get_guild_system()
+        if guild_system:
+            # Mevcut lonca tiplerini bul
+            existing_types = set()
+            for g in guild_system.guilds.values():
+                if hasattr(g, 'guild_type'):
+                    existing_types.add(g.guild_type)
+            
+            for guild_type in GuildType:
+                # Eğer bu tipte lonca varsa listeye ekleme
+                if guild_type in existing_types:
+                    continue
+                    
+                # İsim düzeltme: CRAFT_SECTORS'dan al
+                sector_info = CRAFT_SECTORS.get(guild_type.value, {})
+                name = sector_info.get("name_tr", guild_type.value.title())
+                
+                self.guild_menu.add_item(
+                    f"Kur: {name}",
+                    lambda gt=guild_type: self._create_guild(gt)
+                )
     
     def _create_guild(self, guild_type: GuildType):
         """Yeni lonca kur"""

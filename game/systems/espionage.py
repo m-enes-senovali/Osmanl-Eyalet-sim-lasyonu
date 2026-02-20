@@ -446,18 +446,26 @@ class EspionageSystem:
         # Güvenlik zamanla düşer
         self.security_level = max(0, self.security_level - 1)
         
-        # Sonuçları duyur
+        # Sonuçları duyur ve topla
         audio = get_audio_manager()
+        messages = []
         if results['completed']:
             for r in results['completed']:
-                audio.speak(f"Başarılı: {r['spy']} - {r['operation']}", interrupt=False)
+                msg = f"Casus {r['spy']}, {r['target']} eyaletinde {r['operation']} görevini başarıyla tamamladı."
+                audio.speak(msg, interrupt=False)
+                messages.append(msg)
         if results['failed']:
             for r in results['failed']:
-                audio.speak(f"Başarısız: {r['spy']} - {r['operation']}", interrupt=False)
+                msg = f"Casus {r['spy']}, {r['target']} eyaletindeki {r['operation']} görevinde başarısız oldu."
+                audio.speak(msg, interrupt=False)
+                messages.append(msg)
         if results['captured']:
             for name in results['captured']:
-                audio.speak(f"Yakalandı: {name}", interrupt=False)
+                msg = f"Casus {name} yakalandı!"
+                audio.speak(msg, interrupt=False)
+                messages.append(msg)
         
+        results['messages'] = messages
         return results
     
     def get_spy_count(self) -> int:

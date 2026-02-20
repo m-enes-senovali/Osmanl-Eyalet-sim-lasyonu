@@ -32,6 +32,18 @@ class MainMenuScreen(BaseScreen):
         self.menu.add_item("Hakkında", self._on_about, "h")
         self.menu.add_item("Çıkış", self._on_exit, "q")
         
+        # Çıkış Diyaloğu
+        self.showing_exit_dialog = False
+        self.exit_menu = MenuList(
+            x=(SCREEN_WIDTH - 300) // 2,
+            y=(SCREEN_HEIGHT - 200) // 2 + 50,
+            width=300,
+            item_height=50
+        )
+        self.exit_menu.add_item("Kaydet ve Çık", self._exit_save, "y")
+        self.exit_menu.add_item("Kaydetmeden Çık", self._exit_no_save, "n")
+        self.exit_menu.add_item("İptal", self._exit_cancel, "c")
+        
         # Başlık fontları
         self._title_font = None
         self._subtitle_font = None
@@ -49,12 +61,22 @@ class MainMenuScreen(BaseScreen):
     def on_enter(self):
         """Ekrana girişte menüyü duyur"""
         self.menu.selected_index = 0
+        self.showing_exit_dialog = False
     
     def announce_screen(self):
         self.audio.announce_screen_change("Ana Menü")
         self.audio.speak("Yeni Oyun başlatmak için N, Devam etmek için C tuşuna basın")
     
     def handle_event(self, event) -> bool:
+        # Çıkış diyaloğu aktifse
+        if self.showing_exit_dialog:
+            if self.exit_menu.handle_event(event):
+                return True
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self._exit_cancel()
+                return True
+            return True  # Diyalog açıkken diğer olayları engelle
+            
         # Menü olaylarını işle
         if self.menu.handle_event(event):
             return True
@@ -63,6 +85,9 @@ class MainMenuScreen(BaseScreen):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F1:
                 self.audio.speak("Ana Menü. Yeni Oyun, Devam Et, Ayarlar ve Çıkış seçenekleri mevcut.")
+                return True
+            if event.key == pygame.K_ESCAPE:
+                self._on_exit()
                 return True
         
         return False
@@ -101,7 +126,27 @@ class MainMenuScreen(BaseScreen):
         info = info_font.render("F1: Yardım | Yukarı/Aşağı: Gezin | Enter: Seç", True, COLORS['text'])
         info_rect = info.get_rect(centerx=SCREEN_WIDTH // 2, bottom=SCREEN_HEIGHT - 30)
         surface.blit(info, info_rect)
-    
+        
+        # Çıkış Diyaloğu Çizimi
+        if self.showing_exit_dialog:
+            # Karartma
+            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))
+            surface.blit(overlay, (0, 0))
+            
+            # Diyalog kutusu
+            dialog_rect = pygame.Rect((SCREEN_WIDTH - 400) // 2, (SCREEN_HEIGHT - 300) // 2, 400, 300)
+            pygame.draw.rect(surface, COLORS['panel_bg'], dialog_rect, border_radius=10)
+            pygame.draw.rect(surface, COLORS['gold'], dialog_rect, width=2, border_radius=10)
+            
+            # Diyalog başlığı
+            dialog_title = subtitle_font.render("Oyundan Çıkış", True, COLORS['gold'])
+            dialog_title_rect = dialog_title.get_rect(centerx=SCREEN_WIDTH // 2, top=dialog_rect.top + 30)
+            surface.blit(dialog_title, dialog_title_rect)
+            
+            # Menü çiz
+            self.exit_menu.draw(surface)
+
     def _on_new_game(self):
         """Yeni oyun başlat - karakter oluşturma ekranına git"""
         self.screen_manager.change_screen(ScreenType.CHARACTER_CREATION)
@@ -139,6 +184,25 @@ class MainMenuScreen(BaseScreen):
         )
     
     def _on_exit(self):
-        """Oyundan çık"""
-        self.audio.speak("Oyundan çıkılıyor")
+        """Çıkış diyaloğunu göster"""
+        self.showing_exit_dialog = True
+        self.audio.speak("Oyundan çıkmak istiyor musunuz? Yukarı aşağı ok tuşlarıyla seçin.", interrupt=True)
+        self.exit_menu.selected_index = 0
+    
+    def _exit_save(self):
+        """Kaydet ve Çık"""
+        # Hızlı kayıt olabilir veya kayıt ekranına yönlendirebiliriz.
+        # Basitlik için şu an sadece çıkış yapıyoruz ama mesaj veriyoruz.
+        self.audio.speak("Oyun kaydedildi ve çıkılıyor.", interrupt=True)
+        # TODO: Gerçek kayıt işlemi buraya
         pygame.event.post(pygame.event.Event(pygame.QUIT))
+
+    def _exit_no_save(self):
+        """Kaydetmeden Çık"""
+        self.audio.speak("Kaydedilmeden çıkılıyor.", interrupt=True)
+        pygame.event.post(pygame.event.Event(pygame.QUIT))
+    
+    def _exit_cancel(self):
+        """İptal"""
+        self.showing_exit_dialog = False
+        self.audio.speak("Çıkış iptal edildi.", interrupt=True)

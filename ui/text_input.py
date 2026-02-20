@@ -29,6 +29,7 @@ class AccessibleTextInput:
         self.text = ""
         self.cursor_pos = 0
         self.focused = False
+        self.all_selected = False  # Ctrl+A seçimi
         
         self.audio = get_audio_manager()
         
@@ -36,6 +37,7 @@ class AccessibleTextInput:
         self.bg_color = (45, 40, 55)
         self.border_color = (120, 90, 60)
         self.focus_color = (218, 165, 32)
+        self.selection_color = (100, 100, 150)  # Seçim rengi
         self.text_color = (245, 240, 230)
         self.placeholder_color = (150, 145, 140)
         
@@ -50,6 +52,7 @@ class AccessibleTextInput:
         """Odaklan"""
         self.focused = True
         self.cursor_pos = len(self.text)
+        self.all_selected = False
         
         if self.label:
             self.audio.speak(f"{self.label}. ", interrupt=True)
@@ -64,6 +67,7 @@ class AccessibleTextInput:
     def unfocus(self):
         """Odağı kaldır"""
         self.focused = False
+        self.all_selected = False
     
     def handle_event(self, event) -> bool:
         """Olayları işle"""
@@ -82,6 +86,13 @@ class AccessibleTextInput:
                 self.audio.speak("İptal edildi", interrupt=True)
                 self.unfocus()
                 return True
+            
+            # Ok tuşları - Seçimi iptal et
+            if event.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_HOME, pygame.K_END):
+                if self.all_selected:
+                    self.all_selected = False
+                    self.audio.speak("Seçim iptal", interrupt=True)
+                    # Normal işleme devam et
             
             # Sol ok - Cursor sola
             if event.key == pygame.K_LEFT:
@@ -115,8 +126,16 @@ class AccessibleTextInput:
                 self.audio.speak("Son", interrupt=True)
                 return True
             
-            # Backspace - Sil (cursordan önce)
+            # Backspace - Sil (cursordan önce) veya Seçimi sil
             if event.key == pygame.K_BACKSPACE:
+                if self.all_selected:
+                    self.text = ""
+                    self.cursor_pos = 0
+                    self.all_selected = False
+                    self.audio.play_ui_sound('delete')
+                    self.audio.speak("Tümü silindi", interrupt=True)
+                    return True
+                
                 if self.cursor_pos > 0:
                     deleted = self.text[self.cursor_pos - 1]
                     self.text = self.text[:self.cursor_pos-1] + self.text[self.cursor_pos:]
@@ -127,8 +146,16 @@ class AccessibleTextInput:
                     self.audio.speak("Silinecek karakter yok", interrupt=True)
                 return True
             
-            # Delete - Sil (cursordan sonra)
+            # Delete - Sil (cursordan sonra) veya Seçimi sil
             if event.key == pygame.K_DELETE:
+                if self.all_selected:
+                    self.text = ""
+                    self.cursor_pos = 0
+                    self.all_selected = False
+                    self.audio.play_ui_sound('delete')
+                    self.audio.speak("Tümü silindi", interrupt=True)
+                    return True
+                
                 if self.cursor_pos < len(self.text):
                     deleted = self.text[self.cursor_pos]
                     self.text = self.text[:self.cursor_pos] + self.text[self.cursor_pos+1:]
@@ -138,16 +165,13 @@ class AccessibleTextInput:
                     self.audio.speak("Silinecek karakter yok", interrupt=True)
                 return True
             
-            # Ctrl+A - Tümünü seç ve sil
+            # Ctrl+A - Tümünü seç
             if event.key == pygame.K_a and pygame.key.get_mods() & pygame.KMOD_CTRL:
                 if self.text:
-                    deleted_text = self.text
-                    self.text = ""
-                    self.cursor_pos = 0
-                    self.audio.play_ui_sound('delete')
-                    self.audio.speak(f"Tümü silindi: {deleted_text}", interrupt=True)
+                    self.all_selected = True
+                    self.audio.speak("Tümü seçildi", interrupt=True)
                 else:
-                    self.audio.speak("Zaten boş", interrupt=True)
+                    self.audio.speak("Metin yok", interrupt=True)
                 return True
             
             # Ctrl+V - Yapıştır
@@ -159,6 +183,13 @@ class AccessibleTextInput:
                             # Bytes to string
                             if isinstance(clipboard, bytes):
                                 clipboard = clipboard.decode('utf-8').rstrip('\x00')
+                            
+                            # Seçim varsa üzerine yaz
+                            if self.all_selected:
+                                self.text = ""
+                                self.cursor_pos = 0
+                                self.all_selected = False
+                            
                             paste_text = clipboard[:self.max_length - len(self.text)]
                             if paste_text:
                                 self.text = self.text[:self.cursor_pos] + paste_text + self.text[self.cursor_pos:]
@@ -176,6 +207,12 @@ class AccessibleTextInput:
             
             # Normal karakter girişi
             if event.unicode and event.unicode.isprintable():
+                # Seçim varsa önce sil
+                if self.all_selected:
+                    self.text = ""
+                    self.cursor_pos = 0
+                    self.all_selected = False
+                
                 if len(self.text) < self.max_length:
                     char = event.unicode
                     self.text = self.text[:self.cursor_pos] + char + self.text[self.cursor_pos:]
@@ -221,6 +258,7 @@ class AccessibleTextInput:
             '"': 'çift tırnak',
             '<': 'küçüktür',
             '>': 'büyüktür',
+            '^': 'şapka',
         }
         
         name = char_names.get(char, char)
@@ -234,11 +272,13 @@ class AccessibleTextInput:
         """Metni ayarla"""
         self.text = text[:self.max_length]
         self.cursor_pos = len(self.text)
+        self.all_selected = False
     
     def clear(self):
         """Metni temizle"""
         self.text = ""
         self.cursor_pos = 0
+        self.all_selected = False
     
     def draw(self, surface: pygame.Surface):
         """Çiz"""

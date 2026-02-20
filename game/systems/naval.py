@@ -397,3 +397,72 @@ class NavalSystem:
         system.ships_lost = data.get("ships_lost", 0)
         
         return system
+
+    def conduct_raid(self, difficulty: str) -> dict:
+        """
+        Deniz akını düzenle
+        difficulty: 'easy' (Ticaret Rotası), 'medium' (Sahil Kasabası), 'hard' (Liman Kalesi)
+        """
+        import random
+        
+        # Savaş gemilerini seç
+        warships = [s for s in self.ships if s.get_definition().is_warship and s.health > 50]
+        if not warships:
+            return {'success': False, 'message': "Akın için savaşa hazır geminiz yok!"}
+            
+        fleet_power = sum(s.get_combat_power() for s in warships)
+        
+        targets = {
+            'easy': {'name': 'Ticaret Rotası', 'power': 30, 'gold': (500, 1000), 'damage': (0, 10)},
+            'medium': {'name': 'Sahil Kasabası', 'power': 80, 'gold': (1000, 2500), 'damage': (10, 30)},
+            'hard': {'name': 'Liman Kalesi', 'power': 200, 'gold': (3000, 6000), 'damage': (20, 50)}
+        }
+        
+        target = targets.get(difficulty, targets['easy'])
+        enemy_power = target['power'] * random.uniform(0.8, 1.2)
+        
+        # Savaş sonucu
+        success_chance = fleet_power / (fleet_power + enemy_power)
+        roll = random.random()
+        
+        result = {'success': False, 'gold': 0, 'message': "", 'ships_lost': []}
+        
+        if roll < success_chance:
+            # Zafer
+            result['success'] = True
+            result['gold'] = random.randint(*target['gold'])
+            self.naval_victories += 1
+            
+            # Gemi deneyimi
+            for ship in warships:
+                ship.experience += random.randint(5, 15)
+                
+            result['message'] = f"ZAFER! {target['name']} yağmalandı. {result['gold']} altın kazanıldı."
+        else:
+            # Yenilgi
+            self.naval_defeats += 1
+            result['message'] = f"YENİLGİ! {target['name']} savunması yarılamadı."
+        
+        # Hasar hesaplama (her durumda hasar alınabilir)
+        damage_roll = random.randint(*target['damage'])
+        if not result['success']:
+            damage_roll *= 1.5  # Yenilgide daha çok hasar
+            
+        loss_text = []
+        for ship in warships:
+            # Her gemiye hasar
+            dmg = int(damage_roll * random.uniform(0.5, 1.5))
+            ship.health -= dmg
+            
+            if ship.health <= 0:
+                self.ships.remove(ship)
+                self.ships_lost += 1
+                result['ships_lost'].append(ship.name)
+                loss_text.append(f"{ship.name} battı!")
+            else:
+                loss_text.append(f"{ship.name} -%{dmg} can")
+                
+        if loss_text:
+            result['message'] += " Hasar: " + ", ".join(loss_text)
+            
+        return result

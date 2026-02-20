@@ -520,10 +520,11 @@ class DiplomacySystem:
             )
             return False
     
-    def process_turn(self):
+    def process_turn(self) -> List[str]:
         """Tur sonunda diplomasiyi güncelle"""
         audio = get_audio_manager()
         import random
+        messages = []
         
         # Elçi bekleme süresini azalt
         if self.envoy_cooldown > 0:
@@ -540,7 +541,9 @@ class DiplomacySystem:
             if random.random() < 0.1:  # %10 şans
                 vassal['loyalty'] = max(0, vassal['loyalty'] - 1)
                 if vassal['loyalty'] < 20:
-                    audio.speak(f"⚠ {vassal['name']} vassalınız isyan düşünüyor!", interrupt=False)
+                    msg = f"⚠ {vassal['name']} vassalınız isyan düşünüyor!"
+                    audio.speak(msg, interrupt=False)
+                    messages.append(msg)
         
         # === EVLİLİK İTTİFAKLARI ===
         for marriage in self.marriage_alliances:
@@ -560,10 +563,14 @@ class DiplomacySystem:
         
         # Düşük sadakat uyarısı
         if self.sultan_loyalty < 30:
-            audio.announce("UYARI: Padişah sadakatinizden şüphe ediyor!")
+            msg = "UYARI: Padişah sadakatinizden şüphe ediyor!"
+            audio.announce(msg)
+            messages.append(msg)
         
         # === OLAY ZİNCİRLERİNİ İŞLE ===
-        self.process_event_chains()
+        chain_msgs = self.process_event_chains()
+        if chain_msgs:
+            messages.extend(chain_msgs)
         
         # === MOMENTUM DEĞİŞİMLERİNİ UYGULA ===
         self.process_momentum()
@@ -572,7 +579,9 @@ class DiplomacySystem:
         if not self.active_missions and self.sultan_loyalty > 20:
             if random.random() < 0.2:  # %20 şans
                 self._create_random_mission()
-    
+                
+        return messages
+
     def _create_random_mission(self):
         """Rastgele padişah görevi oluştur"""
         import random
@@ -820,10 +829,11 @@ class DiplomacySystem:
                     return chain
         return None
     
-    def process_event_chains(self):
-        """Olay zincirlerini işle (her turda çağrılır)"""
+    def process_event_chains(self) -> List[str]:
+        """Olay zincirlerini işle (her turda çağrılır) ve mesajları döndür"""
         import random
         audio = get_audio_manager()
+        messages = []
         
         chains_to_remove = []
         
@@ -839,23 +849,31 @@ class DiplomacySystem:
                     if chain['turns_in_stage'] >= 3:
                         # Cevap geldi
                         if random.random() < 0.7:  # %70 olumlu cevap
-                            audio.speak(f"{target}'den elci geldi: Evlilik teklifiniz degerlendiriliyor.", interrupt=True)
+                            msg = f"{target}'den elçi geldi: Evlilik teklifiniz değerlendiriliyor."
+                            audio.speak(msg, interrupt=False)
+                            messages.append(msg)
                             self.advance_event_chain(chain['id'], 'positive_response')
                         else:
-                            audio.speak(f"{target}'den haber: Su an evlilik icin uygun degiliz.", interrupt=True)
+                            msg = f"{target}'den haber: Şu an evlilik için uygun değiliz."
+                            audio.speak(msg, interrupt=False)
+                            messages.append(msg)
                             self.complete_event_chain(chain['id'], False)
                             chains_to_remove.append(chain['id'])
                 
                 elif stage == 1:  # Pazarlık aşaması
                     if chain['turns_in_stage'] >= 2:
                         # Çeyiz pazarlığı tamamlandı
-                        audio.speak(f"💍 {target} ile çeyiz pazarlığı tamamlandı. Düğün hazırlıkları başlıyor!", interrupt=True)
+                        msg = f"{target} ile çeyiz pazarlığı tamamlandı. Düğün hazırlıkları başlıyor!"
+                        audio.speak(msg, interrupt=False)
+                        messages.append(msg)
                         self.advance_event_chain(chain['id'], 'dowry_agreed')
                 
                 elif stage == 2:  # Düğün hazırlıkları
                     if chain['turns_in_stage'] >= 5:
                         # Düğün töreni
-                        audio.speak(f"🎉 BÜYÜK DÜĞÜN TÖRENİ! {target} ile hanedan evliliği kutlanıyor!", interrupt=True)
+                        msg = f"BÜYÜK DÜĞÜN TÖRENİ! {target} ile hanedan evliliği kutlanıyor!"
+                        audio.speak(msg, interrupt=False)
+                        messages.append(msg)
                         self.add_prestige(75, f"{target} ile hanedan evliliği")
                         
                         # Evlilik ittifakını ekle
@@ -884,10 +902,14 @@ class DiplomacySystem:
                         chance = 30 + (power - 1000) // 100
                         
                         if random.randint(1, 100) <= chance:
-                            audio.speak(f"{target} boyun egmeyi kabul etti! Sartlar gorusulecek.", interrupt=True)
+                            msg = f"{target} boyun eğmeyi kabul etti! Şartlar görüşülecek."
+                            audio.speak(msg, interrupt=False)
+                            messages.append(msg)
                             self.advance_event_chain(chain['id'], 'submission')
                         else:
-                            audio.speak(f"{target} vassalligi reddetti! Savas kapida olabilir.", interrupt=True)
+                            msg = f"{target} vassallığı reddetti! Savaş kapıda olabilir."
+                            audio.speak(msg, interrupt=False)
+                            messages.append(msg)
                             if target in self.neighbors:
                                 self.neighbors[target].value -= 30
                                 self.neighbors[target].update_type()
@@ -898,7 +920,9 @@ class DiplomacySystem:
                     if chain['turns_in_stage'] >= 3:
                         # Vassallaşma tamamlandı
                         tribute = chain['data'].get('tribute', 200)
-                        audio.speak(f"🏰 {target} artık resmi olarak vassalınız! Yıllık {tribute} altın haraç ödeyecek.", interrupt=True)
+                        msg = f"{target} artık resmi olarak vassalınız! Yıllık {tribute} altın haraç ödeyecek."
+                        audio.speak(msg, interrupt=False)
+                        messages.append(msg)
                         
                         self.vassals.append({
                             'name': target,
@@ -923,19 +947,24 @@ class DiplomacySystem:
                 if stage == 0:  # Barış teklifi gönderildi
                     if chain['turns_in_stage'] >= 4:
                         if random.random() < 0.6:
-                            audio.speak(f"🕊️ {target} barış anlaşmasını kabul etti!", interrupt=True)
+                            msg = f"{target} barış anlaşmasını kabul etti!"
+                            audio.speak(msg, interrupt=False)
+                            messages.append(msg)
                             if target in self.neighbors:
                                 self.neighbors[target].value = 0
                                 self.neighbors[target].update_type()
                             self.add_prestige(30, f"{target} ile barış")
                             self.complete_event_chain(chain['id'], True)
                         else:
-                            audio.speak(f"{target} barisi reddetti. Savas devam ediyor.", interrupt=True)
+                            msg = f"{target} barışı reddetti. Savaş devam ediyor."
+                            audio.speak(msg, interrupt=False)
+                            messages.append(msg)
                             self.complete_event_chain(chain['id'], False)
                         chains_to_remove.append(chain['id'])
         
         # Tamamlanan zincirleri temizle
         self.event_chains = [c for c in self.event_chains if c['id'] not in chains_to_remove]
+        return messages
     
     # ===================================================================
     # MOMENTUM SİSTEMİ

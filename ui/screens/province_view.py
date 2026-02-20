@@ -70,6 +70,7 @@ class ProvinceViewScreen(BaseScreen):
         self.side_menu.add_item("Casusluk", lambda: self._open_screen(ScreenType.ESPIONAGE), "s")
         self.side_menu.add_item("Din", lambda: self._open_screen(ScreenType.RELIGION), "")
         self.side_menu.add_item("Başarılar", lambda: self._open_screen(ScreenType.ACHIEVEMENT), "b")
+        self.side_menu.add_item("Geçmiş", lambda: self._open_screen(ScreenType.HISTORY), "g")
         self.side_menu.add_item("Topçu", lambda: self._open_screen(ScreenType.ARTILLERY), "t")
         
         # Donanma sadece kıyı eyaletlerinde (on_enter'da eklenir)
@@ -725,6 +726,9 @@ class ProvinceViewScreen(BaseScreen):
         if gm:
             # Önceki durumu kaydet
             prev_gold = gm.economy.resources.gold
+            prev_food = gm.economy.resources.food
+            prev_wood = gm.economy.resources.wood
+            prev_iron = gm.economy.resources.iron
             
             result = gm.process_turn()
             
@@ -733,14 +737,24 @@ class ProvinceViewScreen(BaseScreen):
             
             # Kaynak değişimi
             gold_change = gm.economy.resources.gold - prev_gold
-            if gold_change >= 0:
-                self.audio.speak(f"Altın: {gm.economy.resources.gold:,} (artı {gold_change})")
-            else:
-                self.audio.speak(f"Altın: {gm.economy.resources.gold:,} (eksi {abs(gold_change)})")
+            food_change = gm.economy.resources.food - prev_food
+            wood_change = gm.economy.resources.wood - prev_wood
+            iron_change = gm.economy.resources.iron - prev_iron
+            
+            self.audio.speak(f"Altın: {gm.economy.resources.gold:,} ({'+' if gold_change >= 0 else ''}{gold_change})", interrupt=False)
+            self.audio.speak(f"Zahire: {gm.economy.resources.food:,} ({'+' if food_change >= 0 else ''}{food_change})", interrupt=False)
+            self.audio.speak(f"Kereste: {gm.economy.resources.wood:,} ({'+' if wood_change >= 0 else ''}{wood_change})", interrupt=False)
+            self.audio.speak(f"Demir: {gm.economy.resources.iron:,} ({'+' if iron_change >= 0 else ''}{iron_change})", interrupt=False)
+            
+            # Alt sistem mesajlarını duyur (İnşaat, Casusluk vb.)
+            if 'messages' in result and result['messages']:
+                for msg in result['messages']:
+                    self.audio.speak(msg, interrupt=False)
             
             # Olay varsa duyur
-            if result['event']:
-                self.audio.speak(f"Yeni olay: {gm.events.current_event.title}. O tuşuna basın.")
+            if result.get('event', False):
+                if gm.events.current_event:
+                    self.audio.speak(f"Yeni olay: {gm.events.current_event.title}. O tuşuna basın.", interrupt=False)
             
             # Kritik uyarılar
             if gm.economy.resources.gold < 0:

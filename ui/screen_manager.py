@@ -45,6 +45,7 @@ class ScreenType(Enum):
     ARTILLERY = "artillery"  # Topçu ekranı (YENİ)
     CHARACTER_CREATION = "character_creation"  # Karakter oluşturma (YENİ)
     GUILD = "guild"  # Lonca yönetim ekranı (YENİ)
+    HISTORY = "history"  # Geçmiş olaylar ekranı (YENİ)
 
 
 class BaseScreen:

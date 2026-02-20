@@ -95,6 +95,16 @@ class BuildingInteriorScreen(BaseScreen):
         if stats.food_production > 0:
             prod = int(stats.food_production * (1 + (self.building_level - 1) * 0.5))
             self.info_panel.add_item("Yiyecek Üretimi", f"+{prod}/tur")
+            
+        # Kurulu Modüller (YENİ)
+        building = gm.construction.buildings[self.building_type]
+        if building.installed_modules:
+            self.info_panel.add_item("", "")
+            self.info_panel.add_item("--- Eklentiler ---", "")
+            for mod_id in building.installed_modules:
+                if stats.available_modules and mod_id in stats.available_modules:
+                    mod = stats.available_modules[mod_id]
+                    self.info_panel.add_item("[KURULU] " + mod.name_tr, "")
         
         # Üretim paneli (binaya göre değişir)
         self.production_panel.clear()
@@ -247,9 +257,48 @@ class BuildingInteriorScreen(BaseScreen):
             self.action_menu.add_item("", None)
             self._add_mine_actions()
         
+        # Modül ekleme (YENİ)
+        self.action_menu.add_item("", None)
+        self.action_menu.add_item("--- Eklentiler ---", None)
+        self._add_module_actions()
+        
         # F1 bilgi
         self.action_menu.add_item("", None)
         self.action_menu.add_item("F1: Binanın bonuslarını oku", None)
+    
+    def _add_module_actions(self):
+        """Bina eklentilerini (modülleri) listele"""
+        gm = self.screen_manager.game_manager
+        if not gm or not self.building_type:
+            return
+            
+        if self.building_type not in gm.construction.buildings:
+            return
+            
+        building = gm.construction.buildings[self.building_type]
+        stats = BUILDING_DEFINITIONS[self.building_type]
+        
+        if not stats.available_modules:
+            self.action_menu.add_item("Bu bina için eklenti yok", None)
+            return
+            
+        # Mevcut modülleri ve inşa edilebilirleri listele
+        for module_id, module_stats in stats.available_modules.items():
+            if building.has_module(module_id):
+                # Kurulu modül
+                self.action_menu.add_item(f"[KURULU] {module_stats.name_tr}", None)
+            else:
+                # İnşa edilebilir modül
+                cost_text = f"{module_stats.cost_gold} altın"
+                if module_stats.cost_wood > 0:
+                    cost_text += f", {module_stats.cost_wood} kereste"
+                if module_stats.cost_iron > 0:
+                    cost_text += f", {module_stats.cost_iron} demir"
+                
+                self.action_menu.add_item(
+                    f"İnşa Et: {module_stats.name_tr} ({cost_text})",
+                    lambda mid=module_id: self._construct_module(mid)
+                )
     
     def _add_artillery_actions(self):
         """Topçu Ocağı eylemleri"""
@@ -556,5 +605,36 @@ class BuildingInteriorScreen(BaseScreen):
         # Geri butonu
         self.back_button.draw(surface)
     
+    def _construct_module(self, module_id: str):
+        """Modül inşa et"""
+        gm = self.screen_manager.game_manager
+        if not gm or not self.building_type:
+            return
+            
+        building = gm.construction.buildings[self.building_type]
+        stats = BUILDING_DEFINITIONS[self.building_type]
+        module_stats = stats.available_modules[module_id]
+        
+        # Kaynak kontrolü
+        if not gm.economy.can_afford(module_stats.cost_gold, module_stats.cost_wood, module_stats.cost_iron):
+            self.audio.announce_action_result("Yetersiz Kaynak", False, "Modül inşası için kaynaklar yetersiz.")
+            return
+            
+        # Harcama ve Kurulum
+        gm.economy.spend(module_stats.cost_gold, module_stats.cost_wood, module_stats.cost_iron)
+        building.install_module(module_id)
+        
+        # Ses ve Bildirim
+        self.audio.play_ui_sound('build')
+        self.audio.announce_action_result(
+            f"{module_stats.name_tr} İnşa Edildi", 
+            True, 
+            module_stats.historical_desc
+        )
+        
+        # Arayüzü güncelle
+        self._update_panels()
+        self._setup_action_menu()
+
     def _go_back(self):
         self.screen_manager.change_screen(ScreenType.CONSTRUCTION)

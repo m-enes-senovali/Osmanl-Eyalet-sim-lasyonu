@@ -23,6 +23,7 @@ from game.systems.naval import NavalSystem
 from game.systems.artillery import ArtillerySystem
 from game.systems.espionage import EspionageSystem  # YENİ
 from game.systems.religion import ReligionSystem    # YENİ
+from game.systems.history import HistorySystem      # YENİ
 
 
 def get_base_path():
@@ -103,6 +104,7 @@ class GameManager:
         self.artillery = ArtillerySystem()  # Topçu ocağı
         self.espionage = EspionageSystem()  # Casusluk sistemi (YENİ)
         self.religion = ReligionSystem()    # Din/Kültür sistemi (YENİ)
+        self.history = HistorySystem()      # Geçmiş Olaylar (YENİ)
         
         # Ses yöneticisi
         self.audio = get_audio_manager()
@@ -136,6 +138,17 @@ class GameManager:
         self.naval = NavalSystem()
         self.artillery = ArtillerySystem()
         
+        # YENİ SİSTEMLER (Kritik Düzeltme: Resetlenmediği için önceki oyun verisi kalıyordu)
+        from game.systems.espionage import EspionageSystem
+        from game.systems.religion import ReligionSystem
+        from game.systems.guilds import GuildSystem
+        from game.systems.history import HistorySystem
+        
+        self.espionage = EspionageSystem()
+        self.religion = ReligionSystem()
+        self.guild_system = GuildSystem()
+        self.history = HistorySystem()
+        
         # Zaman sıfırla (1 tur = 1 gün)
         self.current_year = 1520
         self.current_month = 1
@@ -161,6 +174,15 @@ class GameManager:
                 f"1 {self._get_month_name(self.current_month)} {self.current_year}. "
                 f"Osmanlı İmparatorluğu'nda eyalet valisi olarak göreve başladınız.",
                 interrupt=False
+            )
+        
+        # Geçmişe kaydet
+        if hasattr(self, 'history'):
+            self.history.add_entry(
+                turn=0,
+                year=self.current_year,
+                message="Yeni oyun başlatıldı. Eyalet valisi olarak göreve atandınız.",
+                category="general"
             )
     
     def _get_month_name(self, month: int) -> str:
@@ -195,6 +217,15 @@ class GameManager:
             self.current_year += 1
             self.events.reset_yearly()
             self.audio.announce(f"Yeni Yıl: {self.current_year}")
+            
+            # Geçmişe kaydet
+            if hasattr(self, 'history'):
+                self.history.add_entry(
+                    turn=self.turn_count,
+                    year=self.current_year,
+                    message=f"Yeni Yıl: {self.current_year}",
+                    category="general"
+                )
         
         # === SİSTEMLERİ GÜNCELLE ===
         
@@ -249,10 +280,19 @@ class GameManager:
         
         wood_production = self.construction.get_wood_production()
         iron_production = self.construction.get_iron_production()
+        
+        # YENİ: Taş ve Denizcilik Malzemeleri
+        stone_production = self.construction.get_stone_production()
+        naval_supplies = self.construction.get_naval_supplies_production()
+        
         self.economy.add_resources(
             food=food_production,
             wood=wood_production,
-            iron=iron_production
+            iron=iron_production,
+            stone=stone_production,
+            rope=naval_supplies['rope'],
+            tar=naval_supplies['tar'],
+            sailcloth=naval_supplies['sailcloth']
         )
         
         # 3. Nüfus
@@ -307,7 +347,7 @@ class GameManager:
             self.economy.resources.food = 0
         
         # 4. İnşaat
-        self.construction.process_turn()
+        construction_messages = self.construction.process_turn()
         
         # 5. İşçiler
         worker_result = self.workers.process_turn()
@@ -340,10 +380,11 @@ class GameManager:
             self.naval.process_construction()
         
         # 9. Diplomasi
-        self.diplomacy.process_turn()
+        diplomacy_messages = self.diplomacy.process_turn()
         
-        # Görev sürelerini kontrol et
-        for i, mission in enumerate(self.diplomacy.active_missions[:]):
+        # Görev sürelerini kontrol et (Sondan başa doğru, silme işlemi için güvenli)
+        for i in range(len(self.diplomacy.active_missions) - 1, -1, -1):
+            mission = self.diplomacy.active_missions[i]
             mission['turns_remaining'] -= 1
             if mission['turns_remaining'] <= 0:
                 self.diplomacy.fail_mission(i)
@@ -368,6 +409,20 @@ class GameManager:
         for result in battle_results:
             loyalty_change = result.loyalty_change
             
+            # Geçmişe kaydet (YENİ)
+            if hasattr(self, 'history'):
+                victory_str = "ZAFER" if result.victory else "YENİLGİ"
+                target_name = "Düşman"
+                if result.battle_report:
+                    target_name = result.battle_report.target_name
+                
+                self.history.add_entry(
+                    turn=self.turn_count,
+                    year=self.current_year,
+                    message=f"SAVAŞ SONUCU: {victory_str}! {target_name}. Yağma: {result.loot_gold} altın.",
+                    category="military"
+                )
+            
             # Erkek karakter: Askeri prestij bonusu (+%10 sadakat kazancı)
             if self.player and result.victory:
                 prestige_bonus = self.player.get_bonus('military_prestige')
@@ -390,8 +445,28 @@ class GameManager:
         # Ticaret işle
         trade_result = self.trade.process_turn(self.economy)
         
-        # 13. Casusluk (YENİ)
+        # 13. Casusluk
         espionage_result = self.espionage.process_turn()
+        espionage_messages = espionage_result.get('messages', [])
+        
+        # Casusluk etkilerini oyuna yansıt (Keşif, Sabotaj, Fitne vb.)
+        if espionage_result.get('completed'):
+            for result in espionage_result['completed']:
+                effects = result.get('effects', {})
+                for effect_name, value in effects.items():
+                    # Kendi devletimize olan etkiler
+                    if effect_name == 'happiness':
+                        self.population.happiness = min(100, self.population.happiness + value)
+                    elif effect_name == 'loyalty':
+                        self.diplomacy.sultan_loyalty = min(100, self.diplomacy.sultan_loyalty + value)
+                    elif effect_name == 'sultan_loyalty':
+                        self.diplomacy.sultan_loyalty = min(100, self.diplomacy.sultan_loyalty + value)
+                    elif effect_name == 'security':
+                        self.espionage.security_level = min(100, self.espionage.security_level + value)
+                    elif effect_name == 'intelligence':
+                        self.espionage.intelligence_level = min(100, self.espionage.intelligence_level + value)
+                    # Düşmana olan etkiler (Şimdilik varsayımsal global etki olarak tutuluyor)
+                    # enemy_morale, enemy_stability vb. eklenebilir. Şimdilik pas geçiyoruz.
         
         # 14. Din ve Kültür (YENİ)
         religion_result = self.religion.process_turn(self.economy)
@@ -423,6 +498,14 @@ class GameManager:
         event = self.events.check_for_event(self.current_year, game_state)
         if event:
             self.events.announce_event()
+            # Geçmişe kaydet (YENİ)
+            if hasattr(self, 'history'):
+                self.history.add_entry(
+                    turn=self.turn_count,
+                    year=self.current_year,
+                    message=f"OLAY: {event.title} - {event.description}",
+                    category="event"
+                )
         
         # 18. Başarı kontrolü
         try:
@@ -441,13 +524,23 @@ class GameManager:
         # === OTOMATİK KAYIT ===
         self._check_auto_save()
         
+        # Toplanan mesajları birleştir
+        messages = []
+        if 'construction_messages' in locals():
+            messages.extend(construction_messages)
+        if 'espionage_messages' in locals():
+            messages.extend(espionage_messages)
+        if 'diplomacy_messages' in locals():
+            messages.extend(diplomacy_messages)
+        
         return {
             'year': self.current_year,
             'month': self.current_month,
             'turn': self.turn_count,
             'net_income': net_income,
             'population_change': pop_result['population_change'],
-            'event': event is not None
+            'event': event is not None,
+            'messages': messages
         }
     
     def _check_game_over(self):
@@ -746,6 +839,7 @@ class GameManager:
             'artillery': self.artillery.to_dict(),
             'espionage': self.espionage.to_dict(),  # YENİ
             'religion': self.religion.to_dict(),    # YENİ
+            'history': self.history.to_dict(),      # YENİ
         }
         
         try:
