@@ -895,6 +895,22 @@ def attack_player(code):
     defender_name = room['players'][defender_id]['name']
     log(f"[{code}] SAVAŞ SONUCU: {attacker_name} vs {defender_name} = {result}")
     
+    # Savunan oyuncunun görebilmesi için savaş sonucunu kaydet
+    if 'battle_results' not in room['diplomacy']:
+        room['diplomacy']['battle_results'] = []
+        
+    room['diplomacy']['battle_results'].append({
+        'id': str(uuid.uuid4())[:8],
+        'attacker_id': attacker_id,
+        'defender_id': defender_id,
+        'attacker_name': attacker_name,
+        'defender_name': defender_name,
+        'result': result,
+        'defender_losses': defender_losses,
+        'gold_plundered': gold_plunder,
+        'timestamp': now_iso()
+    })
+    
     return jsonify({
         'success': True,
         'result': result,

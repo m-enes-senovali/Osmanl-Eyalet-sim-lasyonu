@@ -44,10 +44,12 @@ class EconomyScreen(BaseScreen):
         self._header_font = None
     
     def _setup_tax_menu(self):
-        """Vergi menüsünü ayarla"""
+        """Ekonomi kararları menüsünü ayarla"""
         self.tax_menu.clear()
         self.tax_menu.add_item("Vergiyi Artır (+5%)", self._increase_tax, "plus")
         self.tax_menu.add_item("Vergiyi Azalt (-5%)", self._decrease_tax, "minus")
+        self.tax_menu.add_item("Sikke Tağşişi (+5000 Altın, %15 Enflasyon)", self._debase_currency)
+        self.tax_menu.add_item("Sikke Tashihi (-10000 Altın, -%15 Enflasyon)", self._reform_currency)
     
     def get_header_font(self):
         if self._header_font is None:
@@ -96,6 +98,7 @@ class EconomyScreen(BaseScreen):
         self.resources_panel.add_item("Demir", f"{eco.resources.iron:,}")
         self.resources_panel.add_item("", "")
         self.resources_panel.add_item("Vergi Oranı", f"%{int(eco.tax_rate * 100)}")
+        self.resources_panel.add_item("Enflasyon", f"%{int(eco.inflation_rate * 100)}")
     
     def handle_event(self, event) -> bool:
         if self.tax_menu.handle_event(event):
@@ -150,9 +153,9 @@ class EconomyScreen(BaseScreen):
         # Net gelir göstergesi
         self._draw_net_indicator(surface)
         
-        # Vergi menüsü
+        # Ekonomi kararları menüsü
         small_font = get_font(FONTS['subheader'])
-        tax_title = small_font.render("Vergi Ayarları", True, COLORS['gold'])
+        tax_title = small_font.render("Ekonomi Kararları", True, COLORS['gold'])
         surface.blit(tax_title, (20, 370))
         self.tax_menu.draw(surface)
         
@@ -163,7 +166,7 @@ class EconomyScreen(BaseScreen):
         self.back_button.draw(surface)
     
     def _draw_net_indicator(self, surface: pygame.Surface):
-        """Net gelir göstergesini çiz"""
+        """Net gelir ve enflasyon göstergesini çiz"""
         gm = self.screen_manager.game_manager
         if not gm:
             return
@@ -177,13 +180,14 @@ class EconomyScreen(BaseScreen):
         pygame.draw.rect(surface, color, rect, width=3, border_radius=10)
         
         font = get_font(FONTS['subheader'])
-        label = font.render("Net Gelir/Tur:", True, COLORS['text'])
+        label = font.render(f"Net Gelir: {net:,}", True, color)
         surface.blit(label, (rect.x + 20, rect.y + 15))
         
-        value_font = get_font(FONTS['header'])
-        sign = "+" if net >= 0 else ""
-        value = value_font.render(f"{sign}{net:,}", True, color)
-        surface.blit(value, (rect.x + 20, rect.y + 45))
+        # Enflasyon göstergesi
+        inflation = gm.economy.inflation_rate
+        inf_color = COLORS['danger'] if inflation > 0.1 else (COLORS['warning'] if inflation > 0 else COLORS['success'])
+        inf_label = font.render(f"Enflasyon: %{int(inflation * 100)}", True, inf_color)
+        surface.blit(inf_label, (rect.x + 20, rect.y + 45))
     
     def _draw_tax_info(self, surface: pygame.Surface):
         """Vergi etki bilgisini çiz"""
@@ -193,7 +197,7 @@ class EconomyScreen(BaseScreen):
         
         happiness_effect = gm.economy.get_tax_happiness_effect()
         
-        rect = pygame.Rect(420, 480, 380, 100)
+        rect = pygame.Rect(820, 380, 420, 100)
         pygame.draw.rect(surface, COLORS['panel_bg'], rect, border_radius=10)
         pygame.draw.rect(surface, COLORS['panel_border'], rect, width=2, border_radius=10)
         
@@ -237,6 +241,22 @@ class EconomyScreen(BaseScreen):
             gm.economy.set_tax_rate(new_rate)
             self.audio.play_game_sound('economy', 'tax')
             self._update_panels()
+            
+    def _debase_currency(self):
+        """Sikke tağşişi yap"""
+        gm = self.screen_manager.game_manager
+        if gm:
+            gm.economy.debase_currency(gm.population)
+            self.audio.play_game_sound('economy', 'coin')
+            self._update_panels()
+            
+    def _reform_currency(self):
+        """Sikke tashihi yap"""
+        gm = self.screen_manager.game_manager
+        if gm:
+            if gm.economy.reform_currency(gm.population):
+                self.audio.play_game_sound('economy', 'coin')
+                self._update_panels()
     
     def _go_back(self):
         """Geri dön"""

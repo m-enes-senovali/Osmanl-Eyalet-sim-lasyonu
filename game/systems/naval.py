@@ -176,6 +176,8 @@ class Ship:
     name: str
     health: int = 100
     experience: int = 0
+    max_health: int = 100
+    bonus_speed: int = 0
     
     def get_definition(self) -> ShipDefinition:
         return SHIP_DEFINITIONS[self.ship_type]
@@ -183,8 +185,13 @@ class Ship:
     def get_combat_power(self) -> int:
         """Deneyimle artırılmış savaş gücü"""
         base = self.get_definition().combat_power
+        health_mod = max(0.1, self.health / max(1, self.max_health))
         exp_bonus = base * (self.experience / 200)  # Max %50 bonus
-        return int(base + exp_bonus)
+        return int((base + exp_bonus) * health_mod)
+        
+    def get_speed(self) -> int:
+        """Gemi hızı (Eklenti ve temel hızı toplar)"""
+        return self.get_definition().speed + self.bonus_speed
 
 
 @dataclass
@@ -193,6 +200,9 @@ class ShipConstruction:
     ship_type: ShipType
     turns_remaining: int
     custom_name: str = ""
+    quality_bonus: int = 0
+    durability_bonus: int = 0
+    speed_bonus: int = 0
 
 
 class NavalSystem:
@@ -229,7 +239,7 @@ class NavalSystem:
         
         return True, "İnşa edilebilir"
     
-    def start_construction(self, ship_type: ShipType, economy, custom_name: str = "") -> bool:
+    def start_construction(self, ship_type: ShipType, economy, construction_system=None, custom_name: str = "") -> bool:
         """Gemi inşasını başlat"""
         can_build, reason = self.can_build_ship(ship_type, economy)
         if not can_build:
@@ -246,11 +256,31 @@ class NavalSystem:
         economy.resources.tar -= definition.tar_cost
         economy.resources.sailcloth -= definition.sailcloth_cost
         
+        # Eklenti bonuslarını hesapla
+        q_bonus = 0
+        d_bonus = 0
+        s_bonus = 0
+        if construction_system:
+            from game.systems.construction import BuildingType
+            if construction_system.has_building(BuildingType.SHIPYARD):
+                sy = construction_system.buildings[BuildingType.SHIPYARD]
+                q_bonus += sy.get_unique_effect('ship_quality')
+                d_bonus += sy.get_unique_effect('ship_durability')
+                s_bonus += sy.get_unique_effect('ship_speed')
+            if construction_system.has_building(BuildingType.ROPEMAKER):
+                rm = construction_system.buildings[BuildingType.ROPEMAKER]
+                q_bonus += rm.get_unique_effect('ship_quality')
+                d_bonus += rm.get_unique_effect('ship_durability')
+                s_bonus += rm.get_unique_effect('ship_speed')
+        
         # Kuyruğa ekle
         self.construction_queue.append(ShipConstruction(
             ship_type=ship_type,
             turns_remaining=definition.build_time,
-            custom_name=custom_name
+            custom_name=custom_name,
+            quality_bonus=q_bonus,
+            durability_bonus=d_bonus,
+            speed_bonus=s_bonus
         ))
         
         self.audio.speak(
@@ -282,10 +312,18 @@ class NavalSystem:
         
         name = construction.custom_name or f"{definition.name} #{self.total_ships_built}"
         
+        # Bonusları entegre et: Quality->Experience, Durability->Max Health, Speed->Bonus Speed
+        base_exp = construction.quality_bonus * 2
+        base_dur = 100 + construction.durability_bonus
+        
         ship = Ship(
             ship_id=ship_id,
             ship_type=construction.ship_type,
-            name=name
+            name=name,
+            experience=base_exp,
+            max_health=base_dur,
+            health=base_dur,
+            bonus_speed=construction.speed_bonus
         )
         
         self.ships.append(ship)
@@ -293,7 +331,7 @@ class NavalSystem:
         # Güçlendirilmiş bildirim
         self.audio.speak(
             f"🚢 GEMİ TAMAMLANDI! {name} denize indirildi! "
-            f"Savaş gücü: {definition.combat_power}, Hız: {definition.speed}",
+            f"Savaş gücü: {ship.get_combat_power()}, Hız: {ship.get_speed()}",
             interrupt=True
         )
     

@@ -93,8 +93,47 @@ class MultiplayerGameScreen(BaseScreen):
                     gm = GameManager()
                     gm.new_game(province_name)
                     gm._mp_province = province_name  # Multiplayer eyalet takibi
+                    
+                    # Eğer oyun zaten başlamışsa (Reconnect durumu), sunucudaki durumu yerel GameManager'a yükle
+                    if self.network.room_data.get('game_started'):
+                        my_state = self.network.room_data.get('player_states', {}).get(self.network.player_id, {})
+                        if my_state:
+                            gm.economy.resources.gold = my_state.get('gold', 1000)
+                            gm.population.happiness = my_state.get('happiness', 50)
+                            gm.population.population.total = my_state.get('population', 50000)
+                            
+                            # Tarihi (Turn) eşitle
+                            server_turn = self.network.room_data.get('current_turn', 1)
+                            turns = server_turn - 1
+                            gm.year += turns // 12
+                            gm.month += turns % 12
+                            if gm.month > 12:
+                                gm.year += 1
+                                gm.month -= 12
+                                
+                            # Askeri gücü yaklaşık olarak restore et (Sadece Yaya vererek)
+                            target_power = my_state.get('military_power', 0)
+                            if target_power > 0:
+                                from game.systems.military import UnitType
+                                current_power = gm.military.get_total_power()
+                                diff = target_power - current_power
+                                if diff > 0:
+                                    # Yaya gücü = 2. O halde eklenecek yaya sayısı:
+                                    infantry_needed = diff // 2
+                                    if UnitType.INFANTRY in gm.military.army:
+                                        gm.military.army[UnitType.INFANTRY].base_count += infantry_needed
+                                        
+                            # Binaları geri yükle
+                            saved_buildings = my_state.get('buildings', [])
+                            for b_id in saved_buildings:
+                                if b_id not in gm.construction.buildings:
+                                    from game.systems.buildings import BUILDING_DEFINITIONS
+                                    if b_id in BUILDING_DEFINITIONS:
+                                        from game.systems.construction import Building
+                                        gm.construction.buildings[b_id] = Building(BUILDING_DEFINITIONS[b_id])
+                    
                     self.screen_manager.game_manager = gm
-                    print(f"[MP] GameManager oluşturuldu: {province_name}")
+                    print(f"[MP] GameManager oluşturuldu: {province_name} (Reconnect: {self.network.room_data.get('game_started')})")
         
         self._setup_action_menu()
         self._update_players_panel()
@@ -685,6 +724,22 @@ class MultiplayerGameScreen(BaseScreen):
         message = data.get("message", "Savaş bitti.")
         winner = data.get("winner", "")
         
+        # Eğer savunan biz isek
+        my_id = self.network.player_id if self.network else None
+        if my_id and data.get("defender_id") == my_id:
+            losses = data.get("defender_losses", 0)
+            gold_lost = data.get("gold_plundered", 0)
+            attacker_name = data.get("attacker_name", "Düşman")
+            
+            message = f"DİKKAT! {attacker_name} size saldırdı! Savaşta {losses} asker kaybettiniz."
+            
+            gm = self.screen_manager.game_manager
+            if gm:
+                gm.military.apply_casualties(losses)
+                if gold_lost > 0:
+                    message += f" {gold_lost} altın yağmalandı."
+                    gm.economy.resources.gold = max(0, gm.economy.resources.gold - gold_lost)
+        
         # Sonucu oku
         self.audio.speak(message, interrupt=True)
         
@@ -727,11 +782,48 @@ class MultiplayerGameScreen(BaseScreen):
         """İttifak kuruldu"""
         message = data.get("message", "İttifak kuruldu!")
         self.audio.speak(message, interrupt=True)
+        
+        # Local Game Manager'a Müttefik olarak ekle
+        if self.network and hasattr(self.network, 'player_id') and self.network.player_id in data.get("players", []):
+            my_id = self.network.player_id
+            other_id = [p for p in data.get("players", []) if p != my_id][0]
+            other_player = self.network.room_data.get('players', {}).get(other_id, {})
+            other_name = other_player.get("name", "Oyuncu")
+            
+            gm = self.screen_manager.game_manager
+            if gm and hasattr(gm, "diplomacy"):
+                from game.systems.diplomacy import Relation, RelationType, AIPersonality
+                gm.diplomacy.neighbors[other_name] = Relation(
+                    target=other_name,
+                    value=100,
+                    relation_type=RelationType.ALLIED,
+                    personality=AIPersonality.HONORABLE
+                )
     
     def _on_trade_formed(self, data: dict):
         """Ticaret anlaşması kuruldu"""
         message = data.get("message", "Ticaret anlaşması kuruldu!")
         self.audio.speak(message, interrupt=True)
+        
+        # Ticaret anlaşmasının yerel ekonomiye katkısı için GameManager'a Fake TradeRoute ekle
+        if self.network and hasattr(self.network, 'player_id') and (data.get("from") == self.network.player_id or data.get("to") == self.network.player_id):
+            gold_per_turn = data.get("gold_per_turn", 100)
+            my_id = self.network.player_id
+            other_id = data.get("to") if data.get("from") == my_id else data.get("from")
+            other_player = self.network.room_data.get('players', {}).get(other_id, {})
+            other_name = other_player.get("name", "Oyuncu")
+            
+            gm = self.screen_manager.game_manager
+            if gm and hasattr(gm, "trade_system"):
+                from game.systems.trade import TradeRoute, GoodType
+                new_route = TradeRoute(
+                    partner_name=other_name,
+                    good_type=list(GoodType)[0], # Sembolik
+                    amount=5,
+                    profit=gold_per_turn,
+                    duration=999 # Süresiz
+                )
+                gm.trade_system.active_routes.append(new_route)
     
     def _open_proposal_menu(self):
         """Bekleyen teklifleri göster"""

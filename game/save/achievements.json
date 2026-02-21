@@ -11,16 +11,16 @@
     "raids_completed": 0,
     "rebellions_crushed": 0,
     "defense_victories": 0,
-    "turns_played": 1,
-    "turns_without_war": 1,
+    "turns_played": 2,
+    "turns_without_war": 2,
     "turns_without_tax": 0
   },
   "achievements": {
     "treasury_master": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 15.658,
-      "current_value": 15658
+      "progress": 27.883999999999997,
+      "current_value": 27884
     },
     "trade_emperor": {
       "unlocked": false,
@@ -35,10 +35,10 @@
       "current_value": 0
     },
     "tax_reformer": {
-      "unlocked": false,
-      "unlock_date": null,
-      "progress": 0.0,
-      "current_value": 0
+      "unlocked": true,
+      "unlock_date": "2026-02-21 05:18",
+      "progress": 100.0,
+      "current_value": 1
     },
     "wealthy_province": {
       "unlocked": false,
@@ -67,8 +67,8 @@
     "artillery_master": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 0.0,
-      "current_value": 0
+      "progress": 1.0,
+      "current_value": 1
     },
     "janissary_aga": {
       "unlocked": false,
@@ -97,8 +97,8 @@
     "spy_master": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 0.0,
-      "current_value": 0
+      "progress": 5.0,
+      "current_value": 1
     },
     "negotiator": {
       "unlocked": false,
@@ -115,8 +115,8 @@
     "peoples_sultan": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 10.381,
-      "current_value": 10381
+      "progress": 15.299999999999999,
+      "current_value": 15300
     },
     "millet_father": {
       "unlocked": false,
@@ -151,14 +151,14 @@
     "survivor": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 1.0,
-      "current_value": 1
+      "progress": 2.0,
+      "current_value": 2
     },
     "pacifist": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 2.0,
-      "current_value": 1
+      "progress": 4.0,
+      "current_value": 2
     },
     "generous": {
       "unlocked": false,

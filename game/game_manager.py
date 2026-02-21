@@ -143,11 +143,13 @@ class GameManager:
         from game.systems.religion import ReligionSystem
         from game.systems.guilds import GuildSystem
         from game.systems.history import HistorySystem
+        from game.systems.achievements import AchievementSystem
         
         self.espionage = EspionageSystem()
         self.religion = ReligionSystem()
-        self.guild_system = GuildSystem()
+        self.guilds = GuildSystem()
         self.history = HistorySystem()
+        self.achievements = AchievementSystem()
         
         # Zaman sıfırla (1 tur = 1 gün)
         self.current_year = 1520
@@ -363,7 +365,7 @@ class GameManager:
             self.economy.trade_modifier += trade_bonus
         
         # 6. Askeri
-        self.military.process_turn()
+        military_messages = self.military.process_turn()
         
         # Erkek karakter: Yeniçeri sadakat bonusu (+%15)
         # Her 3 turda +1 moral (0.15 * 3 turda bir = sürekli küçük etki)
@@ -495,6 +497,9 @@ class GameManager:
             'turn_count': self.turn_count
         }
         
+        # Olay bellek etkilerini (Zincir Olay Etkileri) her tur uygula
+        self._apply_event_memory_effects()
+        
         event = self.events.check_for_event(self.current_year, game_state)
         if event:
             self.events.announce_event()
@@ -532,6 +537,8 @@ class GameManager:
             messages.extend(espionage_messages)
         if 'diplomacy_messages' in locals():
             messages.extend(diplomacy_messages)
+        if 'military_messages' in locals():
+            messages.extend(military_messages)
         
         return {
             'year': self.current_year,
@@ -575,6 +582,60 @@ class GameManager:
             else:
                 self.audio.speak(f"Zarar: {net_income}")
     
+    def _apply_event_memory_effects(self):
+        """Olay zincirlerinden gelen kalıcı etkileri her tur uygula"""
+        mem = self.events.event_memory
+        
+        # 1. Yeniçeri İsyanı Zinciri
+        if mem.get('janissary_angry') and not mem.get('janissary_resolved'):
+            self.population.unrest = min(100, self.population.unrest + 2)
+            self.diplomacy.sultan_loyalty = max(0, self.diplomacy.sultan_loyalty - 1)
+        
+        if mem.get('janissary_revolt') and not mem.get('janissary_resolved'):
+            self.population.happiness = max(0, self.population.happiness - 2)
+            self.economy.resources.gold -= 50
+            
+        # 2. Veba Zinciri
+        if mem.get('plague_started') and not mem.get('plague_resolved'):
+            if mem.get('plague_quarantine'):
+                self.economy.resources.gold -= 100
+                self.population.health = max(0, self.population.health - 2)
+            else:
+                self.population.health = max(0, self.population.health - 5)
+                self.population.happiness = max(0, self.population.happiness - 2)
+                
+        # 3. İpek Yolu
+        if mem.get('silkroad_invested') and not mem.get('silkroad_resolved'):
+            self.economy.resources.gold += 50
+            if mem.get('silkroad_big_investment'):
+                self.economy.resources.gold += 100
+                
+        # 4. Padişah Ziyareti
+        if mem.get('sultan_visit') and not mem.get('sultan_visited'):
+            self.economy.resources.gold -= 20
+            self.population.happiness = min(100, self.population.happiness + 1)
+            
+        # 5. Fetih Seferi
+        if mem.get('conquest_joined') and not mem.get('conquest_completed'):
+            self.military.total_soldiers = max(0, self.military.total_soldiers - 5)
+            self.economy.resources.gold -= 30
+            
+        # 6. Celali İsyanları
+        if mem.get('celali_active') and not mem.get('celali_resolved'):
+            self.population.unrest = min(100, self.population.unrest + 3)
+            self.economy.resources.gold -= 50
+            if mem.get('celali_handling') == 'waited':
+                self.economy.resources.gold -= 50
+                
+        # 7. Taht Kavgaları
+        if mem.get('succession_crisis') and not mem.get('succession_resolved'):
+            self.population.happiness = max(0, self.population.happiness - 1)
+            self.diplomacy.sultan_loyalty = max(0, self.diplomacy.sultan_loyalty - 2)
+            
+        if mem.get('succession_resolved') and mem.get('succession_loyalty_boost'):
+            if self.turn_count % 5 == 0:
+                self.diplomacy.sultan_loyalty = min(100, self.diplomacy.sultan_loyalty + 1)
+            
     def check_victory(self) -> Optional[dict]:
         """Zafer koşullarını kontrol et"""
         from config import VICTORY_CONDITIONS
@@ -837,9 +898,11 @@ class GameManager:
             'workers': self.workers.to_dict(),
             'naval': self.naval.to_dict(),
             'artillery': self.artillery.to_dict(),
-            'espionage': self.espionage.to_dict(),  # YENİ
-            'religion': self.religion.to_dict(),    # YENİ
-            'history': self.history.to_dict(),      # YENİ
+            'espionage': self.espionage.to_dict(),
+            'religion': self.religion.to_dict(),
+            'guilds': self.guilds.to_dict() if hasattr(self, 'guilds') else {},
+            'achievements': self.achievements.to_dict() if hasattr(self, 'achievements') else {},
+            'history': self.history.to_dict() if hasattr(self, 'history') else {}
         }
         
         try:
@@ -918,10 +981,16 @@ class GameManager:
                 self.naval = NavalSystem.from_dict(save_data['naval'])
             if 'artillery' in save_data:
                 self.artillery = ArtillerySystem.from_dict(save_data['artillery'])
-            if 'espionage' in save_data:  # YENİ
+            if 'espionage' in save_data:
                 self.espionage = EspionageSystem.from_dict(save_data['espionage'])
-            if 'religion' in save_data:   # YENİ
+            if 'religion' in save_data:
                 self.religion = ReligionSystem.from_dict(save_data['religion'])
+            if 'guilds' in save_data and hasattr(self, 'guilds'):
+                self.guilds.from_dict(save_data['guilds'])
+            if 'history' in save_data and hasattr(self, 'history'):
+                self.history = HistorySystem.from_dict(save_data['history'])
+            if 'achievements' in save_data and hasattr(self, 'achievements'):
+                self.achievements.from_dict(save_data['achievements'])
             
             # Oyuncu karakteri yükle (YENİ)
             if 'player' in save_data and save_data['player']:

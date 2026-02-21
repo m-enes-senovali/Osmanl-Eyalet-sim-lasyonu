@@ -1435,6 +1435,143 @@ FEMALE_EVENTS.extend([
 EVENT_POOL.extend(MALE_EVENTS)
 EVENT_POOL.extend(FEMALE_EVENTS)
 
+CELALI_EVENTS = [
+    Event(
+        id="celali_chain_1_rumors",
+        title="Celali Eşkıyası",
+        description="Anadolu'da dirlik düzeni bozuldu. Bir asi lideri asker toplayıp yolları kesmeye başladı.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MODERATE,
+        chain_id="celali_chain",
+        min_year=1550,
+        condition_func=lambda state: state.get('unrest', 0) > 40,
+        choices=[
+            EventChoice(
+                text="Asker gönderip ez",
+                effects={'gold': -500, 'soldiers': -50},
+                description="Ordumuz isyancıları dağıtmayı denedi. Masraflı ve kanlı oldu."
+            ),
+            EventChoice(
+                text="Lidere paşalık ver (Rüşvet)",
+                effects={'gold': -1000, 'loyalty': -10},
+                description="İsyancı lideri parayla satın aldınız ama sarayda itibarınız sarsıldı."
+            ),
+            EventChoice(
+                text="Görmezden gel",
+                effects={'happiness': -10, 'unrest': 15},
+                description="Halk kaderine terk edildi. İsyan büyüyor..."
+            )
+        ]
+    ),
+    Event(
+        id="celali_chain_2_uprising",
+        title="Büyük Celali Kalkışması",
+        description="Önü alınamayan isyancılar büyük bir şehri kuşattı! Acil müdahale şart.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MAJOR,
+        chain_id="celali_chain",
+        choices=[
+            EventChoice(
+                text="Topyekün sefere çık",
+                effects={'gold': -1500, 'soldiers': -150, 'happiness': 5},
+                description="Merkez ordu sefere çıktı. İsyancılarla amansız bir savaş başladı."
+            ),
+            EventChoice(
+                text="Müzakere et",
+                effects={'gold': -500, 'loyalty': -20, 'unrest': 10},
+                description="Sarayın onaylamadığı zayıf bir taviz verdiniz. Otorite sarsıldı."
+            )
+        ]
+    ),
+    Event(
+        id="celali_chain_3_climax",
+        title="İsyanın Bastırılması",
+        description="Aylardır süren çatışmalar ve müzakereler sonucunda Celali isyancıları nihayet dağıldı.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.MODERATE,
+        chain_id="celali_chain",
+        choices=[
+            EventChoice(
+                text="Liderleri idam et",
+                effects={'happiness': 10, 'loyalty': 15, 'unrest': -20},
+                description="İbretialem için sert bir ceza verdiniz."
+            ),
+            EventChoice(
+                text="Genel af ilan et",
+                effects={'happiness': 20, 'unrest': -10},
+                description="Halk affınızı sevinçle karşıladı ancak tehlike geçmiş sayılmaz."
+            )
+        ]
+    )
+]
+
+SUCCESSION_EVENTS = [
+    Event(
+        id="succession_chain_1_news",
+        title="Taht Kavgaları",
+        description="Padişahın hastalığı ağırlaştı. Şehzadeler arasında taht mücadelesi baş gösterdi. Tarafınızı seçin!",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.CRITICAL,
+        chain_id="succession_chain",
+        min_turn=40,
+        condition_func=lambda state: state.get('loyalty', 100) < 40,
+        choices=[
+            EventChoice(
+                text="Büyük Şehzadeyi destekle",
+                effects={'gold': -500, 'loyalty': 0},
+                description="Geleneksel verasete uygun olarak büyük şehzadeye biat ettiniz."
+            ),
+            EventChoice(
+                text="Güçlü Şehzadeyi destekle",
+                effects={'gold': -1000, 'soldiers': -50},
+                description="Ordunun ve Yeniçerinin sevdiği güçlü adaya asker desteği verdiniz."
+            ),
+            EventChoice(
+                text="Tarafsız kal",
+                effects={'happiness': -5, 'trade_modifier': -10},
+                description="Merkezin gazabından korkup sessiz kaldınız. Ticaret durma noktasına geldi."
+            )
+        ]
+    ),
+    Event(
+        id="succession_chain_2_civil_war",
+        title="Kanlı Çarpışmalar",
+        description="Şehzade orduları karşı karşıya geldi. Desteklediğiniz adayın durumu kritik.",
+        event_type=EventType.MILITARY,
+        severity=EventSeverity.CRITICAL,
+        chain_id="succession_chain",
+        choices=[
+            EventChoice(
+                text="Bütün ordularla desteğe git",
+                effects={'gold': -800, 'soldiers': -200, 'unrest': 15},
+                description="Kendinizi ateşe attınız. Zafer ya da ölüm!"
+            ),
+            EventChoice(
+                text="Sınırları koru",
+                effects={'happiness': 5},
+                description="Kavgadan uzak durup eyaletin güvenliğine odaklandınız."
+            )
+        ]
+    ),
+    Event(
+        id="succession_chain_3_result",
+        title="Yeni Padişah Cülusu",
+        description="Kanlı mücadele bitti ve yeni Padişah tahta çıktı. Sizin tarafınızdaki duruşunuz değerlendirilecek.",
+        event_type=EventType.DIPLOMATIC,
+        severity=EventSeverity.MAJOR,
+        chain_id="succession_chain",
+        choices=[
+            EventChoice(
+                text="Biat törenine katıl",
+                effects={'gold': -300, 'happiness': 15},
+                description="Yeni padişaha sadakatinizi bildirdiniz. Cülus bahşişleri dağıtıldı."
+            )
+        ]
+    )
+]
+
+EVENT_POOL.extend(CELALI_EVENTS + SUCCESSION_EVENTS)
+
 # Genişletilmiş olayları dahil et
 try:
     from game.systems.events_expanded import get_expanded_events
@@ -1670,11 +1807,14 @@ class EventSystem:
         
         elif event.id == "plague_chain_3_peak":
             self.add_trigger("plague_chain_4_end", 4, event.id, choice_text)
+            
+        elif event.id == "plague_chain_4_end":
+            self.event_memory['plague_resolved'] = True
         
         # === YENİÇERİ ZİNCİRİ ===
         elif event.id == "janissary_chain_1_demand":
             if choice_index == 0:  # Maaş artır - zincir biter
-                pass  # Sorun çözüldü
+                self.event_memory['janissary_resolved'] = True
             elif choice_index == 1:  # Söz ver
                 self.event_memory['janissary_angry'] = True
                 self.add_trigger("janissary_chain_2_unrest", 5, event.id, choice_text)
@@ -1695,6 +1835,9 @@ class EventSystem:
         elif event.id == "janissary_chain_3_revolt":
             self.event_memory['janissary_resolved'] = True
             self.add_trigger("janissary_chain_4_aftermath", 2, event.id, choice_text)
+            
+        elif event.id == "janissary_chain_4_aftermath":
+            self.event_memory['janissary_resolved'] = True
         
         # === İPEK YOLU ZİNCİRİ ===
         elif event.id == "silkroad_chain_1_offer":
@@ -1702,10 +1845,15 @@ class EventSystem:
                 self.event_memory['silkroad_invested'] = True
                 self.event_memory['silkroad_big_investment'] = (choice_index == 0)
                 self.add_trigger("silkroad_chain_2_journey", 5, event.id, choice_text)
+            else:
+                self.event_memory['silkroad_resolved'] = True
         
         elif event.id == "silkroad_chain_2_journey":
             self.add_trigger("silkroad_chain_3_return", 4, event.id, choice_text,
                            {'silkroad_protected': choice_index == 0})
+                           
+        elif event.id == "silkroad_chain_3_return":
+            self.event_memory['silkroad_resolved'] = True
         
         # === PADİŞAH ZİYARETİ ZİNCİRİ ===
         elif event.id == "sultan_chain_1_news":
@@ -1713,12 +1861,17 @@ class EventSystem:
                 self.event_memory['sultan_visit'] = True
                 self.event_memory['sultan_grand'] = (choice_index == 0)
                 self.add_trigger("sultan_chain_2_preparation", 3, event.id, choice_text)
+            else:
+                self.event_memory['sultan_visited'] = True
         
         elif event.id == "sultan_chain_2_preparation":
             self.add_trigger("sultan_chain_3_visit", 3, event.id, choice_text)
         
         elif event.id == "sultan_chain_3_visit":
             self.add_trigger("sultan_chain_4_aftermath", 2, event.id, choice_text)
+            
+        elif event.id == "sultan_chain_4_aftermath":
+            self.event_memory['sultan_visited'] = True
         
         # === FETİH SEFERİ ZİNCİRİ ===
         elif event.id == "conquest_chain_1_call":
@@ -1726,6 +1879,8 @@ class EventSystem:
                 self.event_memory['conquest_joined'] = True
                 self.event_memory['conquest_big_army'] = (choice_index == 0)
                 self.add_trigger("conquest_chain_2_march", 4, event.id, choice_text)
+            else:
+                self.event_memory['conquest_completed'] = True
         
         elif event.id == "conquest_chain_2_march":
             self.add_trigger("conquest_chain_3_siege", 5, event.id, choice_text)
@@ -1736,6 +1891,46 @@ class EventSystem:
         elif event.id == "conquest_chain_4_battle":
             self.event_memory['conquest_victory'] = True
             self.add_trigger("conquest_chain_5_spoils", 2, event.id, choice_text)
+            
+        elif event.id == "conquest_chain_5_spoils":
+            self.event_memory['conquest_completed'] = True
+            
+        # === CELALİ İSYANI ZİNCİRİ ===
+        elif event.id == "celali_chain_1_rumors":
+            self.event_memory['celali_active'] = True
+            if choice_index == 0:  # Ez
+                self.add_trigger("celali_chain_2_uprising", 5, event.id, choice_text, {'celali_handling': 'brute_force'})
+            elif choice_index == 1:  # Rüşvet
+                self.add_trigger("celali_chain_2_uprising", 8, event.id, choice_text, {'celali_handling': 'bribe'})
+            else:  # Bekle
+                self.add_trigger("celali_chain_2_uprising", 3, event.id, choice_text, {'celali_handling': 'waited'})
+                
+        elif event.id == "celali_chain_2_uprising":
+            self.add_trigger("celali_chain_3_climax", 4, event.id, choice_text)
+            
+        elif event.id == "celali_chain_3_climax":
+            self.event_memory['celali_resolved'] = True
+            
+        # === TAHT KAVGALARI ZİNCİRİ ===
+        elif event.id == "succession_chain_1_news":
+            self.event_memory['succession_crisis'] = True
+            if choice_index == 0:
+                self.event_memory['succession_side'] = 'elder'
+            elif choice_index == 1:
+                self.event_memory['succession_side'] = 'strong'
+            else:
+                self.event_memory['succession_side'] = 'neutral'
+            self.add_trigger("succession_chain_2_civil_war", 3, event.id, choice_text)
+            
+        elif event.id == "succession_chain_2_civil_war":
+            self.add_trigger("succession_chain_3_result", 3, event.id, choice_text)
+            
+        elif event.id == "succession_chain_3_result":
+            self.event_memory['succession_resolved'] = True
+            # Ekstra sonuç: Eğer taraf seçildiyse sadakat bonusu/malusu
+            side = self.event_memory.get('succession_side', 'neutral')
+            if side == 'strong':
+                self.event_memory['succession_loyalty_boost'] = True
     
     def dismiss_event(self):
         """Olayı kapat (hiçbir şey yapma)"""

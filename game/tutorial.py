@@ -169,6 +169,7 @@ class Tutorial:
         self.speak("Klavye Kısayolları:", True)
         self.speak("R: Kaynaklar, S: Durum, I: Gelir, W: Uyarılar", False)
         self.speak("E: Ekonomi, M: Askeri, C: İnşaat, D: Diplomasi, P: Halk", False)
+        self.speak("K: Sefer (Savaş), X: Ticaret, O: İşçiler, L: Loncalar", False)
         self.speak("Space: Tur bitir, F5: Kaydet, H: Bu yardım", False)
         self.speak("Tab: Paneller arası, Backspace: Geri", False)
 

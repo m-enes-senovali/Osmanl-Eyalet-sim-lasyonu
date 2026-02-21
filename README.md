@@ -1,158 +1,136 @@
-# Osmanlı Eyalet Yönetim Simülasyonu
+# Osmanlı Eyalet Yönetim Simülasyonu - Kapsamlı Oyun Rehberi
 
 ![Osmanlı Tuğrası](assets/icon.png)
 
-**Sürüm:** 1.0.0  
+**Sürüm:** 1.0.0 (Genişletilmiş Sürüm)  
 **Geliştirici:** Rodoslav Aleksandrov  
 **Dil:** Türkçe  
-**Erişilebilirlik:** Tam NVDA Ekran Okuyucu Desteği
-
-## 📜 Hakkında
-
-**Osmanlı Eyalet Yönetim Simülasyonu**, 1520 yılı Osmanlı İmparatorluğu döneminde geçen, derinlemesine strateji ve yönetim oyunudur. Bir Sancak Beyi veya Beylerbeyi olarak atandığınız eyaleti yönetin, ekonomiyi kalkındırın, ordular kurun, diplomatik ilişkiler geliştirin ve Padişah'ın (Kanuni Sultan Süleyman) gözüne girerek yükselin.
-
-Oyun, tarihi gerçekliğe sadık kalarak tasarlanmış olup, görme engelli oyuncular için **tam erişilebilirlik** sunmaktadır.
+**Erişilebilirlik:** Tam NVDA & SAPI5 Ekran Okuyucu Desteği
 
 ---
 
-## 🌟 Öne Çıkan Özellikler
+## 📜 1. Oyuna Giriş ve Amacınız
 
-### 💰 Gelişmiş Ekonomi Sistemi
-*   **Kaynak Yönetimi:** Altın, Zahire, Kereste, Demir, Taş, Halat, Katran ve Yelken Bezi üretimi.
-*   **Dinamik Piyasa:** Arz-talep dengesine göre değişen fiyatlar (Enflasyon ve Deflasyon).
-*   **Ticaret Yolları:** İpek Yolu, Akdeniz, Karadeniz ve Hint Okyanusu ticaret ağları.
-*   **Vergi Sistemi:** Halkın memnuniyeti ile gelir arasında denge kurun.
+**Osmanlı Eyalet Yönetim Simülasyonu**, 1520 yılı Osmanlı İmparatorluğu (Kanuni Sultan Süleyman dönemi) atmosferinde geçen, derinlemesine bir strateji ve yönetim oyunudur. Bir Eyalet Beylerbeyi veya Sancakbeyi olarak atandığınız bölgeyi yönetmekle sorumlusunuz.
 
-### ⚔️ Detaylı Askeri Sistem (1520 Dönemi)
-*   **Birim Çeşitliliği:**
-    *   **Kapıkulu:** Yeniçeri, Kapıkulu Sipahisi, Topçu, Cebeci.
-    *   **Eyâlet:** Tımarlı Sipahi, Akıncı, Azap.
-    *   **Donanma:** Kadırga, Levent.
-*   **Savaş Mekanikleri:** Meydan Savaşları, Kale Kuşatmaları, Deniz Savaşları.
-*   **Taktiksel Derinlik:** Merkez hücumu, Kanat manevrası, Savunma hattı gibi taktikler.
-
-### 📜 Diplomasi ve Siyaset
-*   **İlişkiler:** Komşu devletler (Venedik, Safevi, Macaristan vb.) ve vasal devletler ile ilişkiler.
-*   **Aksiyonlar:** Elçi gönderme, Ticaret anlaşması, Evlilik ittifakı, Haraç talep etme, Savaş ilanı, Vasallaştırma.
-*   **Saray İlişkileri:** Padişah Sadakati ve Lütfu, Sadrazam ve Defterdar ile ilişkiler.
-*   **Prestij Sistemi:** Şanlı zaferler ve büyük yapılarla prestij kazanın.
-
-### 🏗️ İnşaat ve Şehirleşme
-*   **5 Kategori, 20+ Bina Tipi:**
-    *   **Dini:** Cami, Medrese, Tabhane.
-    *   **Askeri:** Ocak, Kale, Topçu Ocağı, Gözetleme Kulesi.
-    *   **Ekonomi:** Çarşı, Kervansaray, Han, Bedesten, Darphane.
-    *   **Altyapı:** Çiftlik, Maden, Kereste Ocağı, Taş Ocağı, Tersane, Su Kemeri.
-    *   **Sosyal:** Darüşşifa (Hastane), Hamam.
-*   **Sinerji Sistemi:** Binalar birbirini etkiler (Örn: Cami + Medrese = Eğitim Bonusu).
-
-### 🕵️ Casusluk ve İstihbarat
-*   **Ajanlar:** Çavuş, Hafiye, Gezgin Derviş, Tebdil Gezen, Cariye.
-*   **Operasyonlar:** Keşif, Sabotaj, Suikast, Fitne Çıkarma, Propaganda, Harem İstihbaratı.
-*   **Karşı İstihbarat:** Düşman casuslarını yakalayın.
-
-### 🕌 Din ve Kültür (Millet Sistemi)
-*   **Milletler:** Müslüman, Rum Ortodoks, Ermeni, Yahudi, Süryani toplulukları.
-*   **Ulema:** Şeyhülislam, Kadıasker, Kadı, Müderris atamaları.
-*   **Vakıflar:** Cami, İmaret, Medrese vakıfları kurarak halka hizmet edin.
-*   **Fetvalar:** Kritik kararlarda dini meşruiyet kazanın (Cihad, Vergi, vs.).
-
-### 🌐 Çok Oyunculu Mod (Multiplayer)
-*   **Gerçek Zamanlı:** Arkadaşlarınızla aynı anda oynayın.
-*   **Diplomasi:** Oyuncular arası ittifak, ticaret ve savaş.
-*   **WebSocket Sunucusu:** Hızlı ve güvenilir bağlantı.
+**Temel Amacınız:** 
+Halkınızı zenginleştirmek, güçlü bir ordu kurup eyaletinizi düşmanlardan ve eşkıyalardan korumak, Payitaht'a (İstanbul) olan yükümlülüklerinizi yerine getirerek Padişah'ın güvenini kazanmak ve nihayetinde Veziriazamlığa kadar yükselebilmektir. Eğer halkı aç bırakırsanız **İsyan** çıkar, Padişahı küstürürseniz **Kelleniz gider.**
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🎮 2. Temel Kontroller ve Erişilebilirlik (Görme Engelli Desteği)
 
-### Gereksinimler
-*   Python 3.8 veya üzeri
-*   `pygame` kütüphanesi
-*   `websockets` kütüphanesi (Multiplayer için)
+Bu oyun tamamen menü tabanlıdır ve farenin yanı sıra **tamamen klavye** ile oynanabilir. Oyun açıldığı andan itibaren ekran okuyucunuz her menüyü ve uyarıyı size sesli olarak bildirecektir. Oynanış sırasında şu kısayollar hayat kurtarır:
 
-### Kurulum Adımları
-1.  Bu projeyi bilgisayarınıza indirin veya klonlayın.
-2.  Gerekli kütüphaneleri yükleyin:
-    ```bash
-    pip install -r requirements.txt
-    ```
-    *(Eğer `requirements.txt` yoksa: `pip install pygame websockets`)*
+### Ekran Kısayolları
+*   **Yukarı / Aşağı Yön Tuşları:** Menüdeki seçenekler arasında gezinir.
+*   **Enter:** Seçili öğeyi onaylar / İçine girer.
+*   **Tab (Gezinme Tuşu):** Sağ taraftaki "İstatistik / Eyalet Özeti" bilgilerini satır satır okumanızı sağlar.
+*   **Backspace (Geri Tuşu):** Bir önceki menüye döner.
+*   **Escape (ESC):** Çıkış / Ana Menüye dönme ekranını açar.
+*   **Space (Boşluk):** Turu Bitirir (Bir sonraki aya geçer) ve aylık raporu size okur.
+*   **F5:** Oyunu hızlı kaydeder.
+*   **F9:** En son kaydedilen oyunu hızlı bir şekilde yükler.
+*   **Page Up / Page Down:** Arka planda çalan müziğin ses seviyesini artırır veya azaltır.
 
-### Oyunu Başlatma
-Oyunu başlatmak için ana dizindeki `main.py` dosyasını çalıştırın:
-```bash
-python main.py
-```
+### Bilgi ve Durum Öğrenme Kısayolları (Eyalet Ekranındayken)
+*   **H:** Yardımcı Kethüda'nız size o an basabileceğiniz tuşların listesini okur.
+*   **F1:** Genel Eyalet Durumunu (Sadakat, Asker, Altın vb.) baştan sona özetler.
+*   **R:** Deponuzdaki temel kaynakları (Altın, Zahire, Kereste, Demir, vs.) tek tek okur.
+*   **S:** Halkın durumunu (Nüfus numarası, Memnuniyet, Padişah Sadakati) okur.
+*   **I:** O turki **Gelir ve Gider** dökümünüzü okur (Vergiler, Maaşlar).
+*   **Y:** Hangi Yıl, Ay ve Tur'da olduğunuzu söyler.
+*   **W:** Eyalette akut bir kriz (İsyan, Açlık, Para bitmesi) varsa bunları acil uyarı olarak söyler.
+*   **T:** Kethüda'nız o anki durumunuza göre size **tavsiye** verir (Örn: "Zahiremiz bitiyor beyim, hemen çiftlik yapın").
+*   **O:** Tur sonunda gerçekleşen ve bekleyen bir tarihi Olay (Event) varsa onu ekrana getirir.
 
-### Çok Oyunculu Sunucu Kurulumu
-Arkadaşlarınızla oynamak için bir kişinin sunucu olması gerekir:
-```bash
-python server.py --port 8765
-```
-
----
-
-## 🎮 Kontroller (Klavye Kısayolları)
-
-Oyun, klavye ile tam kontrol edilebilir şekilde tasarlanmıştır.
-
-| Tuş | İşlev |
-| :--- | :--- |
-| **Yön Tuşları** | Menülerde gezinme / Harita hareketi |
-| **Enter** | Seçim yapma / Onaylama |
-| **ESC** | Geri gelme / Ana Menü |
-| **Boşluk (Space)** | Turu Bitir (Sıradaki aya geç) |
-| **E** | Ekonomi Ekranı |
-| **M** | Askeri Ekran |
-| **C** | İnşaat Ekranı |
-| **D** | Diplomasi Ekranı |
-| **P** | Nüfus ve Eyalet Ekranı |
-| **F5** | Oyunu Hızlı Kaydet |
-| **F9** | Oyunu Hızlı Yükle |
-| **J** | Mevsim ve Tarih Bilgisi (Sesli) |
-| **Page Up** | Müzik Sesi Artır |
-| **Page Down** | Müzik Sesi Azalt |
-| **O** | Olay Bildirimi (Varsa) |
+### Alt Menü Kısayolları
+*   **E:** Ekonomi
+*   **M:** Askeri Ordu
+*   **C:** İnşaat
+*   **D:** Diplomasi
+*   **P:** Halk (Politikalar ve Göç)
+*   **O:** İşçiler (Reaya / İşçi Atamaları)
+*   **L:** Loncalar
+*   **K:** Sefer / Savaş Ekranı
+*   **X:** Ticaret / Pazar Ekranı
+*   **S (Eğer Yan Menüdeyseniz):** Casusluk Ekranı
+*   **G:** Geçmiş (Önceki turlarda yaşanan olayların kaydı)
 
 ---
 
-## 📚 Oynanış Rehberi
+## 💰 3. Ekonomi: Altın, Kaynaklar ve İşçiler
 
-### 1. Ekonomi Yönetimi
-İlk hedefiniz ekonomiyi dengelemektir.
-*   **Vergiler:** Halkı çok sıkmadan vergileri ayarlayın (%15-20 idealdir).
-*   **Üretim:** Çiftlik (Zahire), Maden (Demir/Altın) ve Kereste Ocağı inşa edin.
-*   **Ticaret:** Pazar ve Kervansaray inşa ederek ticaret gelirini artırın. İpek Yolu gibi ticaret yollarını açın.
+Oyunun can damarı ekonomidir. Kaynak üretmeden asker basamaz veya bina yapamazsınız.
 
-### 2. Ordu Kurma
-Güvenlik için ordu şarttır.
-*   **Ocak:** Yeniçeri ve Sipahi yetiştirmek için Ocak inşa edin.
-*   **Tımar:** Tımarlı Sipahiler ücretsizdir ancak tımar arazisi (Fethedilen toprak) gerektirir.
-*   **Bakım:** Askerlerin tur başına altın ve zahire tükettiğini unutmayın.
+*   **Altın:** Bina yapmak, asker maaşı ödemek ve diplomasi (haraç) için kullanılır. Başlıca **Vergi** toplayarak ve **Ticaret** yaparak kazanılır.
+*   **Zahire (Yiyecek):** Halkınızın yemesi ve askerlerinizin karnının doyması için şarttır. Biterse **Açlık** başlar, nüfus düşer ve hastalık/isyan patlak verir.
+*   **Kereste & Demir & Taş & Yelken Bezi vb.:** Bina inşası ve Asker üretimi (Örn: Donanma için halat, Topçu için demir) için kullanılır.
 
-### 3. Diplomasi
-Komşularınızla iyi geçinin veya onları ezin.
-*   **Elçi:** İlişkileri düzeltmek için elçi gönderin.
-*   **Evlilik:** Güçlü bir müttefik için evlilik ittifakı kurun.
-*   **Casusluk:** Savaşa girmeden önce düşmanı zayıflatmak için casus gönderin.
-*   **Padişah:** İstanbul'dan gelen emirlere uyun, sadakatiniz düşerse kelleniz gidebilir!
+**İşçi Mantığı (O Tuşu):** Binaları inşa etmeniz tek başına yeterli değildir. Bir Çiftlik veya Maden kurduğunuzda, `İşçiler` ekranına gidip oraya halkınızdan "Çalışan" atamalısınız. Atanan her işçi günlük olarak kaynak üretir.
 
-### 4. Din ve Halk
-Huzuru sağlamak önemlidir.
-*   **Hoşgörü:** Farklı milletlere (Müslüman, Rum, Ermeni vb.) hoşgörü gösterin, her birinin farklı bonusları vardır.
-*   **Vakıf:** İmaret ve Şifahane gibi vakıflar kurarak halkın duasını alın.
+**Vergi ve Enflasyon:** Altını vergiyle toplarsınız. "Halk" ekranından Tımar veya Nakit sistemi seçebilirsiniz. Ancak kasanızda aşırı derecede altın birikirse paranız değer kaybeder **(Enflasyon)**. Enflasyonu düşürmek için harcamalar yapabilir veya binlerce altın ödeyerek **Sikke Tashihi** (Para Kararını Sabitleme) uygulayabilirsiniz. Acil paranız bittiğinde piyasadaki sikkenin ayarıyla oynayıp anında nakit alabilirsiniz (**Sikke Tağşişi**) ancak bu Enflasyonunuzu ve İsyan riskini kalıcı olarak artırır!
 
 ---
 
-## 🛠️ Geliştirici Notları
+## 🏗️ 4. İnşaat Sistemi ve Eklentiler (C Tuşu)
 
-Bu proje, Osmanlı tarihine duyulan ilgi ve strateji oyunlarına olan tutkuyla geliştirilmiştir. Özellikle görme engelli oyuncuların da strateji oyunlarından tam keyif alabilmesi için NVDA ekran okuyucu entegrasyonuna büyük önem verilmiştir.
+İnşaat menüsü, eyaletinizi bir köyden devasa bir şehre dönüştürdüğünüz yerdir. Yapılabilecek binalar şunlardır:
+*   **Üretim Binaları:** Çiftlik, Kereste Ocağı, Maden vs. (Kaynak üretmek için şarttır).
+*   **Sosyal Binalar:** Cami, İmaret, Hamam (Halk memnuniyetini ve göç oranını artırır).
+*   **Askeri Binalar:** Kışla, Talimgah, Kale (Daha nitelikli asker basmanızı sağlar).
+*   **Adalet Binaları:** Mahkeme (Yolsuzlukları önler, adaleti sağlar).
+*   **Diplomatik Binalar:** Elçilik (Ajan ve Casus gücünü artırır).
 
-**Katkıda Bulunanlar:**
-*   **Kodlama & Tasarım:** Rodoslav Aleksandrov
-*   **Tarih Danışmanlığı:** (1520-1566 Dönemi Kaynakları)
+**EKLENTİ SİSTEMİ:** 
+Bir bina (Örneğin: Cami) inşa ettiğinizde iş bitmez. İnşaat listesinde mevcut Camii'nizin üzerine gelip **Enter'a basarak içine girin.** Karşınıza çıkacak **"--- Eklentiler ---"** menüsünden o binayı yükseltebilirsiniz. Örneğin bir Camiye "Muvakkithane" ekleyebilir, bir Kaleye "Hendek" kazabilirsiniz. Her eklenti binaya benzersiz ekstra bonuslar verir.
 
 ---
 
-*Osmanlı Eyalet Yönetim Simülasyonu © 2026*
+## ⚔️ 5. Ordu ve Savaş (M ve K Tuşları)
+
+Eyaletinizin güvenliğini sağlamak için çeşitli birlikler eğitebilirsiniz (Askeri Menü - M):
+*   **Azaplar / Yaya Askerler:** Gündelik ucuz piyadelerdir.
+*   **Yeniçeriler:** Çok masraflı ama muazzam derecede güçlü elit birlikler.
+*   **Tımarlı Sipahiler:** Bakım masrafı olmayan ancak üretmek için "Fethedilmiş Tımar Arazisi"ne ihtiyaç duyan süvariler.
+*   **Topçular:** Kale kuşatmalarında şarttır (İnşaat'tan Topçu Ocağı gerektirir).
+*   **Donanma:** Limanınız varsa Kadırga ve Kalyon üretebilirsiniz (Kıyı Eyaletlerinde geçerli).
+
+**Savaşmak (K Tuşu):** Bir komşu devlete "Casusluk" ekranından saldırı planlayabilir veya çok oyunculu oyundaysanız direkt savaş açabilirsiniz. Savaşlarda Ordu Güçlerinin çarpışması haricinde kuşatmayı nasıl yöneteceğinizi (Açık Taarruz, Kuşatma, Menzilli Ateş vs) rakam tuşlarına (1, 2, 3) basarak seçmeniz istenir. Taktik doğrudan kayıpları etkiler!
+
+---
+
+## 🎭 6. Nüfus, Sosyoloji ve Olay Zincirleri
+
+Oyun boyunca rastgele veya tarihe dayalı (1520 - 1566 dönemi) **Olaylar (Eventler)** karşınıza çıkar. Olay uyarısı aldığınızda "O" tuşuyla olaya bakıp bir ferman vermelisiniz (Örn: İsyan eden Celalilere af mı çıkacak yoksa ordu mu yollanacak?).
+
+Bazı olaylar **[OLAY ZİNCİRİ]** şeklindedir. Bunlar basit bir pop-up değillerdir; "Veba Salgını", "Celali İsyanları" veya "Taht Kavgaları" gibi sizin kararınıza göre dallanıp budaklanan ve yıllarca (pasif olarak her turunuzda canınızı yakan) kalıcı krizlerdir. İsyan edeni hoşgörüyle mi yatıştıracaksınız yoksa demir yumrukla mı ezeceksiniz, seçim sizin.
+
+**Göç Politikaları:** "Halk" menüsünden Eyaletinizin göç politikasını belirleyin (Örn: Herkes gelsin, Sadece Müslümanlar, Sınırları Kapat).
+**Meslek Dönüştürme:** Altın ve kaynak harcayarak çiftçilerinizi Zanaatkar, Tüccar veya Ulemaya evirebilirsiniz. (Şehirleşme).
+
+---
+
+## 🕵️ 7. Casusluk (Espionage) ve Diplomasi
+
+Kethüdanız vasıtasıyla diğer komşu krallıklara ajan gönderebilirsiniz (Çavuş, Gezgin Derviş, vs).
+*   **Güvenli Görevler:** Keşif yapmak size diğer devletin zayıf alanlarını gösterir.
+*   **Riskli Görevler:** İsyan çıkartmak veya Suikast düzenlemek relations'ı (ilişkiyi) darmadağın eder. Eğer yakalanırsanız Padişahın kulağına gider ve sadakatiniz tepetaklak olur.
+
+Düşmanla ilişkinizi ölçün. Altın göndererek Padişahın Lütfunu alın (Diplomasi Menüsü - D). Unutmayın, Padişah Sadakati %30'ların altına düştüğü an fermanınız yazılır!
+
+---
+
+## 🌐 8. Çok Oyunculu (Multiplayer) Deneyim
+
+Arkadaşlarınızla aynı anda rakip "Sancakbeyleri" olarak oynayabilirsiniz.
+1. "Multiplayer" menüsünden bir arkadaşınız "Lobi Kur" der. Diğerleri Oda Kodunu girip bağlanır.
+2. Tüm oyuncular aynı dönemi oynarlar. Padişahın sadakati hepiniz için ayrı ayrı işler.
+3. Diğer oyuncularla "Diplomasi" menüsünden **Ticaret Antlaşması** veya **İttifak** kurabilirsiniz. Bunlar gerçek etkilerdir; Ticaret size her ay pasif olarak altın getirirken, müttefikiniz sizinle savaşa girebilir.
+4. Diğer oyunculara (Kısa yol: . (Nokta) tuşu) mesaj gönderip sohbet edebilirsiniz.
+5. Savaş ilan edebilirsiniz! Bir oyuncuya saldırdığınızda onun sahip olduğu askeri varlıkları ve depoladığı altınları yağmalarsınız, onun oyunundaki ordusunu fiilen eksiltmiş olursunuz.
+6. Bağlantınız koparsa odaya aynı isimle geri bağlandığınızda oyununuz sıfırlanmaz, arkadaşlarınızın kaldığı Yıldan, askeri gücünüz restore edilerek geri dönersiniz (State Recovery).
+
+---
+
+### *İyi Şanslar Sancakbeyi! Tarih senin kararlarınla yazılacak.*

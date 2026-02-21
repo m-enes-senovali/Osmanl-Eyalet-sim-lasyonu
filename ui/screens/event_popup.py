@@ -143,7 +143,12 @@ class EventPopupScreen(BaseScreen):
                 'critical': 'Kritik'
             }
             severity = severity_names.get(event.severity.value, '')
-            self.audio.speak(f"{severity} olay: {event.title}", interrupt=True)
+            
+            chain_text = ""
+            if getattr(event, 'chain_id', None):
+                chain_text = " Bu bir olay zinciridir, seçimleriniz uzun vadede kalıcı etkiler bırakacaktır."
+                
+            self.audio.speak(f"{severity} olay: {event.title}.{chain_text}", interrupt=True)
             self.audio.speak(event.description)
             self.audio.speak("Seçenekler:")
             for i, choice in enumerate(event.choices):
@@ -238,9 +243,14 @@ class EventPopupScreen(BaseScreen):
         }
         icon = type_icons.get(event.event_type.value, '[?]')
         
+        # Zincir Olay Belirteci
+        chain_indicator = ""
+        if getattr(event, 'chain_id', None):
+            chain_indicator = " [OLAY ZİNCİRİ]"
+        
         # Başlık
         title_font = self.get_title_font()
-        title = title_font.render(f"{icon} {event.title}", True, COLORS['gold'])
+        title = title_font.render(f"{icon} {event.title}{chain_indicator}", True, COLORS['gold'])
         title_rect = title.get_rect(centerx=SCREEN_WIDTH // 2, top=box_rect.top + 30)
         surface.blit(title, title_rect)
         
@@ -253,6 +263,10 @@ class EventPopupScreen(BaseScreen):
         }
         severity_text = severity_names.get(event.severity.value, '')
         small_font = get_font(FONTS['small'])
+        
+        if chain_indicator:
+            severity_text += " | Uzun Vadeli Etkiler"
+        
         severity_label = small_font.render(f"[{severity_text}]", True, border_color)
         severity_rect = severity_label.get_rect(centerx=SCREEN_WIDTH // 2, top=box_rect.top + 70)
         surface.blit(severity_label, severity_rect)

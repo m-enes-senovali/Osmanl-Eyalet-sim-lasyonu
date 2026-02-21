@@ -9,7 +9,7 @@
     "prestige": 55,
     "experience": 10,
     "background": "default",
-    "turns_as_governor": 21
+    "turns_as_governor": 28
   },
   "province": {
     "name": "Teke Sancağı",
@@ -20,15 +20,15 @@
   "time": {
     "year": 1520,
     "month": 1,
-    "day": 22,
-    "turn": 21
+    "day": 29,
+    "turn": 28
   },
   "economy": {
     "resources": {
-      "gold": 21420,
-      "food": 37168,
-      "wood": 7115,
-      "iron": 5347,
+      "gold": 35028,
+      "food": 49541,
+      "wood": 8743,
+      "iron": 6649,
       "stone": 995,
       "rope": 500,
       "tar": 300,
@@ -42,14 +42,15 @@
       "salt_price": 8.0,
       "copper_price": 15.0
     },
-    "tax_rate": 0.15,
+    "tax_rate": 0.2,
     "trade_level": 1,
-    "inflation_rate": 0.0,
+    "inflation_rate": 0.4294733333333333,
+    "base_inflation": 0.3,
     "active_trade_routes": [
       "black_sea"
     ],
     "tax_modifier": 1.0,
-    "trade_modifier": 0.9105000000000001,
+    "trade_modifier": 0.914,
     "expense_modifier": 1.0
   },
   "military": {
@@ -80,18 +81,19 @@
   },
   "population": {
     "population": {
-      "farmers": 8730,
-      "merchants": 2940,
-      "artisans": 2199,
-      "soldiers": 727,
+      "farmers": 9738,
+      "merchants": 3274,
+      "artisans": 2448,
+      "soldiers": 808,
       "scholars": 200
     },
-    "happiness": 95,
+    "happiness": 75,
     "health": 80,
-    "unrest": 4,
+    "unrest": 20,
     "active_revolt": false,
     "happiness_modifiers": {
-      "event": 5
+      "event": 5,
+      "Tağşiş": -15
     },
     "growth_rate": 0.02,
     "migration_policy": "selective",
@@ -110,13 +112,16 @@
       },
       "soup_kitchen": {
         "level": 3
+      },
+      "medrese": {
+        "level": 1
       }
     },
     "construction_queue": []
   },
   "diplomacy": {
-    "sultan_loyalty": 74,
-    "sultan_favor": 17,
+    "sultan_loyalty": 62,
+    "sultan_favor": 2,
     "sadrazam_relation": 65,
     "basdefterdar_relation": 50,
     "neighbors": {
@@ -241,8 +246,8 @@
         "skill": 2,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Dursun",
@@ -250,8 +255,8 @@
         "skill": 2,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Durmuş",
@@ -259,8 +264,8 @@
         "skill": 2,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Tanrıverdi",
@@ -268,8 +273,8 @@
         "skill": 2,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Veli",
@@ -277,8 +282,8 @@
         "skill": 2,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Budak",
@@ -286,8 +291,8 @@
         "skill": 2,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Korkut",
@@ -295,8 +300,8 @@
         "skill": 2,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Turgut",
@@ -304,8 +309,8 @@
         "skill": 2,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Timurtaş",
@@ -313,8 +318,8 @@
         "skill": 2,
         "task": "construction",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       },
       {
         "name": "Gündüz",
@@ -322,8 +327,8 @@
         "skill": 2,
         "task": "trading",
         "efficiency": 1.5,
-        "turns": 21,
-        "experience": 21
+        "turns": 28,
+        "experience": 28
       }
     ],
     "name_index": 10
@@ -368,7 +373,7 @@
     "spy_counter": 1,
     "mission_counter": 1,
     "intelligence_level": 0,
-    "security_level": 29,
+    "security_level": 22,
     "known_enemy_spies": 0,
     "successful_missions": 1,
     "failed_missions": 0,
@@ -383,25 +388,25 @@
         "autonomy": 0
       },
       "rum": {
-        "loyalty": 71,
+        "loyalty": 78,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "ermeni": {
-        "loyalty": 81,
+        "loyalty": 88,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "yahudi": {
-        "loyalty": 91,
+        "loyalty": 98,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "suryani": {
-        "loyalty": 76,
+        "loyalty": 83,
         "population": 0,
         "unrest": 0,
         "autonomy": 30

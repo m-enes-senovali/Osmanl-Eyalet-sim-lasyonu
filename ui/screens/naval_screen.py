@@ -125,8 +125,15 @@ class NavalScreen(BaseScreen):
         for ship_type in ShipType:
             definition = SHIP_DEFINITIONS[ship_type]
             
-            # Maliyet özeti (Türkçe)
-            cost_text = f"{definition.gold_cost} altın, {definition.wood_cost} kereste"
+            # Maliyet özeti (Türkçe) - Eksiksiz
+            costs = []
+            if definition.gold_cost > 0: costs.append(f"{definition.gold_cost} Altın")
+            if definition.wood_cost > 0: costs.append(f"{definition.wood_cost} Kereste")
+            if hasattr(definition, 'iron_cost') and definition.iron_cost > 0: costs.append(f"{definition.iron_cost} Demir")
+            if hasattr(definition, 'rope_cost') and definition.rope_cost > 0: costs.append(f"{definition.rope_cost} Halat")
+            if hasattr(definition, 'tar_cost') and definition.tar_cost > 0: costs.append(f"{definition.tar_cost} Katran")
+            if hasattr(definition, 'sailcloth_cost') and definition.sailcloth_cost > 0: costs.append(f"{definition.sailcloth_cost} Yelken Bezi")
+            cost_text = ", ".join(costs)
             
             # İnşa edilebilir mi?
             can_build = False
@@ -201,7 +208,7 @@ class NavalScreen(BaseScreen):
         if not gm or not hasattr(gm, 'naval'):
             return
         
-        success = gm.naval.start_construction(ship_type, gm.economy)
+        success = gm.naval.start_construction(ship_type, gm.economy, gm.construction)
         if success:
             self._update_panels()
             self._setup_build_menu()

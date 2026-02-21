@@ -90,7 +90,7 @@ class PopulationSystem:
             return True
         return False
     
-    def convert_profession(self, from_group: str, to_group: str, count: int) -> bool:
+    def convert_profession(self, from_group: str, to_group: str, count: int, economy_system=None) -> bool:
         """
         Meslek dönüşümü - Osmanlı lonca sistemi
         Örn: Çiftçi -> Zanaatkar (şehirlileşme)
@@ -103,8 +103,15 @@ class PopulationSystem:
             audio.speak(f"Yeterli {from_group} yok. En az 100 kalmalı.", interrupt=True)
             return False
         
-        # Dönüşüm maliyeti: eğitim seviyesine göre
+        # Dönüşüm maliyeti: eğitim seviyesine göre (her 100 kişi için)
         education_cost = (5 - self.education_level) * 50  # Düşük eğitim = yüksek maliyet
+        total_cost = (count // 100) * education_cost
+        
+        if total_cost > 0 and economy_system:
+            if not economy_system.can_afford(gold=total_cost):
+                audio.speak(f"Yetersiz altın! Dönüşüm için {total_cost} altın gerekli.", interrupt=True)
+                return False
+            economy_system.spend(gold=total_cost)
         
         # Uygula
         setattr(self.population, from_group, current - count)
@@ -316,6 +323,16 @@ class PopulationSystem:
         system.active_revolt = data['active_revolt']
         system.happiness_modifiers = data.get('happiness_modifiers', {})
         system.growth_rate = data.get('growth_rate', 0.02)
-        system.migration_policy = data.get('migration_policy', MigrationPolicy.SELECTIVE)
         system.education_level = data.get('education_level', 1)
+        
+        # Göç politikası Enum çevrimi
+        policy_val = data.get('migration_policy')
+        if policy_val:
+            try:
+                system.migration_policy = MigrationPolicy(policy_val)
+            except ValueError:
+                system.migration_policy = MigrationPolicy.SELECTIVE
+        else:
+            system.migration_policy = MigrationPolicy.SELECTIVE
+            
         return system

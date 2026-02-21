@@ -5,7 +5,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Halk/Nüfus Ekranı
 
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
-from ui.components import Button, Panel, ProgressBar
+from ui.components import Button, Panel, ProgressBar, MenuList
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
 
@@ -36,6 +36,15 @@ class PopulationScreen(BaseScreen):
             color=COLORS['danger']
         )
         
+        # Eylem menüsü
+        self.action_menu = MenuList(
+            x=860,
+            y=120,
+            width=380,
+            item_height=45
+        )
+        self.menu_mode = "main"
+        
         self.back_button = Button(
             x=20,
             y=SCREEN_HEIGHT - 70,
@@ -55,12 +64,80 @@ class PopulationScreen(BaseScreen):
     
     def on_enter(self):
         self._update_panels()
+        self._setup_main_menu()
     
     def announce_screen(self):
         self.audio.announce_screen_change("Halk Yönetimi")
         gm = self.screen_manager.game_manager
         if gm:
             gm.population.announce_status()
+            
+    def _setup_main_menu(self):
+        """Ana eylem menüsünü ayarla"""
+        self.menu_mode = "main"
+        self.action_menu.clear()
+        self.action_menu.add_item("1. Göç Politikası Belirle", self._setup_migration_menu, "1")
+        self.action_menu.add_item("2. Şehirlileşme (Meslek Dönüşümü)", self._setup_profession_menu, "2")
+        
+    def _setup_migration_menu(self):
+        """Göç politikası menüsünü ayarla"""
+        self.menu_mode = "migration"
+        self.action_menu.clear()
+        self.audio.speak("Göç Politikası seçin.", interrupt=True)
+        
+        self.action_menu.add_item("<- Geri", self._setup_main_menu, "escape")
+        self.action_menu.add_item("", None)
+        
+        policies = [
+            ("open", "Açık Kapı (Nüfus++ | İsyan++)"),
+            ("selective", "Seçici (Dengeli)"),
+            ("restricted", "Kısıtlı (Nüfus+ | Huzur+)"),
+            ("closed", "Kapalı (Nüfus Durur | Huzur++)")
+        ]
+        
+        for i, (policy_id, text) in enumerate(policies):
+            self.action_menu.add_item(
+                f"{i+1}. {text}", 
+                lambda p=policy_id: self._set_migration_policy(p),
+                str(i+1)
+            )
+            
+    def _setup_profession_menu(self):
+        """Meslek dönüştürme menüsünü ayarla"""
+        self.menu_mode = "profession"
+        self.action_menu.clear()
+        
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+            
+        cost_per_100 = (5 - gm.population.education_level) * 50
+        self.audio.speak(f"Meslek dönüşümü. 100 kişi için {cost_per_100} altın.", interrupt=True)
+        
+        self.action_menu.add_item("<- Geri", self._setup_main_menu, "escape")
+        self.action_menu.add_item("", None)
+        
+        self.action_menu.add_item(f"1. Çiftçi -> Zanaatkar ({cost_per_100} altın)", 
+            lambda: self._convert_profession("farmers", "artisans", 100), "1")
+        self.action_menu.add_item(f"2. Çiftçi -> Tüccar ({cost_per_100} altın)", 
+            lambda: self._convert_profession("farmers", "merchants", 100), "2")
+        self.action_menu.add_item(f"3. Zanaatkar -> Tüccar ({cost_per_100} altın)", 
+            lambda: self._convert_profession("artisans", "merchants", 100), "3")
+        self.action_menu.add_item(f"4. Tüccar -> Ulema ({cost_per_100} altın)", 
+            lambda: self._convert_profession("merchants", "scholars", 100), "4")
+
+    def _set_migration_policy(self, policy: str):
+        gm = self.screen_manager.game_manager
+        if gm:
+            gm.population.set_migration_policy(policy)
+            self._update_panels()
+            self._setup_main_menu()
+            
+    def _convert_profession(self, from_group: str, to_group: str, count: int):
+        gm = self.screen_manager.game_manager
+        if gm:
+            gm.population.convert_profession(from_group, to_group, count, economy_system=gm.economy)
+            self._update_panels()
     
     def _update_panels(self):
         """Panelleri güncelle"""
@@ -97,13 +174,19 @@ class PopulationScreen(BaseScreen):
         self.unrest_bar.set_value(pop.unrest)
     
     def handle_event(self, event) -> bool:
+        if self.action_menu.handle_event(event):
+            return True
+            
         if self.back_button.handle_event(event):
             return True
         
         if event.type == pygame.KEYDOWN:
             # Backspace veya Escape - Geri dön
             if event.key in (pygame.K_BACKSPACE, pygame.K_ESCAPE):
-                self._go_back()
+                if self.menu_mode != "main":
+                    self._setup_main_menu()
+                else:
+                    self._go_back()
                 return True
             
             # F1 - Özet
@@ -161,6 +244,12 @@ class PopulationScreen(BaseScreen):
         
         # Etkiler bilgisi
         self._draw_modifiers(surface)
+        
+        # Eylem Menüsü
+        small_font = get_font(FONTS['subheader'])
+        menu_title = small_font.render("Halk Eylemleri", True, COLORS['gold'])
+        surface.blit(menu_title, (860, 80))
+        self.action_menu.draw(surface)
         
         # İsyan uyarısı
         gm = self.screen_manager.game_manager

@@ -362,7 +362,50 @@ class GuildSystem:
                     "production": g.production_level,
                     "quality": g.quality_level,
                     "morale": g.guild_morale,
+                    "seyh_name": g.seyh_name,
+                    "kethuda_name": g.kethuda_name
                 }
                 for key, g in self.guilds.items()
             }
         }
+        
+    def from_dict(self, data: Dict):
+        """Kayıttan yükle"""
+        if not data:
+            return
+            
+        self.muhtesip_active = data.get("muhtesip_active", True)
+        self.narh_strictness = data.get("narh_strictness", 50)
+        
+        self.guilds.clear()
+        
+        guilds_data = data.get("guilds", {})
+        for key, g_data in guilds_data.items():
+            try:
+                g_type = GuildType(g_data.get("type"))
+                city = g_data.get("city", "Bilinmeyen Şehir")
+                
+                # Sektörden adı bul
+                from game.systems.economy import CRAFT_SECTORS
+                sector_key = g_type.value
+                sector = CRAFT_SECTORS.get(sector_key, {})
+                name_tr = sector.get("name_tr", g_type.value.title())
+                
+                guild = Guild(
+                    guild_type=g_type,
+                    name_tr=name_tr,
+                    city=city,
+                    seyh_name=g_data.get("seyh_name", self._generate_guild_leader_name("Şeyh")),
+                    kethuda_name=g_data.get("kethuda_name", self._generate_guild_leader_name("Kethüda"))
+                )
+                
+                guild.usta_count = g_data.get("usta", 1)
+                guild.kalfa_count = g_data.get("kalfa", 3)
+                guild.cirak_count = g_data.get("cirak", 5)
+                guild.production_level = g_data.get("production", 100)
+                guild.quality_level = g_data.get("quality", 100)
+                guild.guild_morale = g_data.get("morale", 100)
+                
+                self.guilds[key] = guild
+            except ValueError:
+                print(f"Bilinmeyen lonca tipi atlandı: {g_data.get('type')}")

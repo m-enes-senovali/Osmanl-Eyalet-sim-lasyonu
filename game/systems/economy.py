@@ -247,15 +247,15 @@ class EconomySystem:
         # Aktif ticaret yolları
         self.active_trade_routes = ['black_sea']  # Varsayılan
         
-        # Modifiers
         self.tax_modifier = 1.0
         self.trade_modifier = 1.0
         self.expense_modifier = 1.0
+        self.base_inflation = 0.0  # Tağşiş vb. kaynaklı kalıcı enflasyon
     
     def calculate_inflation(self):
         """
         Enflasyon hesapla
-        Fazla altın = fiyat artışı (tarihsel: Osmanlı 16. yy gümüş akışı)
+        Fazla altın = fiyat artışı (tarihsel: Osmanlı 16. yy gümüş akışı) + Kalıcı Tağşiş etkisi
         """
         # Referans altın miktarı
         reference_gold = 15000
@@ -263,13 +263,54 @@ class EconomySystem:
         if self.resources.gold > reference_gold:
             # Fazla altın = enflasyon
             excess_ratio = (self.resources.gold - reference_gold) / reference_gold
-            self.inflation_rate = min(0.50, excess_ratio * 0.1)  # Max %50
+            self.inflation_rate = min(0.50, excess_ratio * 0.1) + self.base_inflation
         else:
             # Az altın = deflasyon
             deficit_ratio = (reference_gold - self.resources.gold) / reference_gold
-            self.inflation_rate = max(-0.20, -deficit_ratio * 0.05)  # Min -%20
-        
+            self.inflation_rate = max(-0.20, -deficit_ratio * 0.05) + self.base_inflation
+            
+        self.inflation_rate = min(1.0, max(-0.5, self.inflation_rate)) # -50% ile +100% arası sınırla
         return self.inflation_rate
+        
+    def debase_currency(self, population_system) -> bool:
+        """Sikke tağşişi (Acil durum anında paranın değerini düşürerek altın yaratma)"""
+        self.resources.gold += 5000
+        self.base_inflation += 0.15  # %15 kalıcı enflasyon
+        
+        # Etkileri uygula
+        if hasattr(population_system, "happiness"):
+            population_system.happiness = max(0, population_system.happiness - 15)
+            population_system.add_happiness_modifier('Tağşiş', -15)
+            population_system.unrest = min(100, population_system.unrest + 20)
+            
+        audio = get_audio_manager()
+        audio.speak("UYARI: Sikke tağşişi yapıldı! Hazineye acil 5000 altın aktarıldı, ancak enflasyon kalıcı arttı ve halk isyan ediyor.", interrupt=True)
+        return True
+        
+    def reform_currency(self, population_system) -> bool:
+        """Sikke Tashihi (Enflasyonu düşürmek için sağlam akçe basımı)"""
+        if self.base_inflation <= 0:
+            audio = get_audio_manager()
+            audio.speak("Kalıcı enflasyon zaten sıfır. Para ayarıyla oynamaya gerek yok.", interrupt=True)
+            return False
+            
+        cost = 10000
+        if not self.can_afford(gold=cost):
+            audio = get_audio_manager()
+            audio.speak(f"Para ayarını düzeltmek (Reform) için {cost} altın gerekli!", interrupt=True)
+            return False
+            
+        self.spend(gold=cost)
+        self.base_inflation = max(0.0, self.base_inflation - 0.15)  # %15 düşür
+        
+        # Etkileri uygula (Halkı memnun eder)
+        if hasattr(population_system, "happiness"):
+            population_system.happiness = min(100, population_system.happiness + 10)
+            population_system.add_happiness_modifier('Para Reformu', 10)
+            
+        audio = get_audio_manager()
+        audio.speak("Sikke tashihi (reform) yapıldı! Eski paralar toplatılıp sağlam akçe basıldı. Kalıcı enflasyon %15 azaldı ve halk memnun oldu.", interrupt=True)
+        return True
     
     def get_trade_route_bonus(self) -> float:
         """Aktif ticaret yollarından gelen bonus"""
@@ -328,14 +369,19 @@ class EconomySystem:
         """Tur sonunda ekonomiyi güncelle"""
         audio = get_audio_manager()
         
+        # Enflasyonu güncelle
+        self.calculate_inflation()
+        
         # Gelirleri hesapla
         self.income.tax = self.calculate_tax_income(population)
         self.income.trade = self.calculate_trade_income()
         self.income.tribute = 0  # Haraç şimdilik yok
         
-        # Giderleri hesapla
-        self.expense.military = int(military_count * 1.0 * self.expense_modifier)  # Asker başına 1 altın
-        self.expense.buildings = int(building_maintenance * self.expense_modifier)
+        # Giderleri hesapla (Enflasyon giderleri artırır)
+        inflation_multiplier = 1.0 + max(0, self.inflation_rate)
+        
+        self.expense.military = int(military_count * 1.0 * self.expense_modifier * inflation_multiplier)  # Asker başına 1 altın
+        self.expense.buildings = int(building_maintenance * self.expense_modifier * inflation_multiplier)
         self.expense.tribute_to_sultan = int(self.income.total * 0.02)  # %2 padişaha
         
         # Net değişim
@@ -428,6 +474,7 @@ class EconomySystem:
             'tax_rate': self.tax_rate,
             'trade_level': self.trade_level,
             'inflation_rate': self.inflation_rate,
+            'base_inflation': self.base_inflation,
             'active_trade_routes': self.active_trade_routes,
             'tax_modifier': self.tax_modifier,
             'trade_modifier': self.trade_modifier,
@@ -444,6 +491,7 @@ class EconomySystem:
         system.tax_modifier = data.get('tax_modifier', 1.0)
         system.trade_modifier = data.get('trade_modifier', 1.0)
         system.expense_modifier = data.get('expense_modifier', 1.0)
+        system.base_inflation = data.get('base_inflation', 0.0)
         
         # Yeni alanlar (eski kayıtlarla uyumluluk)
         if 'market' in data:

@@ -16,6 +16,9 @@ class ConstructionScreen(BaseScreen):
     def __init__(self, screen_manager):
         super().__init__(screen_manager)
         
+        # Olay eşleştirmesi
+        self._menu_mapping = []
+        
         # Paneller
         self.buildings_panel = Panel(20, 80, 450, 400, "Mevcut Binalar")
         self.queue_panel = Panel(490, 80, 380, 180, "İnşaat Kuyruğu")
@@ -58,6 +61,8 @@ class ConstructionScreen(BaseScreen):
     def _setup_build_menu(self):
         """İnşaat menüsünü ayarla"""
         self.build_menu.clear()
+        self._menu_mapping = []
+        
         gm = self.screen_manager.game_manager
         if not gm:
             return
@@ -100,6 +105,7 @@ class ConstructionScreen(BaseScreen):
                     f"İnşa: {prereq_marker}{stats.name_tr}",
                     lambda bt=building_type: self._build(bt)
                 )
+                self._menu_mapping.append(('build', building_type))
         
         # Yükseltilebilir binalar
         for building_type, building in con.buildings.items():
@@ -113,11 +119,13 @@ class ConstructionScreen(BaseScreen):
                     f"Yükselt: {stats.name_tr} ({level_name}){synergy_text}",
                     lambda bt=building_type: self._upgrade(bt)
                 )
+                self._menu_mapping.append(('upgrade', building_type))
             else:
                 self.build_menu.add_item(
                     f"Gir: {stats.name_tr} ({level_name} - MAX)",
                     lambda bt=building_type: self._open_building_interior(bt)
                 )
+                self._menu_mapping.append(('enter', building_type))
     
     def _update_panels(self):
         """Panelleri güncelle"""
@@ -223,23 +231,18 @@ class ConstructionScreen(BaseScreen):
         gm = self.screen_manager.game_manager
         if not gm:
             return False
-        
-        available = gm.construction.get_available_buildings()
-        # Tüm mevcut binalar - hem yükseltilebilir hem max seviye
-        existing_buildings = list(gm.construction.buildings.items())
-        
+            
         idx = self.build_menu.selected_index
-        
-        if idx < 0:
+        if idx < 0 or idx >= len(self._menu_mapping):
             return False
+            
+        action, building_type = self._menu_mapping[idx]
         
-        # Mevcut bina listesindeyse (available sonrası)
-        building_idx = idx - len(available)
-        if building_idx >= 0 and building_idx < len(existing_buildings):
-            building_type, building = existing_buildings[building_idx]
+        if action in ('upgrade', 'enter') and building_type in gm.construction.buildings:
+            building = gm.construction.buildings[building_type]
             self._open_building_interior(building_type, building.level)
             return True
-        
+            
         # Yeni bina inşaatı - Enter ile inşa etmeli (False döndür, menü halletsin)
         return False
     
@@ -248,34 +251,23 @@ class ConstructionScreen(BaseScreen):
         gm = self.screen_manager.game_manager
         if not gm:
             return
-        
-        # Mevcut binalar listesi
-        existing_buildings = list(gm.construction.buildings.keys())
-        
-        if self.build_menu.selected_index < 0:
+            
+        idx = self.build_menu.selected_index
+        if idx < 0 or idx >= len(self._menu_mapping):
             self.audio.speak("Önce bir bina seçin.", interrupt=True)
             return
+            
+        action, building_type = self._menu_mapping[idx]
+        stats = BUILDING_DEFINITIONS[building_type]
         
-        # Menüdeki seçili öğeyi bul
-        available = gm.construction.get_available_buildings()
-        upgradable = [(bt, b) for bt, b in gm.construction.buildings.items() 
-                      if b.level < b.get_stats().max_level]
-        
-        idx = self.build_menu.selected_index
-        
-        if idx < len(available):
-            # Yeni bina inşaatı
-            building_type = available[idx]
-            stats = BUILDING_DEFINITIONS[building_type]
+        if action == 'build':
             self.audio.speak(
                 f"{stats.name_tr} henüz inşa edilmemiş. "
                 f"İnşaat maliyeti: {stats.cost_gold} altın, {stats.cost_wood} kereste, {stats.cost_iron} demir.",
                 interrupt=True
             )
-        elif idx < len(available) + len(upgradable):
-            # Yükseltme
-            building_type, building = upgradable[idx - len(available)]
-            stats = BUILDING_DEFINITIONS[building_type]
+        elif action == 'upgrade' and building_type in gm.construction.buildings:
+            building = gm.construction.buildings[building_type]
             next_level = building.level + 1
             cost_mult = next_level * 0.5
             cost_gold = int(stats.cost_gold * cost_mult)
@@ -292,36 +284,19 @@ class ConstructionScreen(BaseScreen):
     
     def _enter_building(self):
         """Mevcut binaya gir - iç ekranı aç"""
-        gm = self.screen_manager.game_manager
-        if not gm:
-            return
-        
-        available = gm.construction.get_available_buildings()
-        upgradable = [(bt, b) for bt, b in gm.construction.buildings.items() 
-                      if b.level < b.get_stats().max_level]
-        
         idx = self.build_menu.selected_index
-        
-        if idx < 0:
+        if idx < 0 or idx >= len(self._menu_mapping):
             self.audio.speak("Önce bir bina seçin.", interrupt=True)
             return
-        
-        # Mevcut bina mı kontrol et
-        if idx >= len(available) and idx < len(available) + len(upgradable):
-            building_type, building = upgradable[idx - len(available)]
+            
+        action, building_type = self._menu_mapping[idx]
+        if action in ('upgrade', 'enter'):
+            gm = self.screen_manager.game_manager
+            building = gm.construction.buildings[building_type]
             self._open_building_interior(building_type, building.level)
-        elif idx < len(available):
-            self.audio.speak("Bu bina henüz inşa edilmemiş. Girmek için önce inşa edin.", interrupt=True)
         else:
-            # Mevcut binaları kontrol et
-            all_buildings = list(gm.construction.buildings.items())
-            building_idx = idx - len(available) - len(upgradable)
-            if building_idx >= 0 and building_idx < len(all_buildings):
-                building_type, building = all_buildings[building_idx]
-                self._open_building_interior(building_type, building.level)
-            else:
-                self.audio.speak("Bu öğede bir bina yok.", interrupt=True)
-    
+            self.audio.speak("Bu bina henüz inşa edilmemiş. Girmek için önce inşa edin.", interrupt=True)
+            
     def _open_building_interior(self, building_type, level):
         """Bina iç ekranını aç"""
         interior_screen = self.screen_manager.screens.get(ScreenType.BUILDING_INTERIOR)
@@ -331,31 +306,23 @@ class ConstructionScreen(BaseScreen):
     
     def _announce_selected_building_cost(self):
         """Seçili binanın maliyet ve seviye bilgisini duyur"""
-        if self.build_menu.selected_index < 0:
-            self.audio.speak("Önce bir bina seçin.", interrupt=True)
-            return
-        
         gm = self.screen_manager.game_manager
         if not gm:
             return
-        
-        # Mevcut menü öğesini belirle
-        available = gm.construction.get_available_buildings()
-        upgradable = [(bt, b) for bt, b in gm.construction.buildings.items() 
-                      if b.level < b.get_stats().max_level]
-        
+            
         idx = self.build_menu.selected_index
+        if idx < 0 or idx >= len(self._menu_mapping):
+            self.audio.speak("Önce bir bina seçin.", interrupt=True)
+            return
+            
+        action, building_type = self._menu_mapping[idx]
+        stats = BUILDING_DEFINITIONS[building_type]
         
-        if idx < len(available):
-            # Yeni bina inşaatı
-            building_type = available[idx]
-            stats = BUILDING_DEFINITIONS[building_type]
+        if action == 'build':
             self._announce_building_details(building_type, stats, 0, gm.construction)
-        elif idx < len(available) + len(upgradable):
-            # Yükseltme
-            bt, building = upgradable[idx - len(available)]
-            stats = building.get_stats()
-            self._announce_building_details(bt, stats, building.level, gm.construction)
+        else:
+            building = gm.construction.buildings[building_type]
+            self._announce_building_details(building_type, stats, building.level, gm.construction)
     
     def _announce_building_details(self, building_type, stats, current_level: int, con=None):
         """Bina detaylarını duyur - gelişmiş bilgilerle"""

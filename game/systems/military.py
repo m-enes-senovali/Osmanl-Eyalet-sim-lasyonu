@@ -429,9 +429,10 @@ class MilitarySystem:
         
         return True
     
-    def process_turn(self):
+    def process_turn(self) -> List[str]:
         """Tur sonunda eğitimleri işle"""
         completed = []
+        messages = []
         
         for item in self.training_queue:
             item.turns_remaining -= 1
@@ -442,13 +443,15 @@ class MilitarySystem:
         # Tamamlananları kaldır
         for item in completed:
             self.training_queue.remove(item)
-            audio = get_audio_manager()
             stats = UNIT_DEFINITIONS[item.unit_type]
-            audio.announce(f"{item.count} {stats.name_tr} eğitimini tamamladı!")
+            msg = f"{item.count} {stats.name_tr} eğitimini tamamladı!"
+            messages.append(msg)
         
         # Moral düzeltme
         if self.morale < 100:
             self.morale = min(100, self.morale + 5)
+            
+        return messages
     
     def fight_bandits(self) -> dict:
         """Eşkıya/isyan bastırma savaşı"""

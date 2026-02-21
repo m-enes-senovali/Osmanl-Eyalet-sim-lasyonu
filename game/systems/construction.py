@@ -1754,12 +1754,22 @@ class Building:
         return f"Seviye {self.level}"
     
     def get_unique_effect(self, effect_name: str) -> int:
-        """Binanın özel etkisini seviye bazlı döndür"""
+        """Binanın özel etkisini seviye bazlı ve modülleriyle birlikte döndür"""
         stats = self.get_stats()
+        total = 0
         if stats.unique_effects and effect_name in stats.unique_effects:
             base = stats.unique_effects[effect_name]
-            return int(base * (1 + (self.level - 1) * 0.3))  # Her seviye %30 artış
-        return 0
+            total += int(base * (1 + (self.level - 1) * 0.3))  # Her seviye %30 artış
+            
+        # Kurulu modüllerden gelen etkileri ekle
+        if stats.available_modules:
+            for module_id in self.installed_modules:
+                if module_id in stats.available_modules:
+                    mod_stats = stats.available_modules[module_id]
+                    if effect_name in mod_stats.effects:
+                        total += mod_stats.effects[effect_name]
+                        
+        return total
 
 
 @dataclass
@@ -2112,11 +2122,10 @@ class ConstructionSystem:
         
         if BuildingType.ROPEMAKER in self.buildings:
             building = self.buildings[BuildingType.ROPEMAKER]
-            level = building.level
-            # Halat Atölyesi: Halat, Katran ve Yelken Bezi üretir
-            production['rope'] = level * 10
-            production['tar'] = level * 5
-            production['sailcloth'] = level * 5
+            # Halat Atölyesi ve alt modüllerinden gelen üretimleri topla
+            production['rope'] = building.get_unique_effect('rope_production')
+            production['tar'] = building.get_unique_effect('tar_production')
+            production['sailcloth'] = building.get_unique_effect('sailcloth_production')
             
         return production
     
@@ -2204,14 +2213,18 @@ class ConstructionSystem:
         """Kayıt için dictionary'e dönüştür"""
         return {
             'buildings': {
-                k.value: {'level': v.level}
+                k.value: {
+                    'level': v.level,
+                    'installed_modules': getattr(v, 'installed_modules', [])
+                }
                 for k, v in self.buildings.items()
             },
             'construction_queue': [
                 {
                     'type': item.building_type.value,
                     'turns': item.turns_remaining,
-                    'is_upgrade': item.is_upgrade
+                    'is_upgrade': item.is_upgrade,
+                    'module_id': getattr(item, 'module_id', None)
                 }
                 for item in self.construction_queue
             ]
@@ -2225,7 +2238,9 @@ class ConstructionSystem:
         for k, v in data['buildings'].items():
             try:
                 bt = BuildingType(k)
-                system.buildings[bt] = Building(bt, level=v['level'])
+                building = Building(bt, level=v['level'])
+                building.installed_modules = v.get('installed_modules', [])
+                system.buildings[bt] = building
             except ValueError:
                 continue  # Bilinmeyen bina tipi (eski kayıt uyumluluğu)
         
@@ -2233,11 +2248,14 @@ class ConstructionSystem:
         for item in data.get('construction_queue', []):
             try:
                 bt = BuildingType(item['type'])
-                system.construction_queue.append(ConstructionQueue(
+                queue_item = ConstructionQueue(
                     bt,
                     item['turns'],
                     item.get('is_upgrade', False)
-                ))
+                )
+                if 'module_id' in item and item['module_id']:
+                    queue_item.module_id = item['module_id']
+                system.construction_queue.append(queue_item)
             except ValueError:
                 continue  # Bilinmeyen bina tipi
         

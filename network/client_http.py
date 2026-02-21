@@ -27,7 +27,7 @@ class HTTPNetworkClient:
         # Polling
         self._polling = False
         self._poll_thread = None
-        self._poll_interval = 1.0  # 1 saniye
+        self._poll_interval = 2.0  # 2 saniye (Rate limit dostu)
         
         # Callback'ler
         self.callbacks: Dict[str, Callable] = {}
@@ -178,6 +178,54 @@ class HTTPNetworkClient:
                     'current_player_id': new_room.get('current_player_id'),
                     'turn': new_room.get('current_turn')
                 })
+            if 'turn_ended' in self.callbacks:
+                self.callbacks['turn_ended']({
+                    'previous_player': old_room.get('current_player_id'),
+                    'current_player': new_room.get('current_player_id')
+                })
+        
+        # Sohbet mesajı var mı?
+        old_chat = old_room.get('chat', [])
+        new_chat = new_room.get('chat', [])
+        if len(new_chat) > len(old_chat):
+            for msg in new_chat[len(old_chat):]:
+                if 'chat_message' in self.callbacks:
+                    self.callbacks['chat_message'](msg)
+                    
+        # Diplomasi teklifleri
+        old_props = old_room.get('diplomacy', {}).get('pending_proposals', [])
+        new_props = new_room.get('diplomacy', {}).get('pending_proposals', [])
+        if len(new_props) > len(old_props):
+            for prop in new_props[len(old_props):]:
+                if prop.get('to_player_id') == self.player_id:
+                    if prop.get('type') == 'alliance' and 'alliance_proposal' in self.callbacks:
+                        self.callbacks['alliance_proposal'](prop)
+                    elif prop.get('type') == 'trade' and 'trade_proposal' in self.callbacks:
+                        self.callbacks['trade_proposal'](prop)
+        
+        # Savaş İlanları
+        old_wars = old_room.get('diplomacy', {}).get('wars', [])
+        new_wars = new_room.get('diplomacy', {}).get('wars', [])
+        if len(new_wars) > len(old_wars):
+            for war in new_wars[len(old_wars):]:
+                if 'war_declared' in self.callbacks:
+                    self.callbacks['war_declared'](war)
+                    
+        # İttifak Kuruldu
+        old_ally = old_room.get('diplomacy', {}).get('alliances', [])
+        new_ally = new_room.get('diplomacy', {}).get('alliances', [])
+        if len(new_ally) > len(old_ally):
+            for ally in new_ally[len(old_ally):]:
+                if 'alliance_formed' in self.callbacks:
+                    self.callbacks['alliance_formed'](ally)
+                    
+        # Ticaret Kuruldu
+        old_trade = old_room.get('diplomacy', {}).get('trade_deals', [])
+        new_trade = new_room.get('diplomacy', {}).get('trade_deals', [])
+        if len(new_trade) > len(old_trade):
+            for trade in new_trade[len(old_trade):]:
+                if 'trade_agreement_formed' in self.callbacks:
+                    self.callbacks['trade_agreement_formed'](trade)
     
     def get_pending_messages(self) -> list:
         """Uyumluluk için - HTTP'de mesaj kuyruğu yok"""

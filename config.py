@@ -114,8 +114,11 @@ def get_font(size: int):
     
     import pygame
     # Türkçe karakter destekli font sırası (Windows → cross-platform)
+    # Segoe UI, modern Windows'un varsayılan ve en estetik fontudur.
     turkish_fonts = [
-        "segoeui",       # Windows 10/11 varsayılan — en iyi Türkçe desteği
+        "segoeui",       # Windows 10/11 varsayılan — en iyi Türkçe desteği ve estetik
+        "corbel",        # Modern alternatif
+        "calibri",       # Başka bir temiz sans-serif
         "arial",         # Tüm Windows sürümlerinde mevcut
         "tahoma",        # Eski Windows uyumluluğu
         "verdana",       # Alternatif

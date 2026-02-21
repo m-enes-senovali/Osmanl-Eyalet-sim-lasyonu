@@ -207,32 +207,37 @@ class WarfareScreen(BaseScreen):
         
         self.action_menu.add_item(
             "<- Geri",
-            lambda: self._setup_action_menu()
+            lambda: self._setup_action_menu(),
+            shortcut="escape"
         )
         self.action_menu.add_item("", None)
         
         # Klasik kuşatma
         self.action_menu.add_item(
-            f"Klasik Kuşatma: {target} (1500 altın)",
-            lambda n=target: self._start_siege(n, "KLASIK")
+            f"1. Klasik Kuşatma: {target} (1500 altın)",
+            lambda n=target: self._start_siege(n, "KLASIK"),
+            shortcut="1"
         )
         
         # Vire = Yoğun hücum
         self.action_menu.add_item(
-            f"Vire (Yoğun Hücum): {target} (2000 altın, +%30 güç, +%20 kayıp)",
-            lambda n=target: self._start_siege(n, "VIRE")
+            f"2. Vire (Yoğun Hücum): {target} (2000 altın, +%30 güç, +%20 kayıp)",
+            lambda n=target: self._start_siege(n, "VIRE"),
+            shortcut="2"
         )
         
         # Lağım = Tünel kazma
         self.action_menu.add_item(
-            f"Lağım (Tünel): {target} (1800 altın, surları zayıflatır)",
-            lambda n=target: self._start_siege(n, "MINING")
+            f"3. Lağım (Tünel): {target} (1800 altın, surları zayıflatır)",
+            lambda n=target: self._start_siege(n, "MINING"),
+            shortcut="3"
         )
         
         # Metris = Sipere girme
         self.action_menu.add_item(
-            f"Metris (Siper): {target} (1600 altın, kayıp -%30)",
-            lambda n=target: self._start_siege(n, "TRENCHING")
+            f"4. Metris (Siper): {target} (1600 altın, kayıp -%30)",
+            lambda n=target: self._start_siege(n, "TRENCHING"),
+            shortcut="4"
         )
     
     def _start_siege(self, target: str, tactic: str = "KLASIK"):

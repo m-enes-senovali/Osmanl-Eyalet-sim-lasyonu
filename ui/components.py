@@ -121,31 +121,54 @@ class Button:
     
     def draw(self, surface: pygame.Surface):
         """Butonu çiz"""
-        # Renk seçimi
+        # Renk ve boyut (lift) seçimi
+        lift_y = 0
         if not self.enabled:
             bg_color = COLORS['button_disabled']
             text_color = (100, 100, 100)
+            lift_y = 0
         elif self.pressed:
             bg_color = COLORS['button_pressed']
             text_color = COLORS['text']
+            lift_y = 1
         elif self.hovered or self.focused:
             bg_color = COLORS['button_hover']
             text_color = COLORS['gold']
+            lift_y = -2
         else:
             bg_color = COLORS['button_normal']
             text_color = COLORS['text']
+            lift_y = 0
+            
+        # Çizim alanı (Aşağı/yukarı hareket efekti)
+        draw_rect = self.rect.copy()
+        draw_rect.y += lift_y
+        
+        # Gölge (Eğer engelli/basılı değilse)
+        if self.enabled and not self.pressed:
+            shadow_rect = self.rect.copy()
+            shadow_rect.y += 3  # Sabit gölge konumu
+            shadow_surface = pygame.Surface((shadow_rect.width, shadow_rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(shadow_surface, (0, 0, 0, 80), shadow_surface.get_rect(), border_radius=12)
+            surface.blit(shadow_surface, shadow_rect.topleft)
         
         # Arka plan
-        pygame.draw.rect(surface, bg_color, self.rect, border_radius=8)
+        pygame.draw.rect(surface, bg_color, draw_rect, border_radius=12)
         
         # Kenarlık
         border_color = COLORS['gold'] if (self.focused or self.hovered) else COLORS['panel_border']
-        pygame.draw.rect(surface, border_color, self.rect, width=2, border_radius=8)
+        pygame.draw.rect(surface, border_color, draw_rect, width=2, border_radius=12)
+        
+        # İç aydınlık efekti (Gloss)
+        inner_rect = draw_rect.inflate(-4, -4)
+        inner_surface = pygame.Surface((inner_rect.width, inner_rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(inner_surface, (255, 255, 255, 10), inner_surface.get_rect(), border_radius=10)
+        surface.blit(inner_surface, inner_rect.topleft)
         
         # Metin
         font = self.get_font()
         text_surface = font.render(self.text, True, text_color)
-        text_rect = text_surface.get_rect(center=self.rect.center)
+        text_rect = text_surface.get_rect(center=draw_rect.center)
         surface.blit(text_surface, text_rect)
         
         # Kısayol göstergesi
@@ -204,11 +227,17 @@ class Panel:
     
     def draw(self, surface: pygame.Surface):
         """Paneli çiz"""
-        # Arka plan
-        pygame.draw.rect(surface, COLORS['panel_bg'], self.rect, border_radius=10)
+        # Çok Katmanlı Yumuşak Gölge (Soft Shadow Overlay)
+        for offset, alpha in [(4, 40), (8, 20), (12, 10)]:
+            shadow_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(shadow_surface, (0, 0, 0, alpha), shadow_surface.get_rect(), border_radius=15)
+            surface.blit(shadow_surface, (self.rect.x + offset, self.rect.y + offset))
+
+        # Ana Arka plan
+        pygame.draw.rect(surface, COLORS['panel_bg'], self.rect, border_radius=12)
         
         # Kenarlık
-        pygame.draw.rect(surface, COLORS['panel_border'], self.rect, width=2, border_radius=10)
+        pygame.draw.rect(surface, COLORS['panel_border'], self.rect, width=2, border_radius=12)
         
         y_offset = 15
         
@@ -259,6 +288,7 @@ class ProgressBar:
         self.rect = pygame.Rect(x, y, width, height)
         self.label = label
         self.max_value = max_value
+        self.target_value = 0
         self.current_value = 0
         self.color = color or COLORS['success']
         self._font = None
@@ -269,8 +299,11 @@ class ProgressBar:
         return self._font
     
     def set_value(self, value: float):
-        """Değeri ayarla"""
-        self.current_value = max(0, min(self.max_value, value))
+        """Hedef değeri ayarla"""
+        self.target_value = max(0, min(self.max_value, value))
+        # Eğer ilk atamaysa direkt doldur
+        if self.current_value == 0 and self.target_value > 0:
+            self.current_value = self.target_value
     
     def get_percentage(self) -> float:
         """Yüzde değerini al"""
@@ -289,20 +322,41 @@ class ProgressBar:
     
     def draw(self, surface: pygame.Surface):
         """Çubuğu çiz"""
+        # Akıcı doluluk efekti (Lerp)
+        diff = self.target_value - self.current_value
+        if abs(diff) > 0.1:
+            self.current_value += diff * 0.1  # Yumuşak geçiş hızı
+        else:
+            self.current_value = self.target_value
+
         # Arka plan
-        pygame.draw.rect(surface, COLORS['panel_bg'], self.rect, border_radius=5)
+        pygame.draw.rect(surface, COLORS['panel_bg'], self.rect, border_radius=8)
+        
+        # İç alan gölgesi (İçeri gömük hissi)
+        inner_shadow = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(inner_shadow, (0, 0, 0, 40), inner_shadow.get_rect(), border_radius=8)
+        surface.blit(inner_shadow, self.rect.topleft)
         
         # Dolu kısım
         if self.current_value > 0:
-            fill_width = int((self.current_value / self.max_value) * self.rect.width)
+            fill_width = max(10, int((self.current_value / self.max_value) * self.rect.width)) # En az 10 piksel görünsün
             fill_rect = pygame.Rect(
                 self.rect.x, self.rect.y,
                 fill_width, self.rect.height
             )
-            pygame.draw.rect(surface, self.color, fill_rect, border_radius=5)
+            pygame.draw.rect(surface, self.color, fill_rect, border_radius=8)
+            
+            # Üst yarıya parlama efekti (Gloss/3D)
+            gloss_rect = pygame.Rect(
+                self.rect.x, self.rect.y,
+                fill_width, self.rect.height // 2
+            )
+            gloss_surface = pygame.Surface((gloss_rect.width, gloss_rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(gloss_surface, (255, 255, 255, 30), gloss_surface.get_rect(), border_top_left_radius=8, border_top_right_radius=8 if fill_width == self.rect.width else 0)
+            surface.blit(gloss_surface, gloss_rect.topleft)
         
         # Kenarlık
-        pygame.draw.rect(surface, COLORS['panel_border'], self.rect, width=2, border_radius=5)
+        pygame.draw.rect(surface, COLORS['panel_border'], self.rect, width=2, border_radius=8)
         
         # Yüzde metni
         font = self.get_font()
@@ -472,21 +526,48 @@ class MenuList:
         font = self.get_font()
         
         for i, (text, _, shortcut) in enumerate(self.items):
+            # Boş ayırıcıları farklı çiz
+            if text.strip() == "":
+                separator_y = self.y + i * self.item_height + self.item_height // 2
+                pygame.draw.line(
+                    surface, COLORS['panel_border'],
+                    (self.x + 20, separator_y),
+                    (self.x + self.width - 20, separator_y),
+                    2
+                )
+                continue
+            
+            is_selected = (i == self.selected_index)
+            lift_y = -2 if is_selected else 0
+            
             item_rect = pygame.Rect(
-                self.x, self.y + i * self.item_height,
-                self.width, self.item_height
+                self.x, self.y + i * self.item_height + lift_y,
+                self.width, self.item_height - 4
             )
             
+            # Seçili olmayan öğelere gölge
+            if not is_selected:
+                shadow_rect = item_rect.copy()
+                shadow_rect.y += 2
+                shadow_surface = pygame.Surface((shadow_rect.width, shadow_rect.height), pygame.SRCALPHA)
+                pygame.draw.rect(shadow_surface, (0, 0, 0, 40), shadow_surface.get_rect(), border_radius=10)
+                surface.blit(shadow_surface, shadow_rect.topleft)
+            
             # Seçili öğe arka planı
-            is_selected = (i == self.selected_index)
             if is_selected:
-                pygame.draw.rect(surface, COLORS['button_hover'], item_rect, border_radius=8)
-                pygame.draw.rect(surface, COLORS['gold'], item_rect, width=2, border_radius=8)
+                pygame.draw.rect(surface, COLORS['button_hover'], item_rect, border_radius=10)
+                pygame.draw.rect(surface, COLORS['gold'], item_rect, width=2, border_radius=10)
                 text_color = COLORS['gold']
             else:
-                pygame.draw.rect(surface, COLORS['button_normal'], item_rect, border_radius=8)
-                pygame.draw.rect(surface, COLORS['panel_border'], item_rect, width=1, border_radius=8)
+                pygame.draw.rect(surface, COLORS['button_normal'], item_rect, border_radius=10)
+                pygame.draw.rect(surface, COLORS['panel_border'], item_rect, width=1, border_radius=10)
                 text_color = COLORS['text']
+            
+            # İç Parlama effect (Gloss)
+            inner_rect = item_rect.inflate(-4, -4)
+            inner_surface = pygame.Surface((inner_rect.width, inner_rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(inner_surface, (255, 255, 255, 5), inner_surface.get_rect(), border_radius=8)
+            surface.blit(inner_surface, inner_rect.topleft)
             
             # Metin
             text_surface = font.render(text, True, text_color)

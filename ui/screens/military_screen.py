@@ -30,6 +30,17 @@ class MilitaryScreen(BaseScreen):
         )
         
         self._header_font = None
+        self._font = None
+        
+    def get_header_font(self):
+        if self._header_font is None:
+            self._header_font = get_font(FONTS['header'])
+        return self._header_font
+        
+    def get_font(self):
+        if self._font is None:
+            self._font = get_font(FONTS['body'])
+        return self._font
     
     def _setup_action_menu(self):
         """Hiyerarşik askeri menüyü ayarla"""
@@ -111,9 +122,15 @@ class MilitaryScreen(BaseScreen):
         self.action_menu.add_category("Eğitim Kuyruğu", training_items)
         
         # === 3. ORDU DURUMU ===
+        # Topçu sayısı
+        total_cannons = 0
+        if hasattr(gm, 'artillery'):
+            total_cannons = len(gm.artillery.cannons)
+            
         durum_items = [
             {'text': f"Toplam Asker: {mil.get_total_soldiers()}", 'callback': None},
-            {'text': f"Toplam Güç: {mil.get_total_power()}", 'callback': None},
+            {'text': f"Toplam Top: {total_cannons}", 'callback': None},
+            {'text': f"Toplam Askeri Güç: {mil.get_total_power()}", 'callback': None},
             {'text': f"Bakım Maliyeti: {mil.get_maintenance_cost()} altın/tur", 'callback': None},
             {'text': '', 'is_separator': True},
             {'text': f"Moral: %{mil.morale}", 'callback': None},

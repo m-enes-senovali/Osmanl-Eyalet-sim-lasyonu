@@ -55,6 +55,23 @@ class BaseScreen:
         self.screen_manager = screen_manager
         self.audio = get_audio_manager()
         self.initialized = False
+        
+        # Font önbellekleri (Tüm alt ekranlar için ortak)
+        from config import FONTS, get_font
+        self._header_font = None
+        self._body_font = None
+        
+    def get_header_font(self):
+        if self._header_font is None:
+            from config import FONTS, get_font
+            self._header_font = get_font(FONTS['header'])
+        return self._header_font
+        
+    def get_font(self):
+        if self._body_font is None:
+            from config import FONTS, get_font
+            self._body_font = get_font(FONTS['body'])
+        return self._body_font
     
     def on_enter(self):
         """Ekrana girişte çağrılır"""
@@ -93,6 +110,13 @@ class ScreenManager:
         self.audio = get_audio_manager()
         self.music = get_music_manager()
         
+        # Ekran geçişi (Fade) değişkenleri
+        self.fade_alpha = 0
+        self.fade_state = None  # None, "out" (kararma), "in" (aydınlanma)
+        self.fade_speed = 1200  # alpha per second (0-255 scaling). 1200 means full fade out/in takes ~0.2s total
+        self.target_screen_type = None
+        self.target_announce = False
+        
         # Multiplayer mod flag - alt ekranların geri dönüşünü belirler
         self.is_multiplayer_mode = False
     
@@ -101,15 +125,26 @@ class ScreenManager:
         self.screens[screen_type] = screen
     
     def change_screen(self, screen_type: ScreenType, announce: bool = True):
-        """Ekran değiştir"""
+        """Ekran değiştir (Fade ile)"""
         if screen_type not in self.screens:
             print(f"Ekran bulunamadı: {screen_type}")
             return
+            
+        # Eğer zaten bir geçiş varsa iptal et, hemen geç (veya sıraya al)
+        if self.fade_state is not None:
+            self._execute_screen_change(self.target_screen_type, self.target_announce)
+            
+        self.target_screen_type = screen_type
+        self.target_announce = announce
+        self.fade_state = "out"
+        self.fade_alpha = 0
         
+    def _execute_screen_change(self, screen_type: ScreenType, announce: bool):
+        """Gerçek ekran değişimini uygula"""
         # Önceki ekrandan çık
         if self.current_screen:
             self.current_screen.on_exit()
-            # Ambiyans sesini durdur (yeni ekran kendi ambiyansını başlatır)
+            # Ambiyans sesini durdur
             self.audio.stop_ambient()
         
         self.previous_screen_type = self.current_screen_type
@@ -137,14 +172,35 @@ class ScreenManager:
         return False
     
     def update(self, dt: float):
-        """Aktif ekranı güncelle"""
+        """Aktif ekranı ve geçiş efeklerini güncelle"""
+        # Fade güncellemeleri
+        if self.fade_state == "out":
+            self.fade_alpha += self.fade_speed * dt
+            if self.fade_alpha >= 255:
+                self.fade_alpha = 255
+                self._execute_screen_change(self.target_screen_type, self.target_announce)
+                self.fade_state = "in"
+        elif self.fade_state == "in":
+            self.fade_alpha -= self.fade_speed * dt
+            if self.fade_alpha <= 0:
+                self.fade_alpha = 0
+                self.fade_state = None
+                
+        # Aktif ekran güncellemeleri
         if self.current_screen:
             self.current_screen.update(dt)
     
     def draw(self, surface: pygame.Surface):
-        """Aktif ekranı çiz"""
+        """Aktif ekranı ve fade overlay'i çiz"""
         # Arka plan
         surface.fill(COLORS['background'])
         
         if self.current_screen:
             self.current_screen.draw(surface)
+            
+        # Karartma (Fade) Overlay
+        if self.fade_state is not None and self.fade_alpha > 0:
+            fade_surface = pygame.Surface(surface.get_size())
+            fade_surface.fill((0, 0, 0))
+            fade_surface.set_alpha(int(self.fade_alpha))
+            surface.blit(fade_surface, (0, 0))
