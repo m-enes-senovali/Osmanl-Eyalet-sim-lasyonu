@@ -219,9 +219,9 @@ class ConstructionScreen(BaseScreen):
                 self._announce_historical_info()
                 return True
             
-            # Tab - Seçili binanın yükseltme maliyetini duyur
+            # Tab - Seçili binanın tüm detaylarını (maliyet, özellik vb.) duyur
             if event.key == pygame.K_TAB:
-                self._announce_upgrade_cost()
+                self._announce_selected_building_cost()
                 return True
         
         return False
@@ -592,7 +592,7 @@ class ConstructionScreen(BaseScreen):
             surface.blit(names, (rect.x + 20, rect.y + 95))
         
         # Kısayollar
-        keys = small_font.render("B: Detay | H: Tarih | Tab: Yükseltme | I: Tüm binalar", True, COLORS.get('text_dim', (150,150,150)))
+        keys = small_font.render("Tab/B: Tüm Detaylar | H: Tarih | I: Fiyat Listesi", True, COLORS.get('text_dim', (150,150,150)))
         surface.blit(keys, (rect.x + 20, rect.y + 115))
     
     def _build(self, building_type: BuildingType):

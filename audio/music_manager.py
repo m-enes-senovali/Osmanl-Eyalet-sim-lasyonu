@@ -154,7 +154,7 @@ class MusicManager:
         
         if not music_file:
             # Dosya yoksa, mevcut en uygun alternatifi kullan
-            if context in (MusicContext.TENSE, MusicContext.DIPLOMACY, MusicContext.VICTORY):
+            if context in (MusicContext.TENSE, MusicContext.DIPLOMACY, MusicContext.VICTORY, MusicContext.BATTLE):
                 # Alternatif olarak ambient kullan
                 music_file = self.get_music_for_context(MusicContext.AMBIENT)
             elif context == MusicContext.MENU:

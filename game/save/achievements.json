@@ -11,16 +11,16 @@
     "raids_completed": 0,
     "rebellions_crushed": 0,
     "defense_victories": 0,
-    "turns_played": 2,
-    "turns_without_war": 2,
+    "turns_played": 4,
+    "turns_without_war": 4,
     "turns_without_tax": 0
   },
   "achievements": {
     "treasury_master": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 27.883999999999997,
-      "current_value": 27884
+      "progress": 23.883,
+      "current_value": 23883
     },
     "trade_emperor": {
       "unlocked": false,
@@ -115,14 +115,14 @@
     "peoples_sultan": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 15.299999999999999,
-      "current_value": 15300
+      "progress": 16.963,
+      "current_value": 16963
     },
     "millet_father": {
-      "unlocked": false,
-      "unlock_date": null,
-      "progress": 0.0,
-      "current_value": 0
+      "unlocked": true,
+      "unlock_date": "2026-02-22 06:19",
+      "progress": 100.0,
+      "current_value": 1
     },
     "religious_leader": {
       "unlocked": false,
@@ -151,14 +151,14 @@
     "survivor": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 2.0,
-      "current_value": 2
+      "progress": 4.0,
+      "current_value": 4
     },
     "pacifist": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 4.0,
-      "current_value": 2
+      "progress": 8.0,
+      "current_value": 4
     },
     "generous": {
       "unlocked": false,

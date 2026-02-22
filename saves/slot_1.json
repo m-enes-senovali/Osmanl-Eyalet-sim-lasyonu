@@ -6,10 +6,10 @@
     "name": "enes",
     "gender": "male",
     "birth_year": 1490,
-    "prestige": 55,
-    "experience": 10,
+    "prestige": 70,
+    "experience": 40,
     "background": "default",
-    "turns_as_governor": 28
+    "turns_as_governor": 88
   },
   "province": {
     "name": "Teke Sancağı",
@@ -19,20 +19,20 @@
   },
   "time": {
     "year": 1520,
-    "month": 1,
-    "day": 29,
-    "turn": 28
+    "month": 3,
+    "day": 30,
+    "turn": 88
   },
   "economy": {
     "resources": {
-      "gold": 35028,
-      "food": 49541,
-      "wood": 8743,
-      "iron": 6649,
-      "stone": 995,
-      "rope": 500,
-      "tar": 300,
-      "sailcloth": 200
+      "gold": 56625,
+      "food": 215849,
+      "wood": 39387,
+      "iron": 31233,
+      "stone": 2795,
+      "rope": 420,
+      "tar": 250,
+      "sailcloth": 170
     },
     "market": {
       "grain_price": 20.0,
@@ -44,24 +44,24 @@
     },
     "tax_rate": 0.2,
     "trade_level": 1,
-    "inflation_rate": 0.4294733333333333,
+    "inflation_rate": 0.56476,
     "base_inflation": 0.3,
     "active_trade_routes": [
       "black_sea"
     ],
     "tax_modifier": 1.0,
-    "trade_modifier": 0.914,
+    "trade_modifier": 2.275,
     "expense_modifier": 1.0
   },
   "military": {
     "units": {
-      "yenicheri": 30,
+      "yenicheri": 69,
       "kapikulu_sipahi": 20,
-      "topcu": 5,
+      "topcu": 2,
       "cebeci": 10,
-      "timarli_sipahi": 50,
-      "akinci": 25,
-      "azap": 80,
+      "timarli_sipahi": 39,
+      "akinci": 125,
+      "azap": 119,
       "kadirga": 0,
       "bastarda": 0,
       "mavna": 0,
@@ -69,7 +69,7 @@
     },
     "training_queue": [],
     "morale": 100,
-    "experience": 0,
+    "experience": 20,
     "at_war": false,
     "total_losses": 0,
     "total_victories": 0,
@@ -77,15 +77,34 @@
     "available_timars": 50,
     "has_port": false,
     "port_level": 0,
-    "commanders": []
+    "commanders": [
+      {
+        "id": "8793efcc",
+        "name": "Rüstem Ağa",
+        "trait": "lojistikci",
+        "level": 1,
+        "experience": 0,
+        "assigned": false
+      },
+      {
+        "id": "7dbb58b8",
+        "name": "Sinan Bey",
+        "trait": "taktisyen",
+        "level": 1,
+        "experience": 0,
+        "assigned": false
+      }
+    ],
+    "assigned_commander_id": null,
+    "garrison_commander_id": null
   },
   "population": {
     "population": {
-      "farmers": 9738,
-      "merchants": 3274,
-      "artisans": 2448,
-      "soldiers": 808,
-      "scholars": 200
+      "farmers": 23907,
+      "merchants": 7979,
+      "artisans": 5866,
+      "soldiers": 1962,
+      "scholars": 300
     },
     "happiness": 75,
     "health": 80,
@@ -96,38 +115,59 @@
       "Tağşiş": -15
     },
     "growth_rate": 0.02,
-    "migration_policy": "selective",
+    "migration_policy": "restricted",
     "education_level": 1
   },
   "construction": {
     "buildings": {
       "mosque": {
-        "level": 1
+        "level": 1,
+        "installed_modules": []
       },
       "farm": {
-        "level": 1
+        "level": 1,
+        "installed_modules": []
       },
       "bakery": {
-        "level": 3
+        "level": 3,
+        "installed_modules": []
       },
       "soup_kitchen": {
-        "level": 3
+        "level": 3,
+        "installed_modules": []
       },
       "medrese": {
-        "level": 1
+        "level": 1,
+        "installed_modules": []
+      },
+      "market": {
+        "level": 1,
+        "installed_modules": []
+      },
+      "caravanserai": {
+        "level": 1,
+        "installed_modules": []
+      },
+      "quarry": {
+        "level": 1,
+        "installed_modules": []
+      },
+      "lumber_mill": {
+        "level": 1,
+        "installed_modules": []
       }
     },
     "construction_queue": []
   },
   "diplomacy": {
-    "sultan_loyalty": 62,
-    "sultan_favor": 2,
+    "sultan_loyalty": 38,
+    "sultan_favor": 0,
     "sadrazam_relation": 65,
     "basdefterdar_relation": 50,
     "neighbors": {
       "Hamid Sancağı": {
-        "value": 70,
-        "type": "neutral",
+        "value": 60,
+        "type": "allied",
         "personality": "honorable"
       },
       "Karaman Eyaleti": {
@@ -136,8 +176,8 @@
         "personality": "aggressive"
       },
       "Kıbrıs": {
-        "value": 0,
-        "type": "neutral",
+        "value": 62,
+        "type": "friendly",
         "personality": "pious"
       },
       "Menteşe Sancağı": {
@@ -146,14 +186,69 @@
         "personality": "aggressive"
       }
     },
-    "active_missions": [],
+    "active_missions": [
+      {
+        "type": "tribute",
+        "title": "Haraç Talebi",
+        "description": "Padişah hazineye 2000 altın katkı bekliyor",
+        "target": 2000,
+        "reward_loyalty": 15,
+        "turns_remaining": 3
+      }
+    ],
     "envoy_cooldown": 0,
-    "vassals": [],
-    "marriage_alliances": [],
-    "prestige": 100,
-    "prestige_history": [],
+    "vassals": [
+      {
+        "name": "Hamid Sancağı",
+        "tribute": 500,
+        "loyalty": 60,
+        "autonomy": 80,
+        "military_support": 100,
+        "from_chain": true
+      }
+    ],
+    "marriage_alliances": [
+      {
+        "partner": "Kıbrıs",
+        "turns_active": 22,
+        "relation_bonus": 30,
+        "yearly_gift": 1000,
+        "from_chain": true
+      }
+    ],
+    "prestige": 380,
+    "prestige_history": [
+      {
+        "amount": 10,
+        "reason": "Kıbrıs'e evlilik teklifi",
+        "new_total": 110
+      },
+      {
+        "amount": 25,
+        "reason": "İsyan Bastır görevi tamamlandı",
+        "new_total": 135
+      },
+      {
+        "amount": 75,
+        "reason": "Kıbrıs ile hanedan evliliği",
+        "new_total": 210
+      },
+      {
+        "amount": 20,
+        "reason": "Hamid Sancağı'e ultimatom",
+        "new_total": 230
+      },
+      {
+        "amount": 150,
+        "reason": "Hamid Sancağı'ı vassallaştırdınız",
+        "new_total": 380
+      }
+    ],
     "event_chains": [],
-    "completed_chains": [],
+    "completed_chains": [
+      "marriage_Kıbrıs_0",
+      "vassal_Hamid Sancağı_0"
+    ],
     "relationship_momentum": []
   },
   "events": {
@@ -171,8 +266,16 @@
   },
   "warfare": {
     "war_weariness": 0,
-    "battle_counter": 0,
-    "war_history": [],
+    "battle_counter": 3,
+    "war_history": [
+      {
+        "target": "Karaman Eyaleti",
+        "type": "raid",
+        "victory": true,
+        "terrain": "plains",
+        "weather": "rain"
+      }
+    ],
     "player_tactic_history": []
   },
   "trade": {
@@ -243,100 +346,117 @@
       {
         "name": "Satılmış",
         "type": "farmer",
-        "skill": 2,
+        "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Dursun",
         "type": "farmer",
-        "skill": 2,
+        "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Durmuş",
         "type": "farmer",
-        "skill": 2,
+        "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Tanrıverdi",
         "type": "farmer",
-        "skill": 2,
+        "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Veli",
         "type": "miner",
-        "skill": 2,
+        "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Budak",
         "type": "miner",
-        "skill": 2,
+        "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Korkut",
         "type": "lumberjack",
-        "skill": 2,
+        "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Turgut",
         "type": "lumberjack",
-        "skill": 2,
+        "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Timurtaş",
         "type": "craftsman",
-        "skill": 2,
+        "skill": 5,
         "task": "construction",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
       },
       {
         "name": "Gündüz",
         "type": "merchant",
-        "skill": 2,
+        "skill": 5,
         "task": "trading",
         "efficiency": 1.5,
-        "turns": 28,
-        "experience": 28
+        "turns": 1252,
+        "experience": 100
+      },
+      {
+        "name": "ekrem",
+        "type": "envoy",
+        "skill": 2,
+        "task": "idle",
+        "efficiency": 1.5,
+        "turns": 373,
+        "experience": 0
       }
     ],
     "name_index": 10
   },
   "naval": {
-    "ships": [],
+    "ships": [
+      {
+        "ship_id": "ship_1",
+        "ship_type": "kadirga",
+        "name": "Kadırga #1",
+        "health": 100,
+        "experience": 0
+      }
+    ],
     "construction_queue": [],
-    "total_ships_built": 0,
+    "total_ships_built": 1,
     "naval_victories": 0,
     "naval_defeats": 0,
     "ships_lost": 0
@@ -363,6 +483,17 @@
         "name": "Ferhad Bey",
         "skill": 5,
         "experience": 10,
+        "location": "rodos",
+        "status": "captured",
+        "current_mission": "mission_2",
+        "turns_remaining": 0
+      },
+      {
+        "spy_id": "spy_2",
+        "spy_type": "cavus",
+        "name": "Hasan Efendi",
+        "skill": 6,
+        "experience": 0,
         "location": "home",
         "status": "idle",
         "current_mission": null,
@@ -370,14 +501,14 @@
       }
     ],
     "active_missions": [],
-    "spy_counter": 1,
-    "mission_counter": 1,
+    "spy_counter": 2,
+    "mission_counter": 2,
     "intelligence_level": 0,
-    "security_level": 22,
+    "security_level": 0,
     "known_enemy_spies": 0,
     "successful_missions": 1,
-    "failed_missions": 0,
-    "spies_lost": 0
+    "failed_missions": 1,
+    "spies_lost": 1
   },
   "religion": {
     "millet_states": {
@@ -388,25 +519,25 @@
         "autonomy": 0
       },
       "rum": {
-        "loyalty": 78,
+        "loyalty": 100,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "ermeni": {
-        "loyalty": 88,
+        "loyalty": 100,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "yahudi": {
-        "loyalty": 98,
+        "loyalty": 100,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
       },
       "suryani": {
-        "loyalty": 83,
+        "loyalty": 100,
         "population": 0,
         "unrest": 0,
         "autonomy": 30
@@ -424,9 +555,20 @@
     "kizilbas_suppressed": false,
     "has_seyhulislam": true,
     "conversions": 0,
-    "rebellions_suppressed": 0
+    "rebellions_suppressed": 0,
+    "fetva_issued_this_turn": false
   },
+  "guilds": {},
+  "achievements": {},
   "history": {
-    "entries": []
+    "entries": [
+      {
+        "turn": 42,
+        "year": 1520,
+        "message": "SAVAŞ SONUCU: ZAFER! Karaman Eyaleti. Yağma: 1399 altın.",
+        "category": "military",
+        "real_time": 1771733516.0808766
+      }
+    ]
   }
 }

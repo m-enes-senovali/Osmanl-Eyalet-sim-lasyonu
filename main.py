@@ -285,23 +285,8 @@ class Game:
             cat_path = os.path.join(base_path, 'audio', 'sounds', cat)
             self.audio.load_sounds_from_directory(cat_path, prefix=f'{cat}_')
         
-        # Müzik
-        music_path = os.path.join(base_path, 'audio', 'sounds', 'music')
-        if os.path.exists(music_path):
-            music_files = [f for f in os.listdir(music_path) 
-                          if f.endswith(('.ogg', '.mp3', '.wav'))]
-            
-            # Müzik dosyalarını isim->yol olarak kaydet
-            for music_file in music_files:
-                name = os.path.splitext(music_file)[0]  # örn: "battle.ogg" -> "battle"
-                full_path = os.path.join(music_path, music_file)
-                self.audio.music_paths[name] = full_path
-            
-            # Varsayılan müziği başlat (ambient veya ilk dosya)
-            if 'ambient' in self.audio.music_paths:
-                self.audio.play_music('background')
-            elif music_files:
-                self.audio.play_music(os.path.join(music_path, music_files[0]))
+        # Müzik yüklemesi ve yönetimi artık tamamen MusicManager (ScreenManager üzerinden) 
+        # tarafından bağlam-duyarlı (context-aware) olarak yapılmaktadır.
     
     def run(self):
         """Ana oyun döngüsü"""

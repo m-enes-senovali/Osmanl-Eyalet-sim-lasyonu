@@ -8,8 +8,10 @@ Akın, kuşatma, savunma ve sefer mekanikleri
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
+from enum import Enum
 import random
 from audio.audio_manager import get_audio_manager
+from game.systems.military import Commander, CommanderTrait
 
 
 # ============================================================
@@ -311,6 +313,7 @@ class Army:
     morale: int = 100        # Moral (0-100)
     experience: int = 0      # Deneyim (0-100)
     ammo: int = 100          # Mühimmat (yeni)
+    commander: Optional[Commander] = None # Ordu Komutanı
     
     # Özel yetenek bekleme süreleri
     ability_cooldowns: Dict[SpecialAbilityType, int] = field(default_factory=dict)
@@ -801,7 +804,8 @@ class WarfareSystem:
                 cavalry=military_system.cavalry,
                 artillery=military_system.artillery_crew,
                 morale=min(100, military_system.morale + bonus_morale),
-                experience=min(100, military_system.experience + bonus_exp)
+                experience=min(100, military_system.experience + bonus_exp),
+                commander=military_system.assigned_commander
             ),
             defender_army=Army(
                 infantry=random.randint(50, 200),
@@ -862,7 +866,8 @@ class WarfareSystem:
                 artillery=military_system.artillery_crew,
                 morale=military_system.morale,
                 experience=military_system.experience,
-                ammo=100
+                ammo=100,
+                commander=military_system.assigned_commander
             ),
             defender_army=Army(
                 infantry=random.randint(200, 500),
@@ -1125,20 +1130,18 @@ class WarfareSystem:
             # RaidStory formatına uygun veri
             encounter_types = ['resistance', 'ambush', 'surrender', 'fortified', 'chase']
             
-            # Çeşitli bölgelerden düşman komutan isimleri
+            # Eyalet ölçeğine uygun, gerçekçi jenerik yerel düşman komutanları
             commanders = [
-                # Türk/Osmanlı rakipleri
-                'Karaca Bey', 'Hasan Paşa', 'Yusuf Ağa', 'Mehmed Reis', 'Ali Voyvoda',
-                # Balkan/Slav komutanları
-                'Dimitri Voyvoda', 'Ivan Kaptan', 'Stefan Bey', 'Nikola Kaptan', 'Miloş Voyvoda',
-                # Macar komutanları
-                'Janos Kapitan', 'Istvan Vayvoda', 'Matyas Bey', 'Lajos Aga',
-                # Venedik/İtalyan komutanları
-                'Marco Capitano', 'Giovanni Comandante', 'Antonio Signore',
-                # Safevi/İran komutanları
-                'Abbas Han', 'Tahmasb Bey', 'Rüstem Mirza',
-                # Memlük/Arap komutanları
-                'Emir Halid', 'Şeyh Ahmed', 'Sultan Baybars'
+                # İsyancılar ve Eşkıyalar
+                'Kızılca Ali', 'Deli Hasan', 'Kör Hüseyin', 'Softa Halil', 'Softa Mustafa',
+                # Balkan/Macar/Hırvat sınır beyleri
+                'István Kaptan', 'Farkas Vayvoda', 'Petar Hırvat', 'Mihail Voyvoda', 'Nikolas Kaptan',
+                # Venedik/İtalyan/Şövalye denizcileri veya paralı askerleri
+                'Capitano Marco', 'Conte Giovanni', 'Sir Pietro', 'Kaptan Andrea',
+                # Safevi/İran sınır komutanları
+                'Şahkulu Han', 'Hüseyin Mirza', 'Ali Kuli Han', 'Rıza Bey', 'Mahmud Han',
+                # Memlük/Arap yerel emirleri
+                'Emir Seyfeddin', 'Şeyh Mahmud', 'Mansur Bey', 'Emir Tarık'
             ]
             
             self.pending_raid_report = {

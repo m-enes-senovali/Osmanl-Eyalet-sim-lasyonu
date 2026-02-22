@@ -10,6 +10,52 @@ from enum import Enum
 from audio.audio_manager import get_audio_manager
 
 
+class CommanderTrait(Enum):
+    """Komutan yetenekleri"""
+    SIEGE_MASTER = "kusatmaci"     # Surlara +X hasar
+    LOGISTICIAN = "lojistikci"     # Kuşatmada erzak tasarrufu
+    AGGRESSOR = "serdengecti"      # Hücumda bonus hasar, fazla kayıp
+    TACTICIAN = "taktisyen"        # Taş-Kağıt-Makas matrisinde bonus
+    DEFENDER = "savunmaci"         # Savunma (Tabur Cengi) hasarını artırır
+
+@dataclass
+class Commander:
+    """Ordu Komutanı (Paşa/Bey)"""
+    id: str
+    name: str                      # Örn: "Gazi Evrenos Bey"
+    trait: CommanderTrait
+    level: int = 1
+    experience: int = 0
+    assigned: bool = False
+    
+    def gain_exp(self, amount: int):
+        self.experience += amount
+        if self.experience >= self.level * 100:
+            self.experience -= self.level * 100
+            self.level += 1
+            
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'trait': self.trait.value,
+            'level': self.level,
+            'experience': self.experience,
+            'assigned': self.assigned
+        }
+        
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            id=data['id'],
+            name=data['name'],
+            trait=CommanderTrait(data['trait']),
+            level=data['level'],
+            experience=data['experience'],
+            assigned=data['assigned']
+        )
+
+
 class MilitaryClass(Enum):
     """Askeri sınıf (1520 Osmanlı ordu yapısı)"""
     KAPIKULU = "kapikulu"    # Merkezi ordu - Padişaha bağlı
@@ -287,7 +333,31 @@ class MilitarySystem:
         self.port_level = 0
         
         # YENİ: Komutanlar
-        self.commanders: List[Dict] = []
+        self.commanders: List[Commander] = []
+        self.assigned_commander: Optional[Commander] = None  # Aktif sefere çıkan ordunun paşası
+        self.garrison_commander: Optional[Commander] = None  # Başkenti savunan paşa
+        
+        # Oyun başında rastgele 1-2 komutan verelim
+        self._generate_initial_commanders()
+    
+    def _generate_initial_commanders(self):
+        import uuid
+        import random
+        
+        # Eyalet komutanları (Sancakbeyi, Alaybeyi, Subaşı gibi jenerik ama döneme uygun isimler)
+        names = [
+            "Mustafa Bey", "Kasım Ağa", "Hızır Bey", "İskender Paşa", 
+            "Ali Ağa", "Sinan Bey", "Murad Paşa", "Rüstem Ağa", 
+            "Hüseyin Paşa", "Oruç Bey", "Hasan Ağa", "Süleyman Paşa", "Ferhad Paşa"
+        ]
+        traits = list(CommanderTrait)
+        
+        for _ in range(2):
+            self.commanders.append(Commander(
+                id=str(uuid.uuid4())[:8],
+                name=random.choice(names),
+                trait=random.choice(traits)
+            ))
     
     def get_total_soldiers(self) -> int:
         """Toplam asker sayısı (donanma hariç)"""
@@ -579,7 +649,9 @@ class MilitarySystem:
             'available_timars': self.available_timars,
             'has_port': self.has_port,
             'port_level': self.port_level,
-            'commanders': self.commanders,
+            'commanders': [c.to_dict() for c in self.commanders],
+            'assigned_commander_id': self.assigned_commander.id if self.assigned_commander else None,
+            'garrison_commander_id': self.garrison_commander.id if self.garrison_commander else None,
         }
     
     @classmethod
@@ -614,7 +686,31 @@ class MilitarySystem:
         system.available_timars = data.get('available_timars', 50)
         system.has_port = data.get('has_port', False)
         system.port_level = data.get('port_level', 0)
-        system.commanders = data.get('commanders', [])
+        
+        # Komutanları Yükle
+        system.commanders = []
+        if 'commanders' in data:
+            if data['commanders'] and isinstance(data['commanders'][0], dict):
+                system.commanders = [Commander.from_dict(c) for c in data['commanders']]
+            else:
+                # Fallback for old saves with empty dict list
+                system._generate_initial_commanders()
+                
+        # Atananları bağla
+        assigned_id = data.get('assigned_commander_id')
+        garrison_id = data.get('garrison_commander_id')
+        
+        if assigned_id:
+            for c in system.commanders:
+                if c.id == assigned_id:
+                    system.assigned_commander = c
+                    break
+                    
+        if garrison_id:
+            for c in system.commanders:
+                if c.id == garrison_id:
+                    system.garrison_commander = c
+                    break
         
         return system
 

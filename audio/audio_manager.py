@@ -136,6 +136,40 @@ class AudioManager:
             sound = self.sounds[sound_name]
             sound.set_volume(volume if volume is not None else self.sfx_volume)
             sound.play()
+            
+    def play_game_sound_panned(self, category: str, name: str, pan: float = 0.0, volume: float = None):
+        """
+        Oyun sesini stereo lokasyon (pan) belirterek çal. (Fake 3D Audio)
+        pan: -1.0 (Tam Sol) ile 1.0 (Tam Sağ) arasında bir değer. 0.0 Merkezdir.
+        """
+        if not self.mixer_available:
+            return
+            
+        sound_name = f"{category}_{name}"
+        if sound_name in self.sounds:
+            sound = self.sounds[sound_name]
+            # Müsait boş bir kanal bul
+            channel = pygame.mixer.find_channel()
+            if channel:
+                base_vol = volume if volume is not None else self.sfx_volume
+                
+                # Pan matrisi (Stereo Panning)
+                # pan -1 ise (left=1.0, right=0.0)
+                # pan 1 ise  (left=0.0, right=1.0)
+                # pan 0 ise  (left=1.0, right=1.0) -> Ortadan (Mono) 
+                
+                # Pan'ı -1 ile 1 arasında sınırla
+                pan = max(-1.0, min(1.0, pan))
+                
+                left_vol = base_vol * min(1.0, 1.0 - pan)
+                right_vol = base_vol * min(1.0, 1.0 + pan)
+                
+                channel.set_volume(left_vol, right_vol)
+                channel.play(sound)
+            else:
+                # Boş kanal yoksa direk çal (merkezden)
+                sound.set_volume(volume if volume is not None else self.sfx_volume)
+                sound.play()
     
     def play_ambient(self, name: str, volume: float = None):
         """

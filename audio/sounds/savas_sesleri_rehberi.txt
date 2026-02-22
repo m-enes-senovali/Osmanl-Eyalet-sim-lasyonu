@@ -1,0 +1,36 @@
+SAVAŞ SİSTEMİ İÇİN GEREKLİ SES VE MÜZİK DOSYALARI LİSTESİ
+======================================================
+Yeni eklediğimiz stereo (uzamsal) ses sistemi ve dinamik savaş müzikleri için aşağıdaki isimlerde ses dosyalarına (Ogg, Wav veya Mp3 formatında) ihtiyacımız var. 
+
+Lütfen bulduğunuz ses efektlerini ve müzikleri, yanlarında belirtilen klasörlerin içine, tam olarak belirtilen isimlerle kaydedin.
+
+1. SAVAŞ EFEKTLERİ (Klasör: audio/sounds/military/)
+------------------------------------------------------
+Bu klasör yoksa oluşturun. Dosya isimlerinin başında "military_" OLMAMALIDIR, oyun motoru "military" klasöründeki dosyanın adını otomatik birleştirir. Sadece aşağıdaki isimleri kullanın:
+
+[ ] sword_clash.ogg  -> (Kılıç, kalkan çarpışma sesleri. Merkez ve Kanat hücumlarında çalınır, stereo destekler.)
+[ ] cannon.ogg       -> (Top patlama sesi. Topçu bombardımanı taktiğinde çalınır.)
+[ ] charge.ogg       -> (Atlı hücumu, dörtnala giden at sesleri ve bağırmalar. Akıncı ve Süvari şarjında çalınır.)
+[ ] arrow.ogg        -> (Ok veya tüfek yaylım ateşi (Voli) sesi. Yeniçeri Ateşi yeteneğinde çalınır.)
+[ ] march.ogg        -> (Ordu yürüyüşü, uygun adım ayak sesleri veya savaş başlangıcı gerilimi. Tur geçişlerinde düşman hamle yaparken duyulur.)
+[ ] defeat.ogg       -> (Yenilgi sesi, acı verici bir ses veya hüzünlü kısa bir efekt. Savaş kaybedildiğinde çalar.)
+
+(Not: .ogg yerine .wav veya .mp3 de kullanabilirsiniz, motor hepsini destekliyor.)
+
+
+2. DİNAMİK SAVAŞ MÜZİKLERİ (Klasör: audio/sounds/music/)
+------------------------------------------------------
+Bu klasörün içine atılacak müzikler savaşın gidişatını belirler:
+
+[ ] battle.ogg       -> (Standart Savaş Müziği. Fetih, epik ve coşkulu bir müzik. Kuşatma başladığında çalar.)
+[ ] tense.ogg        -> (Kriz ve Gerilim Müziği. Savaşta senin veya düşmanın morali %30'un altına düştüğünde işler ciddileşince battle.ogg susar ve bu çalmaya başlar. Daha karanlık ve baskın bir müzik olmalı.)
+[ ] victory.ogg      -> (Zafer Müziği / Fanfar. Savaştan zaferle ayrıldığında kısa süreliğine çalan coşkulu bitiş müziği.)
+
+Ekstra (Eğer yoksa):
+[ ] background.ogg   -> (Normal Eyalet ekranında çalan sakin ortam müziği. Savaş bitince buna geri dönülür.)
+[ ] menu_theme.ogg   -> (Ana menü müziği)
+[ ] diplomacy.ogg    -> (Diplomasi ekranı müziği)
+
+
+DOSYA İSİMLENDİRME ÖRNEĞİ:
+Eğer elinde kılıç sesi varsa, dosyanın adını "sword_clash.wav" yapıp "audio/sounds/military/" klasörünün içine atman yeterlidir. Oyun otomatik olarak tanıyacak ve stereo olarak doğru kulaklığa yönlendirecektir.
