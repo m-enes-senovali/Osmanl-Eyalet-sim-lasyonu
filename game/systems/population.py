@@ -325,13 +325,10 @@ class PopulationSystem:
         system.growth_rate = data.get('growth_rate', 0.02)
         system.education_level = data.get('education_level', 1)
         
-        # Göç politikası Enum çevrimi
+        # Göç politikası kontrolü
         policy_val = data.get('migration_policy')
-        if policy_val:
-            try:
-                system.migration_policy = MigrationPolicy(policy_val)
-            except ValueError:
-                system.migration_policy = MigrationPolicy.SELECTIVE
+        if policy_val and policy_val in MigrationPolicy.POLICY_EFFECTS:
+            system.migration_policy = policy_val
         else:
             system.migration_policy = MigrationPolicy.SELECTIVE
             

@@ -312,6 +312,9 @@ class ReligionSystem:
         # İstatistikler
         self.conversions = 0
         self.rebellions_suppressed = 0
+        
+        # Hile / Spam engelleme
+        self.fetva_issued_this_turn = False
     
     def appoint_ulema(self, rank: UlemaRank, economy) -> Optional[Ulema]:
         """Ulema ata (Şeyhülislam hariç - o yalnızca Padişah tarafından atanır)"""
@@ -433,6 +436,8 @@ class ReligionSystem:
     
     def process_turn(self, economy) -> Dict:
         """Tur sonunda din sistemini işle"""
+        self.fetva_issued_this_turn = False
+        
         results = {
             'income': 0,
             'expenses': 0,
@@ -507,6 +512,10 @@ class ReligionSystem:
         if not self.has_seyhulislam:
             audio.announce_action_result("Fetva", False, "Şeyhülislam gerekli")
             return {'success': False}
+            
+        if getattr(self, 'fetva_issued_this_turn', False):
+            audio.announce_action_result("Fetva", False, "Bu tur zaten bir fetva verildi")
+            return {'success': False}
         
         # Fetva maliyeti
         cost = 50
@@ -538,6 +547,8 @@ class ReligionSystem:
         self.legitimacy = min(100, self.legitimacy + 5)
         effects['legitimacy'] = 5
         
+        self.fetva_issued_this_turn = True
+        
         audio.announce_action_result("Fetva", True, f"Konu: {topic}")
         
         return {'success': True, 'effects': effects}
@@ -559,14 +570,19 @@ class ReligionSystem:
             if vakif.condition > 50:  # Sadece iyi durumdaki vakıflar
                 stats = VAKIF_DEFINITIONS[vakif.vakif_type]
                 for key, value in stats.effects.items():
-                    if key in effects:
-                        effects[key] += value
+                    effects[key] = effects.get(key, 0) + value
         
         # Millet etkileri
         for millet, state in self.millet_states.items():
             stats = MILLET_DEFINITIONS[millet]
             if state['loyalty'] > 50:
                 effects['trade_bonus'] += stats.trade_bonus * 10
+                
+        # Ulema Etkileri (Önceden yoktu, düzeltildi)
+        for ulema in self.ulema:
+            stats = ULEMA_DEFINITIONS[ulema.rank]
+            for key, value in stats.effects.items():
+                effects[key] = effects.get(key, 0) + value
         
         return effects
     
@@ -621,7 +637,8 @@ class ReligionSystem:
             'kizilbas_suppressed': self.kizilbas_suppressed,
             'has_seyhulislam': self.has_seyhulislam,
             'conversions': self.conversions,
-            'rebellions_suppressed': self.rebellions_suppressed
+            'rebellions_suppressed': self.rebellions_suppressed,
+            'fetva_issued_this_turn': getattr(self, 'fetva_issued_this_turn', False)
         }
     
     @classmethod
@@ -671,5 +688,6 @@ class ReligionSystem:
         system.has_seyhulislam = data.get('has_seyhulislam', True)
         system.conversions = data.get('conversions', 0)
         system.rebellions_suppressed = data.get('rebellions_suppressed', 0)
+        system.fetva_issued_this_turn = data.get('fetva_issued_this_turn', False)
         
         return system

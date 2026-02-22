@@ -988,7 +988,7 @@ class GameManager:
             if 'guilds' in save_data and hasattr(self, 'guilds'):
                 self.guilds.from_dict(save_data['guilds'])
             if 'history' in save_data and hasattr(self, 'history'):
-                self.history = HistorySystem.from_dict(save_data['history'])
+                self.history.from_dict(save_data['history'])
             if 'achievements' in save_data and hasattr(self, 'achievements'):
                 self.achievements.from_dict(save_data['achievements'])
             

@@ -157,19 +157,30 @@ class ReligionScreen(BaseScreen):
         
         # === 3. FETVA ===
         if rel.has_seyhulislam:
+            # Fetva kısıtlamaları (1 turda 1 fetva)
+            is_disabled = getattr(rel, 'fetva_issued_this_turn', False)
+            
             fetva_items = [
-                {'text': 'Cihad Fetvası (Askeri Moral +20)', 'callback': lambda: self._issue_fetva('cihad')},
-                {'text': 'Ticaret Fetvası (Ticaret +10%)', 'callback': lambda: self._issue_fetva('ticaret')},
-                {'text': 'Vergi Fetvası (Meşruiyet +15)', 'callback': lambda: self._issue_fetva('vergi')},
+                {'text': 'Cihad Fetvası (Askeri Moral +20)' if not is_disabled else '[Kullanıldı] Cihad Fetvası', 
+                 'callback': lambda: self._issue_fetva('cihad') if not is_disabled else None, 
+                 'disabled': is_disabled},
+                {'text': 'Ticaret Fetvası (500 Altın Destek)' if not is_disabled else '[Kullanıldı] Ticaret', 
+                 'callback': lambda: self._issue_fetva('ticaret') if not is_disabled else None,
+                 'disabled': is_disabled},
+                {'text': 'Vergi Fetvası (+400 Altın, -5 Halk Huzuru)' if not is_disabled else '[Kullanıldı] Vergi', 
+                 'callback': lambda: self._issue_fetva('vergi') if not is_disabled else None,
+                 'disabled': is_disabled},
             ]
             
             if rel.kizilbas_threat > 20 and not rel.kizilbas_suppressed:
                 fetva_items.append({
-                    'text': 'Kızılbaş Karşıtı Fetva (Tehdit -20)',
-                    'callback': lambda: self._issue_fetva('kizilbas')
+                    'text': 'Kızılbaş Karşıtı Fetva (Tehdit -20)' if not is_disabled else '[Kullanıldı] Kızılbaş Fetvası',
+                    'callback': lambda: self._issue_fetva('kizilbas') if not is_disabled else None,
+                    'disabled': is_disabled
                 })
             
-            self.action_menu.add_category("Fetva Ver (50 altın)", fetva_items)
+            cat_title = "Fetva Ver (50 altın)" if not is_disabled else "Fetva Ver (Beklemede)"
+            self.action_menu.add_category(cat_title, fetva_items)
         
         # === 4. HOŞGÖRÜ POLİTİKASI ===
         tolerance_items = [
@@ -199,21 +210,51 @@ class ReligionScreen(BaseScreen):
         """Fetva ver"""
         gm = self.screen_manager.game_manager
         if gm:
-            gm.religion.issue_fetva(topic, gm.economy)
+            result = gm.religion.issue_fetva(topic, gm.economy)
+            if result.get('success'):
+                effects = result.get('effects', {})
+                if 'military_morale' in effects and hasattr(gm, 'military'):
+                    gm.military.morale = min(100, gm.military.morale + effects['military_morale'])
+                    
+                if topic == 'ticaret' and hasattr(gm, 'economy'):
+                    gm.economy.add_resources(gold=500)
+                    
+                if topic == 'vergi' and hasattr(gm, 'economy'):
+                    gm.economy.add_resources(gold=400)
+                    if hasattr(gm, 'population'):
+                        gm.population.unrest = min(100, gm.population.unrest + 5)
+                        
             self._update_panels()
+            self._setup_action_menu()
     
     def _increase_tolerance(self):
         """Hoşgörüyü artır"""
         gm = self.screen_manager.game_manager
         if gm:
+            if gm.religion.tolerance >= 100:
+                self.audio.announce_action_result("Hoşgörü", False, "Hoşgörü zaten maksimum seviyede")
+                return
+                
             gm.religion.tolerance = min(100, gm.religion.tolerance + 10)
-            self.audio.announce_action_result("Hoşgörü", True, "+10")
+            
+            # Gayrimüslim sadakati anında artar, Müslüman sadakati bir miktar düşer
+            for millet, state in gm.religion.millet_states.items():
+                if millet != Millet.MUSLIM:
+                    state['loyalty'] = min(100, state['loyalty'] + 3)
+            
+            gm.religion.millet_states[Millet.MUSLIM]['loyalty'] = max(0, gm.religion.millet_states[Millet.MUSLIM]['loyalty'] - 2)
+            
+            self.audio.announce_action_result("Hoşgörü", True, "Artırıldı. Azınlık sadakati yükseldi")
             self._update_panels()
     
     def _decrease_tolerance(self):
         """Hoşgörüyü azalt"""
         gm = self.screen_manager.game_manager
         if gm:
+            if gm.religion.tolerance <= 0:
+                self.audio.announce_action_result("Hoşgörü", False, "Hoşgörü zaten minimum seviyede")
+                return
+                
             gm.religion.tolerance = max(0, gm.religion.tolerance - 10)
             # Müslüman sadakati artar
             gm.religion.millet_states[Millet.MUSLIM]['loyalty'] = min(
