@@ -30,7 +30,7 @@ class GameSettings:
         # Varsayılan ayarlar
         self.defaults = {
             # Ses ayarları
-            'music_volume': 30,      # 0-100
+            'music_volume': 25,      # 0-100
             'sfx_volume': 70,        # 0-100
             'music_enabled': True,
             'sfx_enabled': True,

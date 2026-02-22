@@ -786,7 +786,8 @@ class ProvinceViewScreen(BaseScreen):
                         our_casualties=raid_data['our_casualties'],
                         victory=raid_data['victory'],
                         enemy_commander=raid_data['enemy_commander'],
-                        special_event=raid_data.get('special_event')
+                        special_event=raid_data.get('special_event'),
+                        is_naval=raid_data.get('is_naval', False)
                     )
                     raid_screen.set_raid_story(story)
                     self.screen_manager.change_screen(ScreenType.RAID_REPORT)

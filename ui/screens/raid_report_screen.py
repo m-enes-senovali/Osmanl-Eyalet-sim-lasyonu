@@ -28,6 +28,7 @@ class RaidStory:
     victory: bool                       # Zafer mi?
     enemy_commander: str                # Düşman komutan ismi
     special_event: Optional[str] = None # Özel olay
+    is_naval: bool = False              # Deniz akını mı?
 
 
 # Rastgele düşman komutan isimleri
@@ -150,25 +151,30 @@ class RaidReportScreen(BaseScreen):
         
         story = self.raid_story
         
-        texts = {
-            "intro": f"{story.raid_size} akıncı askeri {story.target_name} topraklarına doğru yola çıktı!",
-            
-            "scout": "Keşif birlikleri düşman köylerini tespit ediyor... İlerleyen atlılar ufukta toz kaldırıyor.",
-            
-            "approach": f"Süvari birlikleri {story.villages_raided} köye yaklaşıyor. Sessizce mevzi alınıyor...",
-            
-            "raid_start": f"BASKIN! Akıncılar köylere saldırıya geçti! Düşman {story.enemy_commander} komutasında savunma yapıyor.",
-            
-            "loot": self._get_loot_text(),
-            
-            "encounter": self._get_encounter_text(),
-            
-            "retreat": "Akıncı birlikleri ganimetlerle birlikte geri çekiliyor... Atlılar hızla uzaklaşıyor.",
-            
-            "result": self._get_result_text(),
-            
-            "close": "Akın raporu tamamlandı. Devam etmek için Enter tuşuna basın."
-        }
+        if story.is_naval:
+            texts = {
+                "intro": f"{story.raid_size} gemilik filomuz {story.target_name} limanlarına doğru yelken açtı!",
+                "scout": "Öncü fırkateynler düşman kıyılarını gözetliyor... Ufukta yelkenler göründü.",
+                "approach": f"Kadırgalar {story.villages_raided} sahil kasabasına yaklaşıyor. Toplar ateşe hazırlanıyor...",
+                "raid_start": f"BOMBARDIMAN! Leventler sahillere çıkıyor! Düşman {story.enemy_commander} komutasında direniyor.",
+                "loot": self._get_loot_text(),
+                "encounter": self._get_encounter_text(),
+                "retreat": "Filomuz ganimetlerle dolu gemilerle açık denize çekiliyor... Rüzgar ardımızda.",
+                "result": self._get_result_text(),
+                "close": "Deniz akını raporu tamamlandı. Devam etmek için Enter tuşuna basın."
+            }
+        else:
+            texts = {
+                "intro": f"{story.raid_size} akıncı askeri {story.target_name} topraklarına doğru yola çıktı!",
+                "scout": "Keşif birlikleri düşman köylerini tespit ediyor... İlerleyen atlılar ufukta toz kaldırıyor.",
+                "approach": f"Süvari birlikleri {story.villages_raided} köye yaklaşıyor. Sessizce mevzi alınıyor...",
+                "raid_start": f"BASKIN! Akıncılar köylere saldırıya geçti! Düşman {story.enemy_commander} komutasında savunma yapıyor.",
+                "loot": self._get_loot_text(),
+                "encounter": self._get_encounter_text(),
+                "retreat": "Akıncı birlikleri ganimetlerle birlikte geri çekiliyor... Atlılar hızla uzaklaşıyor.",
+                "result": self._get_result_text(),
+                "close": "Akın raporu tamamlandı. Devam etmek için Enter tuşuna basın."
+            }
         
         return texts.get(event_type, "")
     
@@ -193,7 +199,16 @@ class RaidReportScreen(BaseScreen):
             base = f"Yağma devam ediyor! Şu ana kadar toplanan: {loot_str}."
             
             if story.special_event:
-                base += f" Özel haber: {story.special_event}"
+                # Özel olayları Türkçeleştir
+                event_translations = {
+                    'hidden_treasure': 'Gizli bir hazine bulundu! Ekstra ganimetler gemilere taşındı.',
+                    'ambush_survived': 'Kritik anda bir pusu atlatıldı! Birliklerimiz çok cesurca çarpıştı.',
+                    'local_guide': 'Yerel bir rehber sayesinde zengin rotalara ulaşıldı.',
+                    'enemy_commander_captured': 'Ganimetlerin yanında düşman komutanı esir alındı.',
+                    'storm_weathered': 'Şiddetli bir fırtına atlatıldı, ancak mallar sağ salim gemiye yüklendi.'
+                }
+                translated_event = event_translations.get(story.special_event, story.special_event)
+                base += f" Özel haber: {translated_event}"
             
             return base
         else:
@@ -206,12 +221,20 @@ class RaidReportScreen(BaseScreen):
         
         story = self.raid_story
         
-        encounter_texts = {
-            "patrol": f"Düşman devriye birliği ile karşılaşıldı! {story.enemy_killed} düşman askeri öldürüldü, {story.our_casualties} kayıp verdik.",
-            "ambush": f"PUSU! Düşman bizi pusuya düşürdü! Ağır çatışma... {story.our_casualties} askerimiz şehit düştü.",
-            "surrender": f"Köy halkı direniş göstermeden teslim oldu. Kan dökülmeden {story.prisoners_taken} esir alındı.",
-            "none": "Düşman kuvvetleriyle herhangi bir karşılaşma olmadı. Akın sessizce tamamlandı."
-        }
+        if story.is_naval:
+            encounter_texts = {
+                "patrol": f"Düşman donanma devriyesiyle karşılaşıldı! Gemiler hasar aldı. {story.our_casualties} levent şehit düştü.",
+                "ambush": f"PUSU! Düşman kalyonları koya saklanmış! Ağır top ateşi altında {story.our_casualties} kayıp verdik.",
+                "surrender": f"Liman şehri direniş göstermeden teslim oldu. Savaşsız {story.prisoners_taken} esir alındı.",
+                "none": "Düşman donanması ufukta görünmedi. Deniz akını engelsiz tamamlandı."
+            }
+        else:
+            encounter_texts = {
+                "patrol": f"Düşman devriye birliği ile karşılaşıldı! {story.enemy_killed} düşman askeri öldürüldü, {story.our_casualties} kayıp verdik.",
+                "ambush": f"PUSU! Düşman bizi pusuya düşürdü! Ağır çatışma... {story.our_casualties} askerimiz şehit düştü.",
+                "surrender": f"Köy halkı direniş göstermeden teslim oldu. Kan dökülmeden {story.prisoners_taken} esir alındı.",
+                "none": "Düşman kuvvetleriyle herhangi bir karşılaşma olmadı. Akın sessizce tamamlandı."
+            }
         
         return encounter_texts.get(story.encounter_type, "Çatışma yaşandı.")
     

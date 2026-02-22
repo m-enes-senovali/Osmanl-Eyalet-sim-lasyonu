@@ -6,10 +6,10 @@
     "name": "enes",
     "gender": "male",
     "birth_year": 1490,
-    "prestige": 70,
-    "experience": 40,
+    "prestige": 85,
+    "experience": 70,
     "background": "default",
-    "turns_as_governor": 88
+    "turns_as_governor": 146
   },
   "province": {
     "name": "Teke Sancağı",
@@ -19,20 +19,20 @@
   },
   "time": {
     "year": 1520,
-    "month": 3,
-    "day": 30,
-    "turn": 88
+    "month": 5,
+    "day": 27,
+    "turn": 146
   },
   "economy": {
     "resources": {
-      "gold": 56625,
-      "food": 215849,
-      "wood": 39387,
-      "iron": 31233,
-      "stone": 2795,
-      "rope": 420,
-      "tar": 250,
-      "sailcloth": 170
+      "gold": 99441,
+      "food": 474533,
+      "wood": 99596,
+      "iron": 69429,
+      "stone": 5695,
+      "rope": 300,
+      "tar": 170,
+      "sailcloth": 90
     },
     "market": {
       "grain_price": 20.0,
@@ -44,7 +44,7 @@
     },
     "tax_rate": 0.2,
     "trade_level": 1,
-    "inflation_rate": 0.56476,
+    "inflation_rate": 0.8,
     "base_inflation": 0.3,
     "active_trade_routes": [
       "black_sea"
@@ -55,13 +55,13 @@
   },
   "military": {
     "units": {
-      "yenicheri": 69,
+      "yenicheri": 134,
       "kapikulu_sipahi": 20,
-      "topcu": 2,
+      "topcu": 7,
       "cebeci": 10,
-      "timarli_sipahi": 39,
+      "timarli_sipahi": 4,
       "akinci": 125,
-      "azap": 119,
+      "azap": 93,
       "kadirga": 0,
       "bastarda": 0,
       "mavna": 0,
@@ -69,7 +69,7 @@
     },
     "training_queue": [],
     "morale": 100,
-    "experience": 20,
+    "experience": 50,
     "at_war": false,
     "total_losses": 0,
     "total_victories": 0,
@@ -100,10 +100,10 @@
   },
   "population": {
     "population": {
-      "farmers": 23907,
-      "merchants": 7979,
-      "artisans": 5866,
-      "soldiers": 1962,
+      "farmers": 29908,
+      "merchants": 9977,
+      "artisans": 7360,
+      "soldiers": 2454,
       "scholars": 300
     },
     "happiness": 75,
@@ -160,7 +160,7 @@
     "construction_queue": []
   },
   "diplomacy": {
-    "sultan_loyalty": 38,
+    "sultan_loyalty": 50,
     "sultan_favor": 0,
     "sadrazam_relation": 65,
     "basdefterdar_relation": 50,
@@ -176,7 +176,7 @@
         "personality": "aggressive"
       },
       "Kıbrıs": {
-        "value": 62,
+        "value": 100,
         "type": "friendly",
         "personality": "pious"
       },
@@ -186,22 +186,13 @@
         "personality": "aggressive"
       }
     },
-    "active_missions": [
-      {
-        "type": "tribute",
-        "title": "Haraç Talebi",
-        "description": "Padişah hazineye 2000 altın katkı bekliyor",
-        "target": 2000,
-        "reward_loyalty": 15,
-        "turns_remaining": 3
-      }
-    ],
+    "active_missions": [],
     "envoy_cooldown": 0,
     "vassals": [
       {
         "name": "Hamid Sancağı",
         "tribute": 500,
-        "loyalty": 60,
+        "loyalty": 53,
         "autonomy": 80,
         "military_support": 100,
         "from_chain": true
@@ -210,7 +201,7 @@
     "marriage_alliances": [
       {
         "partner": "Kıbrıs",
-        "turns_active": 22,
+        "turns_active": 80,
         "relation_bonus": 30,
         "yearly_gift": 1000,
         "from_chain": true
@@ -265,8 +256,8 @@
     "pending_triggers": []
   },
   "warfare": {
-    "war_weariness": 0,
-    "battle_counter": 3,
+    "war_weariness": 55,
+    "battle_counter": 13,
     "war_history": [
       {
         "target": "Karaman Eyaleti",
@@ -274,6 +265,41 @@
         "victory": true,
         "terrain": "plains",
         "weather": "rain"
+      },
+      {
+        "target": "Menteşe Sancağı",
+        "type": "naval_raid",
+        "victory": true,
+        "terrain": "river",
+        "weather": "rain"
+      },
+      {
+        "target": "Menteşe Sancağı",
+        "type": "naval_raid",
+        "victory": true,
+        "terrain": "river",
+        "weather": "rain"
+      },
+      {
+        "target": "Menteşe Sancağı",
+        "type": "naval_raid",
+        "victory": true,
+        "terrain": "river",
+        "weather": "storm"
+      },
+      {
+        "target": "Menteşe Sancağı",
+        "type": "naval_raid",
+        "victory": true,
+        "terrain": "river",
+        "weather": "storm"
+      },
+      {
+        "target": "Menteşe Sancağı",
+        "type": "naval_raid",
+        "victory": true,
+        "terrain": "river",
+        "weather": "clear"
       }
     ],
     "player_tactic_history": []
@@ -349,7 +375,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -358,7 +384,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -367,7 +393,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -376,7 +402,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -385,7 +411,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -394,7 +420,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -403,7 +429,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -412,7 +438,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -421,7 +447,7 @@
         "skill": 5,
         "task": "construction",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -430,7 +456,7 @@
         "skill": 5,
         "task": "trading",
         "efficiency": 1.5,
-        "turns": 1252,
+        "turns": 1310,
         "experience": 100
       },
       {
@@ -439,7 +465,7 @@
         "skill": 2,
         "task": "idle",
         "efficiency": 1.5,
-        "turns": 373,
+        "turns": 431,
         "experience": 0
       }
     ],
@@ -452,13 +478,21 @@
         "ship_type": "kadirga",
         "name": "Kadırga #1",
         "health": 100,
-        "experience": 0
+        "experience": 33
+      },
+      {
+        "ship_id": "ship_2",
+        "ship_type": "mahon",
+        "name": "Mahon #2",
+        "health": 100,
+        "experience": 28
       }
     ],
     "construction_queue": [],
-    "total_ships_built": 1,
-    "naval_victories": 0,
-    "naval_defeats": 0,
+    "repair_queue": [],
+    "total_ships_built": 2,
+    "naval_victories": 3,
+    "naval_defeats": 1,
     "ships_lost": 0
   },
   "artillery": {
@@ -561,14 +595,6 @@
   "guilds": {},
   "achievements": {},
   "history": {
-    "entries": [
-      {
-        "turn": 42,
-        "year": 1520,
-        "message": "SAVAŞ SONUCU: ZAFER! Karaman Eyaleti. Yağma: 1399 altın.",
-        "category": "military",
-        "real_time": 1771733516.0808766
-      }
-    ]
+    "entries": []
   }
 }

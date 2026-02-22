@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Osmanlı Eyalet Yönetim Simülasyonu - Deniz Kuvvetleri Ekranı
 Tersane ve filo yönetimi
@@ -61,7 +61,7 @@ class NavalScreen(BaseScreen):
         )
         
         self._header_font = None
-        self.menu_mode = "ships"  # "ships", "build", "raid"
+        self.menu_mode = "ships"  # "ships", "build"
     
     def get_header_font(self):
         if self._header_font is None:
@@ -72,7 +72,6 @@ class NavalScreen(BaseScreen):
         self._update_panels()
         self._setup_ship_menu()
         self._setup_build_menu()
-        self._setup_raid_menu()
         self.audio.play_ambient('waves')
     
     def announce_screen(self):
@@ -99,17 +98,28 @@ class NavalScreen(BaseScreen):
         
         for i, ship in enumerate(naval.ships):
             definition = ship.get_definition()
+            
+            # Eğer gemi tamirdeyse ekstra bilgi ver
+            repair_info = ""
+            for r in naval.repair_queue:
+                if r.ship.ship_id == ship.ship_id:
+                    repair_info = f" [Tamirde: {r.turns_remaining} Tur]"
+                    break
+                    
             health_text = f"[%{ship.health}]" if ship.health < 100 else ""
             
+            # # işaretini sil
+            display_name = ship.name.replace(" #", " ")
+            
             self.ship_menu.add_item(
-                f"{ship.name} - {definition.name} {health_text}",
+                f"{display_name} - {definition.name} {health_text}{repair_info}",
                 lambda idx=i: self._select_ship(idx)
             )
         
         # Ayırıcı ve inşa butonu
         self.ship_menu.add_item("", None)
         self.ship_menu.add_item("YENİ GEMİ İNŞA ET", lambda: self._switch_to_build())
-        self.ship_menu.add_item("DENİZ AKINI DÜZENLE", lambda: self._switch_to_raid())
+        self.ship_menu.add_item("FİLOYU TAMİR ET", lambda: self._repair_fleet())
     
     def _setup_build_menu(self):
         """İnşa menüsünü oluştur"""
@@ -147,27 +157,11 @@ class NavalScreen(BaseScreen):
                 lambda st=ship_type: self._start_build(st)
             )
             
-    def _setup_raid_menu(self):
-        """Akın menüsünü oluştur"""
-        self.raid_menu.clear()
-        self.raid_menu.add_item("<- Filoya Dön", lambda: self._switch_to_ships())
-        self.raid_menu.add_item("", None)
-        
-        self.raid_menu.add_item("Ticaret Rotası (Kolay) - Düşük Risk, Düşük Altın", lambda: self._start_raid('easy'))
-        self.raid_menu.add_item("Sahil Kasabası (Orta) - Orta Risk, Orta Altın", lambda: self._start_raid('medium'))
-        self.raid_menu.add_item("Liman Kalesi (Zor) - Yüksek Risk, Yüksek Altın", lambda: self._start_raid('hard'))
-    
     def _switch_to_build(self):
         """İnşa moduna geç"""
         self.menu_mode = "build"
         self._setup_build_menu()
         self.audio.speak("Tersane - gemi inşa menüsü. Bir gemi türü seçin.", interrupt=True)
-    
-    def _switch_to_raid(self):
-        """Akın moduna geç"""
-        self.menu_mode = "raid"
-        self._setup_raid_menu()
-        self.audio.speak("Akın planlama. Hedef seçin.", interrupt=True)
     
     def _switch_to_ships(self):
         """Filo moduna geç"""
@@ -214,23 +208,19 @@ class NavalScreen(BaseScreen):
             self._setup_build_menu()
             self._update_queue_panel()
             
-    def _start_raid(self, difficulty: str):
-        """Akın başlat"""
+    def _repair_fleet(self):
+        """Filoyu tamir et"""
         gm = self.screen_manager.game_manager
         if not gm or not hasattr(gm, 'naval'):
             return
             
-        result = gm.naval.conduct_raid(difficulty)
-        
-        if result['success']:
-            gm.economy.add_resources(gold=result['gold'])
-            self.audio.play_game_sound('warfare', 'victory')
+        success, message = gm.naval.repair_fleet(gm.economy)
+        if success:
+            self.audio.play_game_sound('construction', 'build')
+            self._update_panels()
+            self._setup_ship_menu()
         else:
-            self.audio.play_game_sound('warfare', 'defeat')
-            
-        self.audio.announce(result['message'])
-        self._update_panels()
-        self._setup_ship_menu() # Gemiler batmış olabilir
+            self.audio.speak(message, interrupt=True)
     
     def _update_panels(self):
         """Panelleri güncelle"""
@@ -276,17 +266,28 @@ class NavalScreen(BaseScreen):
         
         naval = gm.naval
         
-        if not naval.construction_queue:
-            self.queue_panel.add_item("", "İnşa kuyruğu boş")
+        if not naval.construction_queue and not getattr(naval, 'repair_queue', []):
+            self.queue_panel.add_item("", "İnşa ve tamir kuyruğu boş")
             return
         
+        # İnşaatlar
         for i, construction in enumerate(naval.construction_queue):
             definition = SHIP_DEFINITIONS[construction.ship_type]
             name = construction.custom_name or definition.name
+            display_name = name.replace(" #", " ")
             self.queue_panel.add_item(
-                f"{i+1}. {name}",
+                f"İnşa: {display_name}",
                 f"{construction.turns_remaining} tur kaldı"
             )
+            
+        # Tamirler
+        if hasattr(naval, 'repair_queue'):
+            for i, repair in enumerate(naval.repair_queue):
+                display_name = repair.ship.name.replace(" #", " ")
+                self.queue_panel.add_item(
+                    f"Tamir: {display_name}",
+                    f"{repair.turns_remaining} tur kaldı"
+                )
     
     def _go_back(self):
         self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
@@ -295,9 +296,6 @@ class NavalScreen(BaseScreen):
         # Aktif menüyü işle
         if self.menu_mode == "build":
             if self.build_menu.handle_event(event):
-                return True
-        elif self.menu_mode == "raid":
-            if self.raid_menu.handle_event(event):
                 return True
         else:
             if self.ship_menu.handle_event(event):
@@ -322,8 +320,6 @@ class NavalScreen(BaseScreen):
             if event.key == pygame.K_TAB:
                 if self.menu_mode == "ships":
                     self._switch_to_build()
-                elif self.menu_mode == "build":
-                    self._switch_to_raid()
                 else:
                     self._switch_to_ships()
                 return True
@@ -358,11 +354,6 @@ class NavalScreen(BaseScreen):
             build_title = small_font.render("Gemi İnşa Et", True, COLORS['gold'])
             surface.blit(build_title, (490, 235))
             self.build_menu.draw(surface)
-        elif self.menu_mode == "raid":
-            # Akın menüsü
-            raid_title = small_font.render("Deniz Akını", True, COLORS['gold'])
-            surface.blit(raid_title, (490, 235))
-            self.raid_menu.draw(surface)
         else:
             # Gemi listesi
             ship_title = small_font.render("Gemiler", True, COLORS['gold'])

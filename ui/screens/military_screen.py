@@ -143,6 +143,46 @@ class MilitaryScreen(BaseScreen):
         # === 4. EŞKIYA BASTIR ===
         self.action_menu.add_action("Eşkıya Bastır", self._fight_bandits)
         
+        commander_items = []
+        
+        trait_dict = {
+            'SIEGE_MASTER': 'Kuşatma Ustası',
+            'LOGISTICIAN': 'Lojistik Uzmanı',
+            'AGGRESSOR': 'Serdengeçti',
+            'TACTICIAN': 'Taktisyen',
+            'DEFENDER': 'Savunma Ustası'
+        }
+        
+        if mil.assigned_commander:
+            trait_name = mil.assigned_commander.trait.name
+            trait_tr = trait_dict.get(trait_name, trait_name)
+            commander_items.append({
+                'text': f"Aktif Paşa: {mil.assigned_commander.name} ({trait_tr})",
+                'callback': None
+            })
+            commander_items.append({
+                'text': "Paşayı Görevden Al",
+                'callback': self._unassign_commander
+            })
+        else:
+            commander_items.append({
+                'text': "Atanmış Paşa Yok (Sefere lidersiz çıkılacak)",
+                'callback': None
+            })
+        
+        commander_items.append({'text': '', 'is_separator': True})
+        
+        for cmdr in mil.commanders:
+            if cmdr != mil.assigned_commander:
+                trait_name = cmdr.trait.name
+                trait_tr = trait_dict.get(trait_name, trait_name)
+                commander_items.append({
+                    'text': f"Ata: {cmdr.name} (Yetenek: {trait_tr}, Seviye: {cmdr.level})",
+                    'callback': lambda c=cmdr: self._assign_commander(c)
+                })
+        
+        self.action_menu.add_category("Komutanlar (Paşalar)", commander_items)
+        
         # === GERİ BUTONU ===
         self.action_menu.add_back_button()
         
@@ -432,6 +472,35 @@ class MilitaryScreen(BaseScreen):
                 )
             
             self._update_panels()
+            
+    def _assign_commander(self, commander):
+        """Orduya komutan ata"""
+        gm = self.screen_manager.game_manager
+        if gm:
+            gm.military.assigned_commander = commander
+            commander.assigned = True
+            
+            # Sesli geri bildirim
+            trait_tr = {
+                'SIEGE_MASTER': 'Kuşatma Ustası',
+                'LOGISTICIAN': 'Lojistik Uzmanı',
+                'AGGRESSOR': 'Serdengeçti',
+                'TACTICIAN': 'Taktisyen',
+                'DEFENDER': 'Savunma Ustası'
+            }.get(commander.trait.name, commander.trait.name)
+            
+            self.audio.announce(f"{commander.name}, ordu komutanı olarak atandı. Yeteneği: {trait_tr}")
+            self._setup_action_menu()
+            
+    def _unassign_commander(self):
+        """Mevcut komutanı görevden al"""
+        gm = self.screen_manager.game_manager
+        if gm and gm.military.assigned_commander:
+            name = gm.military.assigned_commander.name
+            gm.military.assigned_commander.assigned = False
+            gm.military.assigned_commander = None
+            self.audio.announce(f"{name} görevden alındı. Ordu şu an lidersiz.")
+            self._setup_action_menu()
     
     def _go_back(self):
         """Geri dön"""

@@ -901,9 +901,14 @@ class WarfareSystem:
             return False, reason
         
         # Filo kontrolü
+        # Filo kontrolü (En az 3 savaş gemisi ve 100 savaş gücü)
         warship_count = sum(1 for s in naval_system.ships if s.get_definition().is_warship)
-        if warship_count < 1:
-            return False, "Deniz akını için en az 1 savaş gemisi gerekli!"
+        if warship_count < 3:
+            return False, "Deniz akını için en az 3 savaş gemisi gerekli!"
+            
+        fleet_power = naval_system.get_fleet_power()
+        if fleet_power < 100:
+            return False, "Donanmanız bu akın için fazla zayıf (En az 100 savaş gücü gerekli)."
         
         # Maliyet kontrolü
         costs = self.battle_costs[BattleType.NAVAL_RAID]
@@ -940,7 +945,7 @@ class WarfareSystem:
                 morale=random.randint(60, 85)
             ),
             phase=BattlePhase.MARCH,
-            turns_remaining=2,
+            turns_remaining=3,
             terrain=TerrainType.RIVER,  # Deniz olarak river kullan
             weather=self.get_random_weather()
         )
@@ -955,7 +960,8 @@ class WarfareSystem:
 
     
     def process_battles(self, military_system, artillery_power: int = 0, 
-                        siege_bonus: int = 0, naval_power: int = 0) -> List[BattleResult]:
+                        siege_bonus: int = 0, naval_power: int = 0,
+                        naval_system=None) -> List[BattleResult]:
         """Aktif savaşları işle - topçu ve deniz gücü desteği ile"""
         results = []
         completed = []
@@ -971,7 +977,7 @@ class WarfareSystem:
             if battle.turns_remaining <= 0:
                 if battle.phase == BattlePhase.MARCH:
                     battle.phase = BattlePhase.COMBAT
-                    battle.turns_remaining = 1 if battle.battle_type == BattleType.RAID else 5
+                    battle.turns_remaining = 1 if battle.battle_type in (BattleType.RAID, BattleType.NAVAL_RAID) else 5
                     
                     audio = get_audio_manager()
                     
@@ -1004,7 +1010,7 @@ class WarfareSystem:
                         audio.announce(f"{battle.defender_name} ile çatışma başladı!")
                     
                 elif battle.phase == BattlePhase.COMBAT:
-                    result = self._resolve_battle(battle, military_system)
+                    result = self._resolve_battle(battle, military_system, naval_system)
                     results.append(result)
                     completed.append(battle)
         
@@ -1025,7 +1031,7 @@ class WarfareSystem:
         
         return results
     
-    def _resolve_battle(self, battle: Battle, military_system) -> BattleResult:
+    def _resolve_battle(self, battle: Battle, military_system, naval_system=None) -> BattleResult:
         """Savaş sonucunu hesapla"""
         terrain = battle.terrain
         weather = battle.weather
@@ -1068,36 +1074,62 @@ class WarfareSystem:
             attacker_casualties = random.randint(80, 200)
             defender_casualties = random.randint(30, 100)
         
-        # Kayıpları uygula - units dictionary'yi güncelle
+        # Kayıpları uygula
         from game.systems.military import UnitType as MilitaryUnitType
-        
-        infantry_loss = int(attacker_casualties * 0.6)
-        cavalry_loss = int(attacker_casualties * 0.3)
-        artillery_loss = int(attacker_casualties * 0.1)
-        
-        # Piyade kayıpları (Yeniçeri ve Azap'a dağıt)
-        yenicheri_loss = infantry_loss // 2
-        azap_loss = infantry_loss - yenicheri_loss
-        military_system.units[MilitaryUnitType.YENICHERI] = max(0, military_system.units.get(MilitaryUnitType.YENICHERI, 0) - yenicheri_loss)
-        military_system.units[MilitaryUnitType.AZAP] = max(0, military_system.units.get(MilitaryUnitType.AZAP, 0) - azap_loss)
-        
-        # Süvari kayıpları (Sipahi)
-        military_system.units[MilitaryUnitType.SIPAHI] = max(0, military_system.units.get(MilitaryUnitType.SIPAHI, 0) - cavalry_loss)
-        
-        # Topçu kayıpları
-        military_system.units[MilitaryUnitType.TOPCU] = max(0, military_system.units.get(MilitaryUnitType.TOPCU, 0) - artillery_loss)
-        
-        # Deneyim kazan
+        # Deneyim hesaplaması (Kara/Deniz ikisi de kullanıyor)
         exp_gain = 5 if victory else 2
-        military_system.experience = min(100, military_system.experience + exp_gain)
+        
+        if battle.battle_type == BattleType.NAVAL_RAID and naval_system:
+            # Gemi hasarları
+            warships = [s for s in naval_system.ships if s.get_definition().is_warship]
+            damage_roll = random.randint(10, 30)
+            if not victory:
+                damage_roll = int(damage_roll * 1.5)
+                
+            for ship in warships:
+                dmg = int(damage_roll * random.uniform(0.5, 1.5))
+                ship.health -= dmg
+                if ship.health <= 0:
+                    naval_system.ships.remove(ship)
+                    naval_system.ships_lost += 1
+            
+            if victory:
+                naval_system.naval_victories += 1
+                for ship in warships:
+                    ship.experience += min(50, random.randint(5, 15))
+            else:
+                naval_system.naval_defeats += 1
+        else:
+            # Standart kara savaşı asker kayıpları
+            infantry_loss = int(attacker_casualties * 0.6)
+            cavalry_loss = int(attacker_casualties * 0.3)
+            artillery_loss = int(attacker_casualties * 0.1)
+            
+            # Piyade kayıpları (Yeniçeri ve Azap'a dağıt)
+            yenicheri_loss = infantry_loss // 2
+            azap_loss = infantry_loss - yenicheri_loss
+            military_system.units[MilitaryUnitType.YENICHERI] = max(0, military_system.units.get(MilitaryUnitType.YENICHERI, 0) - yenicheri_loss)
+            military_system.units[MilitaryUnitType.AZAP] = max(0, military_system.units.get(MilitaryUnitType.AZAP, 0) - azap_loss)
+            
+            # Süvari kayıpları (Sipahi)
+            military_system.units[MilitaryUnitType.SIPAHI] = max(0, military_system.units.get(MilitaryUnitType.SIPAHI, 0) - cavalry_loss)
+            
+            # Topçu kayıpları
+            military_system.units[MilitaryUnitType.TOPCU] = max(0, military_system.units.get(MilitaryUnitType.TOPCU, 0) - artillery_loss)
+            
+            
+            # Kara ordusu deneyim kazan
+            military_system.experience = min(100, military_system.experience + exp_gain)
         
         # Yağma
         loot_gold = 0
         loot_food = 0
         if victory:
-            if battle.battle_type == BattleType.RAID:
+            if battle.battle_type in (BattleType.RAID, BattleType.NAVAL_RAID):
                 loot_gold = random.randint(500, 2000)
                 loot_food = random.randint(100, 500)
+                if battle.battle_type == BattleType.NAVAL_RAID:
+                    loot_gold = int(loot_gold * 1.5)  # Deniz akınları daha karlı
             elif battle.battle_type == BattleType.SIEGE:
                 loot_gold = random.randint(2000, 10000)
                 loot_food = random.randint(500, 1500)
@@ -1126,9 +1158,11 @@ class WarfareSystem:
         self.battle_reports.append(report)
         
         # Akın raporu için pending_raid_report'u ayarla (RaidReportScreen için)
-        if battle.battle_type == BattleType.RAID:
+        if battle.battle_type in (BattleType.RAID, BattleType.NAVAL_RAID):
             # RaidStory formatına uygun veri
             encounter_types = ['resistance', 'ambush', 'surrender', 'fortified', 'chase']
+            if battle.battle_type == BattleType.NAVAL_RAID:
+                encounter_types = ['patrol', 'ambush', 'surrender', 'none']
             
             # Eyalet ölçeğine uygun, gerçekçi jenerik yerel düşman komutanları
             commanders = [
@@ -1144,9 +1178,11 @@ class WarfareSystem:
                 'Emir Seyfeddin', 'Şeyh Mahmud', 'Mansur Bey', 'Emir Tarık'
             ]
             
+            is_naval = battle.battle_type == BattleType.NAVAL_RAID
+            
             self.pending_raid_report = {
                 'target_name': battle.defender_name,
-                'raid_size': battle.attacker_army.get_total_soldiers(),
+                'raid_size': max(1, battle.attacker_army.get_total_soldiers()) if not is_naval else max(1, int(battle.attacker_army.artillery / 20)),
                 'villages_raided': random.randint(2, 8),
                 'encounter_type': random.choice(encounter_types),
                 'loot_gold': loot_gold,
@@ -1156,7 +1192,8 @@ class WarfareSystem:
                 'our_casualties': attacker_casualties,
                 'victory': victory,
                 'enemy_commander': random.choice(commanders),
-                'special_event': random.choice([None, None, 'hidden_treasure', 'ambush_survived', 'local_guide'])
+                'special_event': random.choice([None, None, 'hidden_treasure', 'ambush_survived', 'local_guide']),
+                'is_naval': is_naval
             }
         
         # Audio bildirimi

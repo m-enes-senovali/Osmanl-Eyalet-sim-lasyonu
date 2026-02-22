@@ -195,7 +195,20 @@ class WarfareScreen(BaseScreen):
         
         self._update_panels()
         self._setup_action_menu()
-    
+        
+    def _start_naval_raid(self, target: str):
+        """Deniz akını başlat (3 tur sonra çözümlenecek)"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+            
+        success, message = gm.warfare.start_naval_raid(
+            target, gm.naval, gm.economy, gm.turn_count, gm.province.is_coastal
+        )
+        
+        self.audio.speak(message, interrupt=True)
+        self._update_panels()
+        self._setup_action_menu()    
     def _show_siege_tactics(self, target: str):
         """Kuşatma taktiği seçim menüsünü göster"""
         self.action_menu.clear()

@@ -406,7 +406,8 @@ class GameManager:
             self.military,
             artillery_power=artillery_power,
             siege_bonus=siege_bonus,
-            naval_power=naval_power
+            naval_power=naval_power,
+            naval_system=self.naval if hasattr(self, 'naval') else None
         )
         for result in battle_results:
             loyalty_change = result.loyalty_change

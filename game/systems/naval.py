@@ -204,6 +204,14 @@ class ShipConstruction:
     durability_bonus: int = 0
     speed_bonus: int = 0
 
+@dataclass
+class ShipRepair:
+    """Tamir edilen gemi"""
+    ship: Ship
+    turns_remaining: int
+    gold_cost: int
+    wood_cost: int
+
 
 class NavalSystem:
     """Deniz kuvvetleri yönetim sistemi"""
@@ -211,6 +219,7 @@ class NavalSystem:
     def __init__(self):
         self.ships: List[Ship] = []
         self.construction_queue: List[ShipConstruction] = []
+        self.repair_queue: List[ShipRepair] = []
         self.total_ships_built: int = 0
         self.naval_victories: int = 0
         self.naval_defeats: int = 0
@@ -291,17 +300,29 @@ class NavalSystem:
     
     def process_construction(self):
         """İnşaatları işle (her tur çağrılır)"""
+        build_speed_mod = 1 # Placeholder for potential future modifiers
+        # İnşa edilenler
         completed = []
-        
         for construction in self.construction_queue:
-            construction.turns_remaining -= 1
-            
+            construction.turns_remaining -= int(1 * build_speed_mod)
             if construction.turns_remaining <= 0:
                 completed.append(construction)
         
         for construction in completed:
             self.construction_queue.remove(construction)
             self._complete_ship(construction)
+            
+        # Tamir edilenler
+        repaired = []
+        for repair in self.repair_queue:
+            repair.turns_remaining -= int(1 * build_speed_mod)
+            if repair.turns_remaining <= 0:
+                repaired.append(repair)
+                
+        for repair in repaired:
+            self.repair_queue.remove(repair)
+            repair.ship.health = repair.ship.max_health
+            self.audio.speak(f"{repair.ship.name} isimli geminin tamiri tamamlandı, göreve hazır.", interrupt=False)
     
     def _complete_ship(self, construction: ShipConstruction):
         """Gemi inşasını tamamla"""
@@ -310,7 +331,7 @@ class NavalSystem:
         self.total_ships_built += 1
         ship_id = f"ship_{self.total_ships_built}"
         
-        name = construction.custom_name or f"{definition.name} #{self.total_ships_built}"
+        name = construction.custom_name or f"{definition.name} {self.total_ships_built}"
         
         # Bonusları entegre et: Quality->Experience, Durability->Max Health, Speed->Bonus Speed
         base_exp = construction.quality_bonus * 2
@@ -378,6 +399,48 @@ class NavalSystem:
             f"Ticaret kapasitesi: {trade_cap}.",
             interrupt=True
         )
+        
+    def repair_fleet(self, economy) -> tuple:
+        """Toplu gemiyi tamir sırasına ekle"""
+        # Formally already repairing ships shouldn't be queued again
+        already_repairing = {r.ship.ship_id for r in self.repair_queue}
+        damaged_ships = [s for s in self.ships if s.health < s.max_health and s.ship_id not in already_repairing]
+        
+        if not damaged_ships:
+            if already_repairing:
+                return False, "Hasarlı gemileriniz zaten şu an tersanede onarımda."
+            return False, "Bütün gemiler zaten sapasağlam."
+            
+        total_missing_health = sum(s.max_health - s.health for s in damaged_ships)
+        
+        # Tamir maliyeti formülü
+        gold_cost = int(total_missing_health * 1.5)
+        wood_cost = int(total_missing_health * 0.5)
+        
+        if economy.resources.gold < gold_cost or economy.resources.wood < wood_cost:
+            return False, f"Yetersiz kaynak. Tamir için {gold_cost} altın ve {wood_cost} kereste gerekli."
+            
+        economy.resources.gold -= gold_cost
+        economy.resources.wood -= wood_cost
+        
+        # Tamir süreleri hasara ve gemi büyüklüğüne göre (min 1, max 7 tur)
+        queued_count = 0
+        max_turns = 1
+        for ship in damaged_ships:
+            def_speed = max(3, ship.get_definition().build_time // 3)
+            damage_ratio = (ship.max_health - ship.health) / ship.max_health
+            turns = max(1, int(def_speed * damage_ratio * 2))
+            max_turns = max(max_turns, turns)
+            
+            self.repair_queue.append(ShipRepair(
+                ship=ship,
+                turns_remaining=turns,
+                gold_cost=int((ship.max_health - ship.health) * 1.5),
+                wood_cost=int((ship.max_health - ship.health) * 0.5)
+            ))
+            queued_count += 1
+            
+        return True, f"{gold_cost} altın ve {wood_cost} kereste harcanarak {queued_count} gemi onarım sırasına alındı. Onarımlar {max_turns} tur içinde tamamlanacak."
     
     def to_dict(self) -> Dict:
         """Kayıt için dictionary"""
@@ -399,6 +462,15 @@ class NavalSystem:
                     "custom_name": c.custom_name
                 }
                 for c in self.construction_queue
+            ],
+            "repair_queue": [
+                {
+                    "ship_id": r.ship.ship_id,
+                    "turns_remaining": r.turns_remaining,
+                    "gold_cost": r.gold_cost,
+                    "wood_cost": r.wood_cost
+                }
+                for r in self.repair_queue
             ],
             "total_ships_built": self.total_ships_built,
             "naval_victories": self.naval_victories,
@@ -428,6 +500,17 @@ class NavalSystem:
                 custom_name=const_data.get("custom_name", "")
             )
             system.construction_queue.append(construction)
+            
+        for rep_data in data.get("repair_queue", []):
+            # Eşleşen gemiyi bul
+            matching_ship = next((s for s in system.ships if s.ship_id == rep_data["ship_id"]), None)
+            if matching_ship:
+                system.repair_queue.append(ShipRepair(
+                    ship=matching_ship,
+                    turns_remaining=rep_data["turns_remaining"],
+                    gold_cost=rep_data.get("gold_cost", 0),
+                    wood_cost=rep_data.get("wood_cost", 0)
+                ))
         
         system.total_ships_built = data.get("total_ships_built", 0)
         system.naval_victories = data.get("naval_victories", 0)

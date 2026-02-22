@@ -212,13 +212,15 @@ class BattleScreen(BaseScreen):
             cmdr = self.current_battle.attacker_army.commander
             if cmdr:
                 trait_names = {
-                    CommanderTrait.SIEGE_MASTER: "Kuşatmacı",
-                    CommanderTrait.LOGISTICIAN: "Lojistikçi",
-                    CommanderTrait.AGGRESSOR: "Serdengeçti (Agresif)",
-                    CommanderTrait.TACTICIAN: "Taktisyen",
-                    CommanderTrait.DEFENDER: "Savunmacı"
+                    'SIEGE_MASTER': "Kuşatmacı",
+                    'LOGISTICIAN': "Lojistik Uzmanı",
+                    'AGGRESSOR': "Serdengeçti (Agresif)",
+                    'TACTICIAN': "Taktisyen",
+                    'DEFENDER': "Savunmacı"
                 }
-                t_name = trait_names.get(cmdr.trait, cmdr.trait.value)
+                # Handle both Enum and string gracefully
+                t_key = cmdr.trait.name if hasattr(cmdr.trait, 'name') else str(cmdr.trait)
+                t_name = trait_names.get(t_key, t_key)
                 self.tactics_menu.add_item(
                     f"[KOMUTAN] Paşa {cmdr.name} - Yatkınlık: {t_name}",
                     None,
