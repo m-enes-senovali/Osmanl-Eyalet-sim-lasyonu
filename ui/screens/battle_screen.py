@@ -94,30 +94,46 @@ class BattleScreen(BaseScreen):
     def _initialize_battle(self):
         """Aktif savaşı başlat"""
         gm = self.screen_manager.game_manager
-        if not gm or not gm.warfare.active_battles:
+        
+        self.is_defending = False
+        if gm and hasattr(gm, 'current_invasion') and gm.current_invasion:
+            self.is_defending = True
+            
+        if not self.is_defending and (not gm or not gm.warfare.active_battles):
             self.battle_ended = True
             return
+            
+        self.current_battle = None
         
-        # İlk aktif kuşatmayı al
-        for battle in gm.warfare.active_battles:
-            if battle.battle_type == BattleType.SIEGE:
-                self.current_battle = battle
-                break
-        
-        if not self.current_battle:
-            self.battle_ended = True
-            return
-        
+        if not self.is_defending:
+            # İlk aktif kuşatmayı al
+            for battle in gm.warfare.active_battles:
+                if battle.battle_type == BattleType.SIEGE:
+                    self.current_battle = battle
+                    break
+            
+            if not self.current_battle:
+                self.battle_ended = True
+                return
+            
+            self.player_morale = self.current_battle.attacker_army.morale
+            self.enemy_morale = self.current_battle.defender_army.morale
+        else:
+            # İstila için değerleri kur
+            self.player_morale = 100
+            self.enemy_morale = 100
+            # Kalemiz varsa morale/savunma bonusu ekleyelim
+            if gm:
+                self.player_morale += gm.construction.get_defense_bonus() * 10
+            
         self.current_round = 1
-        self.player_morale = self.current_battle.attacker_army.morale
-        self.enemy_morale = self.current_battle.defender_army.morale
         self.player_casualties = 0
         self.enemy_casualties = 0
         self.battle_ended = False
         self.victory = False
         self.combat_log = []
         self.player_tactic = None
-        
+            
         # Düşman Komutan Profili Atama (Doktrin)
         doctrines = ['SERDENGECTI', 'MUHENDIS', 'AKINCI_BEYI', 'DENGE']
         self.enemy_doctrine = random.choice(doctrines)
@@ -128,11 +144,19 @@ class BattleScreen(BaseScreen):
         
         if self.battle_ended:
             self.tactics_menu.add_item(
-                "Savaş Alanından Ayrıl (Escape)",
+                "Savaş Alanından Ayrıl",
                 self._end_battle,
                 "escape"
             )
             return
+            
+        # Savaş devam ederken kaçış tuşu (Sadece Saldıran Bizsek)
+        if not self.is_defending and not getattr(self, 'battle_ended', False):
+             self.tactics_menu.add_item(
+                "[GERİ ÇEKİL] Savaş Alamından Ayrıl (Escape)",
+                self._end_battle,
+                "escape"
+            )
         
         # === KUŞATMA DURUMU ===
         if self.current_battle and hasattr(self.current_battle, 'siege_state') and self.current_battle.siege_state:
@@ -261,6 +285,14 @@ class BattleScreen(BaseScreen):
                 lambda: self._use_special_ability(SpecialAbilityType.CAVALRY_CHARGE),
                 "s"
             )
+            
+        # Savaş ve Teslimiyet (Savunan ise ekleme)
+        if getattr(self, 'is_defending', False):
+             self.tactics_menu.add_item(
+                "0. Şehrin Anahtarlarını Ver ve Teslim Ol (Oyunu Kaybetme Riski)",
+                self._tactic_surrender,
+                "0"
+            )
     
     def _update_status_panel(self):
         """Durum panelini güncelle"""
@@ -289,9 +321,12 @@ class BattleScreen(BaseScreen):
                 self.audio.speak("Yenilgi. Savaş sona erdi. Escape tuşuyla çıkın.", interrupt=False)
             return
         
-        if self.current_battle:
+        if self.current_battle or getattr(self, 'is_defending', False):
+            target_name = self.current_battle.defender_name if self.current_battle else getattr(self.screen_manager.game_manager, 'current_invasion', {}).get('invader', 'Düşman')
+            context_str = f"{target_name} kuşatması." if self.current_battle else f"Şehrimiz {target_name} tarafından kuşatılıyor."
+            
             self.audio.speak(
-                f"{self.current_battle.defender_name} kuşatması. "
+                f"{context_str} "
                 f"Tur {self.current_round}. "
                 f"Moralimiz yüzde {self.player_morale}, düşman morali yüzde {self.enemy_morale}. "
                 "Taktik seçin.",
@@ -333,7 +368,7 @@ class BattleScreen(BaseScreen):
     
     def _announce_status(self):
         """Savaş durumunu duyur"""
-        if not self.current_battle:
+        if not self.current_battle and not getattr(self, 'is_defending', False):
             return
         
         self.audio.speak(
@@ -421,6 +456,17 @@ class BattleScreen(BaseScreen):
         
         return False
     
+    def _tactic_surrender(self):
+        """Şehri AI'a teslim et (Sadece Savunmadayken)"""
+        if getattr(self, 'is_defending', False):
+            self.victory = False
+            self.battle_ended = True
+            
+            # Ağır cezalar
+            self.audio.speak("Kalenin anahtarlarını düşmana teslim ettik. Büyük bir hezimet!", interrupt=True)
+            self.combat_log.append(f"Tur {self.current_round}: Şartlı teslimiyet kabul edildi, şehir yağmalandı.")
+            self._end_battle()
+            
     def _use_special_ability(self, ability_type: SpecialAbilityType):
         """Özel yetenek kullan - Sadece seçimi hazırla"""
         ability = SPECIAL_ABILITIES.get(ability_type)
@@ -512,7 +558,7 @@ class BattleScreen(BaseScreen):
         """Savaşı bitir ve sonuçları uygula"""
         gm = self.screen_manager.game_manager
         
-        if gm and self.current_battle:
+        if gm and (self.current_battle or getattr(self, 'is_defending', False)):
             # Savaşı listeden kaldır
             if self.current_battle in gm.warfare.active_battles:
                 gm.warfare.active_battles.remove(self.current_battle)
@@ -520,19 +566,37 @@ class BattleScreen(BaseScreen):
             # Kriz müziğini kapat
             get_music_manager().set_crisis(False)
             
-            # Sonuçları uygula
-            if self.victory:
-                # Zafer ödülleri
-                get_music_manager().play_context(MusicContext.VICTORY, force=True)
-                loot = random.randint(5000, 15000)
-                gm.economy.add_resources(gold=loot)
-                gm.diplomacy.sultan_loyalty = min(100, gm.diplomacy.sultan_loyalty + 10)
-                gm.military.experience = min(100, gm.military.experience + 15)
-                self.audio.speak(f"Zafer! {loot} altın yağma ve padişah sadakati arttı!", interrupt=True)
+            # Savunma Savaşıysa Farklı Sonuçlar Uygula
+            if getattr(self, 'is_defending', False):
+                if self.victory:
+                    # Savunmayı başardık!
+                    get_music_manager().play_context(MusicContext.VICTORY, force=True)
+                    gm.diplomacy.sultan_loyalty = min(100, gm.diplomacy.sultan_loyalty + 20)
+                    gm.military.experience = min(100, gm.military.experience + 20)
+                    self.audio.speak(f"ZAFER! Kuşatmayı yardık ve düşmanı topraklarımızdan attık! Padişah bizden razı olsun.", interrupt=True)
+                else:
+                    # Şehri savunamadık, Yağmalandık!
+                    loot_lost = int(gm.economy.resources.gold * 0.4)  # Kasanın %40'ı çalınır
+                    gm.economy.spend(gold=loot_lost)
+                    gm.diplomacy.sultan_loyalty = max(0, gm.diplomacy.sultan_loyalty - 30)
+                    gm.military.morale = max(0, gm.military.morale - 30)
+                    gm.population.unrest = min(100, gm.population.unrest + 25)
+                    self.audio.speak(f"HEZİMET! Eyaletimiz düştü, hazinemizden {loot_lost} altın yağmalandı ve halk isyanın eşiğinde!", interrupt=True)
+                
+                # Savunma savaşını listeden sil
+                gm.current_invasion = None
             else:
-                # Yenilgi cezaları (azaltılmış)
-                gm.diplomacy.sultan_loyalty = max(0, gm.diplomacy.sultan_loyalty - 5)
-                gm.military.morale = max(0, gm.military.morale - 10)
+                # Normal Kuşatma Sonu (Saldıran Biziz)
+                if self.victory:
+                    get_music_manager().play_context(MusicContext.VICTORY, force=True)
+                    loot = random.randint(5000, 15000)
+                    gm.economy.add_resources(gold=loot)
+                    gm.diplomacy.sultan_loyalty = min(100, gm.diplomacy.sultan_loyalty + 10)
+                    gm.military.experience = min(100, gm.military.experience + 15)
+                    self.audio.speak(f"Zafer! {loot} altın yağma ve padişah sadakati arttı!", interrupt=True)
+                else:
+                    gm.diplomacy.sultan_loyalty = max(0, gm.diplomacy.sultan_loyalty - 5)
+                    gm.military.morale = max(0, gm.military.morale - 10)
         
         # Ana ekrana dön
         self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
@@ -812,10 +876,14 @@ class BattleScreen(BaseScreen):
     def draw(self, surface: pygame.Surface):
         # Başlık
         header_font = self.get_header_font()
-        if self.current_battle:
+        
+        title = "SAVAS"
+        if getattr(self, 'is_defending', False):
+            gm = self.screen_manager.game_manager
+            invader = gm.current_invasion['invader'] if gm and hasattr(gm, 'current_invasion') and gm.current_invasion else "Düşman"
+            title = f"!!! {invader} ŞEHRİMİZİ KUŞATIYOR !!! TUR {self.current_round}"
+        elif self.current_battle:
             title = f"{self.current_battle.defender_name} KUSATMASI - TUR {self.current_round}"
-        else:
-            title = "SAVAS"
         
         title_render = header_font.render(title, True, COLORS['gold'])
         surface.blit(title_render, (50, 30))

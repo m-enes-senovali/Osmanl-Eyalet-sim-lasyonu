@@ -165,6 +165,54 @@ class DiplomacyScreen(BaseScreen):
         
         self.action_menu.add_category(f"Vassallaştırma (Güç: {military_power})", vassal_items)
         
+        # === 4.5 ÖRTÜLÜ OPERASYONLAR (VEKALET SAVAŞI) ===
+        proxy_war_items = []
+        for neighbor in dip.neighbors:
+            proxy_war_items.append({
+                'text': f"{neighbor} (Sınır kışkırtması - 3000 Altın)",
+                'callback': lambda n=neighbor: self._fund_proxy_war(n)
+            })
+        if not proxy_war_items:
+             proxy_war_items.append({'text': 'Komşu eyalet bulunmuyor', 'callback': None})
+             
+        self.action_menu.add_category("Örtülü Operasyon (Sınır Akınları)", proxy_war_items)
+        
+        # === 4.6 AHİDNAMELER (KAPİTÜLASYONLAR) ===
+        capitulation_items = []
+        for neighbor in dip.neighbors:
+            is_cap = any(cap['target'] == neighbor for cap in dip.capitulations)
+            if not is_cap:
+                capitulation_items.append({
+                    'text': f"{neighbor} (Gümrük feragati, İlişki ++)",
+                    'callback': lambda n=neighbor: self._grant_capitulation(n)
+                })
+            else:
+                 capitulation_items.append({
+                    'text': f"[İmtiyazlı] {neighbor}",
+                    'callback': None
+                })
+        if not capitulation_items:
+            capitulation_items.append({'text': 'Komşu eyalet bulunmuyor', 'callback': None})
+        self.action_menu.add_category("Ahidname Ver (Ticari İmtiyaz)", capitulation_items)
+        
+        # === 4.7 TİCARİ AMBARGO ===
+        embargo_items = []
+        for neighbor in dip.neighbors:
+            is_emb = any(emb['target'] == neighbor for emb in dip.embargoes)
+            if not is_emb:
+                embargo_items.append({
+                    'text': f"{neighbor} (Ambargo Uygula - İlişki düşer)",
+                    'callback': lambda n=neighbor: self._impose_embargo(n)
+                })
+            else:
+                 embargo_items.append({
+                    'text': f"[Kaldır] {neighbor} (Ambargoyu Kaldır)",
+                    'callback': lambda n=neighbor: self._remove_embargo(n)
+                })
+        if not embargo_items:
+            embargo_items.append({'text': 'Komşu eyalet bulunmuyor', 'callback': None})
+        self.action_menu.add_category("Ticari Ambargolar (Uygula / Kaldır)", embargo_items)
+        
         # === 5. DURUM ÖZETİ ===
         durum_items = [
             {'text': f"Prestij: {dip.prestige} ({dip.get_prestige_level()})", 'callback': None},
@@ -562,6 +610,69 @@ class DiplomacyScreen(BaseScreen):
         if neg_screen:
             neg_screen.setup_negotiation(NegotiationType.VASSAL, target)
             self.screen_manager.change_screen(ScreenType.NEGOTIATION)
+            
+    def _fund_proxy_war(self, target: str):
+        """Vekalet savaşı (Örtülü Operasyon) eylemini tetikler"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+            
+        # Zaten yeterli altın var mı kontrolünü arka planda diplomacy.py yapıyor
+        # ama yetersizse hata sesini buraya da ekleyebiliriz istenirse.
+        success, gold, casualties = gm.diplomacy.fund_proxy_war(target, gm.economy)
+        
+        if success:
+           self.audio.play_game_sound('diplomacy', 'war_declare')
+        else:
+           self.audio.play_game_sound('ui', 'error')
+           
+        self._update_panels()
+        self._setup_action_menu()
+        
+    def _grant_capitulation(self, target: str):
+        """Ahidname verme eylemi"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+            
+        success = gm.diplomacy.grant_capitulation(target, gm.population, gm.economy)
+        if success:
+            self.audio.play_game_sound('diplomacy', 'seal')
+        else:
+            self.audio.play_game_sound('ui', 'error')
+            
+        self._update_panels()
+        self._setup_action_menu()
+        
+    def _impose_embargo(self, target: str):
+        """Ambargo uygulama eylemi"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+            
+        success = gm.diplomacy.impose_embargo(target, gm.economy)
+        if success:
+            self.audio.play_game_sound('diplomacy', 'war_declare')
+        else:
+            self.audio.play_game_sound('ui', 'error')
+            
+        self._update_panels()
+        self._setup_action_menu()
+        
+    def _remove_embargo(self, target: str):
+        """Ambargo kaldırma eylemi"""
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+            
+        success = gm.diplomacy.remove_embargo(target, gm.economy)
+        if success:
+            self.audio.play_game_sound('diplomacy', 'seal')
+        else:
+            self.audio.play_game_sound('ui', 'error')
+            
+        self._update_panels()
+        self._setup_action_menu()
     
     def _complete_tribute_mission(self, mission_index: int, gold_amount: int):
         """Haraç görevi tamamla"""

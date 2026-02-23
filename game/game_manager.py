@@ -161,6 +161,9 @@ class GameManager:
         self.is_running = True
         self.game_over = False
         
+        # AI İstilası / Savunma Savaşı state'i
+        self.current_invasion = None  # None veya {'invader': 'Devlet Adı', 'power': 2000}
+        
         # Karaktere göre duyuru
         if self.player:
             title = self.player.get_full_title()
@@ -384,6 +387,15 @@ class GameManager:
         # 9. Diplomasi
         diplomacy_messages = self.diplomacy.process_turn()
         
+        # Vassal haraçlarını ekonomiye ekle
+        if getattr(self.diplomacy, 'tribute_income', 0) > 0:
+            self.economy.add_resources(gold=self.diplomacy.tribute_income)
+            
+        # Vassallardan gelen pasif istihbarat desteği (3 turda bir)
+        if hasattr(self, 'espionage') and getattr(self.diplomacy, 'vassals', []):
+            if self.turn_count % 3 == 0:
+                self.espionage.intelligence_level = min(100, self.espionage.intelligence_level + len(self.diplomacy.vassals))
+        
         # Görev sürelerini kontrol et (Sondan başa doğru, silme işlemi için güvenli)
         for i in range(len(self.diplomacy.active_missions) - 1, -1, -1):
             mission = self.diplomacy.active_missions[i]
@@ -436,6 +448,19 @@ class GameManager:
                 self.diplomacy.sultan_loyalty + loyalty_change))
             if result.loot_gold > 0:
                 self.economy.add_resources(gold=result.loot_gold)
+                
+        # 10.5 DÜŞMAN İSTİLALARI (Savunma Savaşı Kontrolü)
+        is_invaded, invader_name, invader_power = self.diplomacy.check_enemy_invasions(self.military.get_total_power())
+        if is_invaded:
+            self.current_invasion = {
+                'invader': invader_name,
+                'power': invader_power
+            }
+            # Eğer istila varsa ses çaldır ve tur sonu anonsunu bekle
+            audio = get_audio_manager()
+            audio.play_game_sound('ui', 'war_declare')
+        else:
+            self.current_invasion = None
         
         # 11. Ticaret
         # Liman durumunu güncelle (Tersane binası)

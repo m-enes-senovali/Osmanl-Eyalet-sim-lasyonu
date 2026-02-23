@@ -804,6 +804,13 @@ class ProvinceViewScreen(BaseScreen):
                     battle_screen.set_battle_data(siege_data)
                     self.screen_manager.change_screen(ScreenType.BATTLE)
                     return  # Oyun sonu kontrolüne geçme
+                    
+            # Düşman İstilası Kontrolü (Savunma Savaşı)
+            if hasattr(gm, 'current_invasion') and gm.current_invasion:
+                invader = gm.current_invasion['invader']
+                self.audio.announce(f"DİKKAT! Sınırlar aşıldı! Eyaletimiz {invader} tarafından kuşatılıyor! Savunma hattına geçin!")
+                self._open_screen(ScreenType.BATTLE)
+                return
             
             if gm.game_over:
                 self.screen_manager.change_screen(ScreenType.GAME_OVER)

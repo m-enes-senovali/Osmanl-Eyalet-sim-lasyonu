@@ -1808,6 +1808,15 @@ class ConstructionSystem:
         if building_type in self.buildings:
             return self.buildings[building_type].level
         return 0
+        
+    def get_defense_bonus(self) -> int:
+        """Kuşatmalarda kale ve kulelerden gelen savunma/moral bonusu"""
+        bonus = 0
+        if BuildingType.FORTRESS in self.buildings:
+            bonus += self.buildings[BuildingType.FORTRESS].level * 2
+        if BuildingType.WATCHTOWER in self.buildings:
+            bonus += self.buildings[BuildingType.WATCHTOWER].level * 1
+        return bonus
     
     def check_prerequisite(self, building_type: BuildingType) -> tuple:
         """

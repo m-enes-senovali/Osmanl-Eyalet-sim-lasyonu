@@ -85,7 +85,8 @@ def _init_achievements():
             description="%0 isyan ile %20 vergi al",
             category=AchievementCategory.ECONOMIC,
             points=25,
-            condition_key="high_tax_no_revolt"
+            condition_key="high_tax_no_revolt",
+            target_value=20
         ),
         Achievement(
             id="wealthy_province",
@@ -216,7 +217,8 @@ def _init_achievements():
             description="Tüm milletlerde %80+ sadakat sağla",
             category=AchievementCategory.SOCIAL,
             points=40,
-            condition_key="all_millets_loyal"
+            condition_key="all_millets_loyal",
+            target_value=80
         ),
         Achievement(
             id="religious_leader",
@@ -458,8 +460,8 @@ class AchievementSystem:
                 return self.stats['buildings_built'] >= 50
             elif key == "high_tax_no_revolt":
                 tax_rate = getattr(gm.economy, 'tax_rate', 0)
-                happiness = getattr(gm.population, 'happiness', 0)
-                return tax_rate >= 0.20 and happiness >= 70
+                active_revolt = getattr(gm.population, 'active_revolt', False)
+                return tax_rate >= 0.20 and not active_revolt
             elif key == "income_10k":
                 # Gelir hesapla
                 try:
@@ -502,6 +504,8 @@ class AchievementSystem:
             elif key == "population_100k":
                 return gm.population.population.total >= 100000
             elif key == "all_millets_loyal":
+                if not getattr(gm, 'religion', None) or not getattr(gm.religion, 'millet_states', None):
+                    return False
                 for state in gm.religion.millet_states.values():
                     if state.get('loyalty', 0) < 80:
                         return False
@@ -549,6 +553,8 @@ class AchievementSystem:
                 return len(getattr(gm.economy, 'active_trade_routes', []))
             elif key == "buildings_50":
                 return self.stats['buildings_built']
+            elif key == "high_tax_no_revolt":
+                return int(getattr(gm.economy, 'tax_rate', 0) * 100)
             elif key == "income_10k":
                 try:
                     return int(gm.economy.calculate_tax_income() + gm.economy.calculate_trade_income())
@@ -586,6 +592,13 @@ class AchievementSystem:
             # Sosyal
             elif key == "population_100k":
                 return gm.population.population.total
+            elif key == "all_millets_loyal":
+                if not getattr(gm, 'religion', None) or not getattr(gm.religion, 'millet_states', None):
+                    return 0
+                millets = gm.religion.millet_states.values()
+                if not millets:
+                    return 0
+                return int(min(state.get('loyalty', 0) for state in millets))
             elif key == "ulema_10":
                 return len(gm.religion.ulema)
             elif key == "vakifs_20":

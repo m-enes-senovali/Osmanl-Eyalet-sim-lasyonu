@@ -176,6 +176,8 @@ class DiplomacySystem:
         # === YENİ: Vassaller ve İttifaklar ===
         self.vassals: List[Dict] = []  # Vassal devletler
         self.marriage_alliances: List[Dict] = []  # Evlilik ittifakları
+        self.capitulations: List[Dict] = []  # Ahidnameler (Ticari İmtiyazlar)
+        self.embargoes: List[Dict] = []  # Ambargolar
         self.tribute_income = 0  # Vassallerden gelen haraç
         
         # === PRESTİJ SİSTEMİ ===
@@ -462,6 +464,163 @@ class DiplomacySystem:
             )
             return False, 0
     
+    def fund_proxy_war(self, target: str, economy) -> tuple:
+        """Sınır boylarındaki aşiretleri/akıncıları altınla fonlayarak vekalet savaşı (Proxy War) başlatır"""
+        audio = get_audio_manager()
+        
+        if target not in self.neighbors:
+            audio.speak("Geçersiz hedef.", interrupt=True)
+            return False, 0, 0
+            
+        cost = 3000
+        if not economy.can_afford(gold=cost):
+            audio.speak(f"Örtülü operasyon (Kışkırtma) için en az {cost} altın fon/rüşvet gerekli.", interrupt=True)
+            return False, 0, 0
+            
+        economy.spend(gold=cost)
+        
+        import random
+        success_chance = 60
+        relation = self.neighbors[target]
+        
+        roll = random.randint(1, 100)
+        
+        if roll <= success_chance:
+            # Başarılı yıpratma/yağma
+            stolen_gold = random.randint(1000, 4000)
+            enemy_casualty = random.randint(300, 1000)
+            
+            economy.add_resources(gold=stolen_gold)
+            
+            # Yarı yarıya deşifre olma ihtimali
+            if random.random() < 0.5:
+                relation.value -= 40
+                relation.update_type()
+                msg = f"Sınır akınları başarılı! {target} zayiat verdi, {stolen_gold} altın ganimet elde edildi. Ancak izimiz deşifre oldu, gerilim arttı."
+            else:
+                msg = f"Örtülü operasyon kusursuz! {target} zayiat verdi ve {stolen_gold} altın ele geçirildi. (Kimliğimiz gizli kaldı)"
+                
+            audio.announce_action_result("Vekalet Savaşı", True, msg)
+            return True, stolen_gold, enemy_casualty
+            
+        elif roll <= success_chance + 25:
+            # Parayı alıp kaçma/Beceriksizlik
+            audio.announce_action_result("Vekalet Savaşı", False, "Fonladığımız yerel beyler altını alıp hiçbir eylem yapmadı! Operasyon çöktü.")
+            return False, 0, 0
+        else:
+            # Büyük diplomatik kriz (Eskalasyon)
+            relation.value = -100
+            relation.update_type()
+            audio.announce_action_result(
+                "Vekalet Savaşı", 
+                False, 
+                f"BÜYÜK KRİZ! Kışkırtma girişimi elinize yüzünüze bulaştı. {target} savaş naraları atıyor!"
+            )
+            return False, 0, 0
+    
+    def grant_capitulation(self, target: str, population, economy) -> bool:
+        """Hedef devlete Ahidname (Ticari İmtiyaz) ver. Liderlikle ve iç huzurla ödenir."""
+        audio = get_audio_manager()
+        
+        if target not in self.neighbors:
+            audio.speak("Geçersiz hedef.", interrupt=True)
+            return False
+            
+        for cap in self.capitulations:
+            if cap['target'] == target:
+                audio.speak(f"{target} devletine zaten ahidname verilmiş.", interrupt=True)
+                return False
+                
+        # İlişki fırlaması
+        relation = self.neighbors[target]
+        relation.value = min(100, relation.value + 40)
+        relation.update_type()
+        
+        # Kapitülasyon eklentisi
+        self.capitulations.append({
+            'target': target,
+            'turns_active': 0
+        })
+        
+        # Esnaf (Lonca) kızar -> Unrest artar
+        if population:
+            population.unrest = min(100, population.unrest + 15)
+            population.happiness = max(0, population.happiness - 10)
+        
+        # Gümrük geliri düşer (Bunu trade_modifier düşürerek yapalım)
+        if economy:
+            economy.trade_modifier = max(0.1, economy.trade_modifier - 0.2)
+            
+        audio.announce_action_result(
+            "Ahidname", 
+            True, 
+            f"BÜYÜK KARAR! {target} devletine ticari imtiyaz verildi. İlişki +40 arttı, ancak yerli esnaf isyanda!"
+        )
+        return True
+        
+    def impose_embargo(self, target: str, economy) -> bool:
+        """Hedef devlete Ticari Ambargo uygula"""
+        audio = get_audio_manager()
+        
+        if target not in self.neighbors:
+            return False
+            
+        for emb in self.embargoes:
+            if emb['target'] == target:
+                audio.speak(f"{target} devletine zaten ambargo uygulanıyor.", interrupt=True)
+                return False
+                
+        # İlişki dibe vurur
+        relation = self.neighbors[target]
+        relation.value = max(-100, relation.value - 50)
+        relation.update_type()
+        
+        self.embargoes.append({
+            'target': target,
+            'turns_active': 0
+        })
+        
+        # Senin de ticaretin düşer (Karşılıklı zarar)
+        if economy:
+            economy.trade_modifier = max(0.1, economy.trade_modifier - 0.15)
+            
+        audio.announce_action_result(
+            "Ticari Ambargo", 
+            True, 
+            f"{target} sınırları kapatıldı! Ambargo başladı, ilişkiler dibe vurdu."
+        )
+        return True
+        
+    def remove_embargo(self, target: str, economy) -> bool:
+        """Hedef devlete uygulanan Ticari Ambargoyu kaldır"""
+        audio = get_audio_manager()
+        
+        if target not in self.neighbors:
+            return False
+            
+        target_emb = next((emb for emb in self.embargoes if emb['target'] == target), None)
+        if not target_emb:
+            audio.speak(f"{target} devletine uygulanan bir ambargo yok.", interrupt=True)
+            return False
+            
+        self.embargoes.remove(target_emb)
+        
+        # İlişkiler hafifçe düzelir (ama tam değil)
+        relation = self.neighbors[target]
+        relation.value = min(100, relation.value + 20)
+        relation.update_type()
+        
+        # Ticaret cezasının bir kısmı geri kazanılır
+        if economy:
+            economy.trade_modifier += 0.10
+            
+        audio.announce_action_result(
+            "Ambargoyu Kaldır", 
+            True, 
+            f"{target} ambargosu kaldırıldı! Ticaret yolları yeniden açılıyor."
+        )
+        return True
+    
     def make_vassal(self, target: str, military_power: int) -> bool:
         """Komşuyu vassal yap (savaş sonrası veya güçlü diplomasi)"""
         audio = get_audio_manager()
@@ -520,6 +679,50 @@ class DiplomacySystem:
             )
             return False
     
+    def check_enemy_invasions(self, player_military_power: int) -> tuple:
+        """Her tur düşmanların saldırı niyetini kontrol et (AI İstilası)
+        Dönüş: (SaldırdıMı, DüşmanAdı, DüşmanAskeriGüç)"""
+        import random
+        
+        for name, relation in self.neighbors.items():
+            if relation.value > -70:
+                continue
+                
+            # Savaş Sebebi (Casus Belli) - İlişki -70 altındaysa tetiklenebilir
+            base_attack_chance = (abs(relation.value) - 70) * 1.5  # Max -100'de %45 şans
+            
+            # Güç Dengesi Çarpanı (Düşman bizden güçlüyse daha çok saldırır)
+            # Yapay zekaya varsayılan bir güç atıyoruz, zorluğa göre değişir
+            AI_base_power = 2000
+            if relation.personality and hasattr(relation.personality, 'value'):
+                if relation.personality.value == 'militaristic':
+                    AI_base_power = 4000
+                elif relation.personality.value == 'expansionist':
+                    AI_base_power = 3000
+            
+            # Eğer düşmandan zayıfsak şansı katla
+            power_ratio = AI_base_power / max(1, player_military_power)
+            
+            final_chance = base_attack_chance * power_ratio
+            
+            # Cooldown kontrolü - üst üste savaş açılmasın
+            if hasattr(self, 'invasion_cooldown') and self.invasion_cooldown > 0:
+                self.invasion_cooldown -= 1
+                continue
+                
+            if random.randint(1, 100) <= final_chance:
+                # Saldırdıktan sonra bir miktar barış payı bırak, 10 tur cooldown ver
+                self.invasion_cooldown = 10
+                relation.value = -30  # Savaş sonrası 'soğuk barış'
+                relation.update_type()
+                return True, name, AI_base_power
+                
+        # Hiçbir düşman saldırmadı, eğer cooldown varsa 1 düşür (genel sayaç için)
+        if hasattr(self, 'invasion_cooldown') and self.invasion_cooldown > 0:
+            self.invasion_cooldown -= 1
+            
+        return False, "", 0
+        
     def process_turn(self) -> List[str]:
         """Tur sonunda diplomasiyi güncelle"""
         audio = get_audio_manager()
@@ -532,18 +735,33 @@ class DiplomacySystem:
         
         # === VASSAL HARAÇLARI ===
         self.tribute_income = 0
+        vassals_to_remove = []
         for vassal in self.vassals:
             # Günlük haraç (yıllık / 360 ≈ tribute / 12 per month)
-            daily_tribute = vassal['tribute'] // 30
+            daily_tribute = max(1, vassal['tribute'] // 30)
             self.tribute_income += daily_tribute
             
             # Vassal sadakati zamanla azalabilir
             if random.random() < 0.1:  # %10 şans
                 vassal['loyalty'] = max(0, vassal['loyalty'] - 1)
-                if vassal['loyalty'] < 20:
+                
+                if vassal['loyalty'] <= 0:
+                    msg = f"💥 İHANET! {vassal['name']} vassallığı reddetti ve isyan bayrağı çekti!"
+                    audio.announce(msg)
+                    messages.append(msg)
+                    
+                    if vassal['name'] in self.neighbors:
+                        self.neighbors[vassal['name']].value = -100
+                        self.neighbors[vassal['name']].update_type()
+                        
+                    vassals_to_remove.append(vassal)
+                elif vassal['loyalty'] < 20:
                     msg = f"⚠ {vassal['name']} vassalınız isyan düşünüyor!"
                     audio.speak(msg, interrupt=False)
                     messages.append(msg)
+        
+        for v in vassals_to_remove:
+            self.vassals.remove(v)
         
         # === EVLİLİK İTTİFAKLARI ===
         for marriage in self.marriage_alliances:
@@ -673,6 +891,11 @@ class DiplomacySystem:
     
     def to_dict(self) -> Dict:
         """Kayıt için dictionary'e dönüştür"""
+        vassal_data = []
+        for v in self.vassals:
+            # Sadece serileştirilebilir verileri kaydet
+            vassal_data.append({k: val for k, val in v.items()})
+            
         return {
             'sultan_loyalty': self.sultan_loyalty,
             'sultan_favor': self.sultan_favor,
@@ -688,8 +911,10 @@ class DiplomacySystem:
             },
             'active_missions': self.active_missions,
             'envoy_cooldown': self.envoy_cooldown,
-            'vassals': self.vassals,
+            'vassals': vassal_data,
             'marriage_alliances': self.marriage_alliances,
+            'capitulations': getattr(self, 'capitulations', []),
+            'embargoes': getattr(self, 'embargoes', []),
             'prestige': self.prestige,
             'prestige_history': self.prestige_history[-10:],  # Son 10 kayıt
             'event_chains': self.event_chains,
@@ -701,22 +926,25 @@ class DiplomacySystem:
     def from_dict(cls, data: Dict) -> 'DiplomacySystem':
         """Dictionary'den yükle"""
         system = cls()
-        system.sultan_loyalty = data['sultan_loyalty']
-        system.sultan_favor = data['sultan_favor']
+        system.sultan_loyalty = data.get('sultan_loyalty', 90)
+        system.sultan_favor = data.get('sultan_favor', 50)
         system.sadrazam_relation = data.get('sadrazam_relation', 65)
         system.basdefterdar_relation = data.get('basdefterdar_relation', 
             data.get('defterdar_relation', 50))  # Eski kayıtlarla uyumluluk
         
         # Komşuları kişilikle birlikte yükle
         system.neighbors = {}
-        for k, v in data['neighbors'].items():
-            personality = AIPersonality(v.get('personality', 'mercantile'))
-            system.neighbors[k] = Relation(k, v['value'], RelationType(v['type']), personality)
+        if 'neighbors' in data:
+            for k, v in data['neighbors'].items():
+                personality = AIPersonality(v.get('personality', 'mercantile'))
+                system.neighbors[k] = Relation(k, v['value'], RelationType(v['type']), personality)
         
         system.active_missions = data.get('active_missions', [])
         system.envoy_cooldown = data.get('envoy_cooldown', 0)
         system.vassals = data.get('vassals', [])
         system.marriage_alliances = data.get('marriage_alliances', [])
+        system.capitulations = data.get('capitulations', [])
+        system.embargoes = data.get('embargoes', [])
         system.tribute_income = 0
         
         # Yeni sistemler

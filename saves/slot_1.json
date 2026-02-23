@@ -6,10 +6,10 @@
     "name": "enes",
     "gender": "male",
     "birth_year": 1490,
-    "prestige": 85,
-    "experience": 70,
+    "prestige": 100,
+    "experience": 120,
     "background": "default",
-    "turns_as_governor": 146
+    "turns_as_governor": 242
   },
   "province": {
     "name": "Teke Sancağı",
@@ -19,17 +19,17 @@
   },
   "time": {
     "year": 1520,
-    "month": 5,
-    "day": 27,
-    "turn": 146
+    "month": 8,
+    "day": 31,
+    "turn": 242
   },
   "economy": {
     "resources": {
-      "gold": 99441,
-      "food": 474533,
-      "wood": 99596,
-      "iron": 69429,
-      "stone": 5695,
+      "gold": 167148,
+      "food": 912791,
+      "wood": 196996,
+      "iron": 130281,
+      "stone": 10495,
       "rope": 300,
       "tar": 170,
       "sailcloth": 90
@@ -50,7 +50,7 @@
       "black_sea"
     ],
     "tax_modifier": 1.0,
-    "trade_modifier": 2.275,
+    "trade_modifier": 2.655,
     "expense_modifier": 1.0
   },
   "military": {
@@ -69,7 +69,7 @@
     },
     "training_queue": [],
     "morale": 100,
-    "experience": 50,
+    "experience": 70,
     "at_war": false,
     "total_losses": 0,
     "total_victories": 0,
@@ -155,24 +155,31 @@
       "lumber_mill": {
         "level": 1,
         "installed_modules": []
+      },
+      "fortress": {
+        "level": 5,
+        "installed_modules": [
+          "ic_kale",
+          "cephane"
+        ]
       }
     },
     "construction_queue": []
   },
   "diplomacy": {
-    "sultan_loyalty": 50,
-    "sultan_favor": 0,
+    "sultan_loyalty": 81,
+    "sultan_favor": 10,
     "sadrazam_relation": 65,
     "basdefterdar_relation": 50,
     "neighbors": {
       "Hamid Sancağı": {
-        "value": 60,
-        "type": "allied",
+        "value": 10,
+        "type": "neutral",
         "personality": "honorable"
       },
       "Karaman Eyaleti": {
-        "value": 70,
-        "type": "neutral",
+        "value": -30,
+        "type": "cold",
         "personality": "aggressive"
       },
       "Kıbrıs": {
@@ -181,8 +188,8 @@
         "personality": "pious"
       },
       "Menteşe Sancağı": {
-        "value": 70,
-        "type": "neutral",
+        "value": 60,
+        "type": "allied",
         "personality": "aggressive"
       }
     },
@@ -192,8 +199,16 @@
       {
         "name": "Hamid Sancağı",
         "tribute": 500,
-        "loyalty": 53,
+        "loyalty": 45,
         "autonomy": 80,
+        "military_support": 100,
+        "from_chain": true
+      },
+      {
+        "name": "Menteşe Sancağı",
+        "tribute": 500,
+        "loyalty": 56,
+        "autonomy": 10,
         "military_support": 100,
         "from_chain": true
       }
@@ -201,13 +216,37 @@
     "marriage_alliances": [
       {
         "partner": "Kıbrıs",
-        "turns_active": 80,
+        "turns_active": 176,
         "relation_bonus": 30,
         "yearly_gift": 1000,
         "from_chain": true
       }
     ],
-    "prestige": 380,
+    "capitulations": [
+      {
+        "target": "Karaman Eyaleti",
+        "turns_active": 0
+      }
+    ],
+    "embargoes": [
+      {
+        "target": "Karaman Eyaleti",
+        "turns_active": 0
+      },
+      {
+        "target": "Kıbrıs",
+        "turns_active": 0
+      },
+      {
+        "target": "Menteşe Sancağı",
+        "turns_active": 0
+      },
+      {
+        "target": "Hamid Sancağı",
+        "turns_active": 0
+      }
+    ],
+    "prestige": 500,
     "prestige_history": [
       {
         "amount": 10,
@@ -233,12 +272,38 @@
         "amount": 150,
         "reason": "Hamid Sancağı'ı vassallaştırdınız",
         "new_total": 380
+      },
+      {
+        "amount": 20,
+        "reason": "Menteşe Sancağı'e ultimatom",
+        "new_total": 400
+      },
+      {
+        "amount": 150,
+        "reason": "Menteşe Sancağı'ı vassallaştırdınız",
+        "new_total": 500
+      },
+      {
+        "amount": 30,
+        "reason": "Asker Talebi görevi tamamlandı",
+        "new_total": 500
+      },
+      {
+        "amount": 20,
+        "reason": "Haraç Talebi görevi tamamlandı",
+        "new_total": 500
+      },
+      {
+        "amount": 30,
+        "reason": "Asker Talebi görevi tamamlandı",
+        "new_total": 500
       }
     ],
     "event_chains": [],
     "completed_chains": [
       "marriage_Kıbrıs_0",
-      "vassal_Hamid Sancağı_0"
+      "vassal_Hamid Sancağı_0",
+      "vassal_Menteşe Sancağı_0"
     ],
     "relationship_momentum": []
   },
@@ -256,7 +321,7 @@
     "pending_triggers": []
   },
   "warfare": {
-    "war_weariness": 55,
+    "war_weariness": 0,
     "battle_counter": 13,
     "war_history": [
       {
@@ -375,7 +440,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -384,7 +449,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -393,7 +458,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -402,7 +467,7 @@
         "skill": 5,
         "task": "farming",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -411,7 +476,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -420,7 +485,7 @@
         "skill": 5,
         "task": "mining",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -429,7 +494,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -438,7 +503,7 @@
         "skill": 5,
         "task": "logging",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -447,7 +512,7 @@
         "skill": 5,
         "task": "construction",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -456,7 +521,7 @@
         "skill": 5,
         "task": "trading",
         "efficiency": 1.5,
-        "turns": 1310,
+        "turns": 1406,
         "experience": 100
       },
       {
@@ -465,7 +530,7 @@
         "skill": 2,
         "task": "idle",
         "efficiency": 1.5,
-        "turns": 431,
+        "turns": 527,
         "experience": 0
       }
     ],
@@ -537,7 +602,7 @@
     "active_missions": [],
     "spy_counter": 2,
     "mission_counter": 2,
-    "intelligence_level": 0,
+    "intelligence_level": 51,
     "security_level": 0,
     "known_enemy_spies": 0,
     "successful_missions": 1,

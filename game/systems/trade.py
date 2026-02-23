@@ -551,6 +551,7 @@ class TradeSystem:
             'inventory': inventory_data,  # YENİ
             'active_caravans': [
                 {
+                    'caravan_id': c.caravan_id,
                     'route_id': c.route.route_id,
                     'turns_remaining': c.turns_remaining,
                     'goods_value': c.goods_value,
@@ -596,7 +597,7 @@ class TradeSystem:
             route = system.routes.get(c_data['route_id'])
             if route:
                 caravan = Caravan(
-                    caravan_id=f"caravan_{system.caravan_counter}",
+                    caravan_id=c_data.get('caravan_id', f"caravan_{system.caravan_counter}"),
                     route=route,
                     status=CaravanStatus.TRAVELING,
                     turns_remaining=c_data['turns_remaining'],
