@@ -46,6 +46,7 @@ class ScreenType(Enum):
     CHARACTER_CREATION = "character_creation"  # Karakter oluşturma (YENİ)
     GUILD = "guild"  # Lonca yönetim ekranı (YENİ)
     HISTORY = "history"  # Geçmiş olaylar ekranı (YENİ)
+    DIVAN = "divan"  # Eyalet Divanı ekranı (YENİ)
 
 
 class BaseScreen:
@@ -157,8 +158,46 @@ class ScreenManager:
         # Müziği ekrana göre değiştir
         self.music.on_screen_change(screen_type.name)
         
+        # Ambiyans sesini ekrana göre çal (dosya varsa)
+        self._play_screen_ambient(screen_type)
+        
         if announce:
             self.current_screen.announce_screen()
+    
+    # Ekran -> Ambiyans ses eşlemesi
+    # Her ekran için tematik çevre sesi. Dosya yoksa sessizce devam eder.
+    SCREEN_AMBIENT_MAP = {
+        ScreenType.MAIN_MENU: None,  # Menüde ambiyans yok, sadece müzik
+        ScreenType.PROVINCE_VIEW: "city",  # Şehir sesleri
+        ScreenType.ECONOMY: "market",  # Pazar sesleri
+        ScreenType.MILITARY: "camp",  # Askeri kamp sesleri
+        ScreenType.CONSTRUCTION: "workshop",  # Atölye/inşaat sesleri
+        ScreenType.POPULATION: "crowd",  # Kalabalık sesleri
+        ScreenType.WORKERS: "crowd",  # Çalışan işçi sesleri
+        ScreenType.TRADE: "bazaar",  # Çarşı/Bedesten sesleri
+        ScreenType.ESPIONAGE: "night",  # Gece sesleri
+        ScreenType.RELIGION: "mosque",  # Cami ambiyansı
+        ScreenType.DIPLOMACY: "court",  # Saray sesleri
+        ScreenType.NEGOTIATION: "court",  # Saray sesleri
+        ScreenType.WARFARE: "march",  # Yürüyüş/savaş hazırlığı
+        ScreenType.BATTLE: "battlefield",  # Savaş alanı
+        ScreenType.RAID_REPORT: None,
+        ScreenType.MAP: "wind",  # Rüzgar sesi
+        ScreenType.NAVAL: "sea",  # Deniz/dalga sesleri
+        ScreenType.ARTILLERY: "foundry",  # Dökümhane sesleri
+        ScreenType.BUILDING_INTERIOR: "workshop",  # Atölye sesleri
+        ScreenType.GUILD: "bazaar",  # Çarşı sesleri
+        ScreenType.HISTORY: None,
+        ScreenType.DIVAN: "court",  # Divan toplantısı
+        ScreenType.TUTORIAL: None,
+        ScreenType.ACHIEVEMENT: None,
+    }
+    
+    def _play_screen_ambient(self, screen_type: ScreenType):
+        """Ekrana uygun ambiyans sesini çal (dosya yoksa sessizce geç)"""
+        ambient_name = self.SCREEN_AMBIENT_MAP.get(screen_type)
+        if ambient_name:
+            self.audio.play_ambient(ambient_name)
     
     def go_back(self):
         """Önceki ekrana dön"""

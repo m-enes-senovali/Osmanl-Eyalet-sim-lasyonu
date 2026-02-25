@@ -148,7 +148,7 @@ class NavalScreen(BaseScreen):
             # İnşa edilebilir mi?
             can_build = False
             if hasattr(gm, 'naval'):
-                can_build, _ = gm.naval.can_build_ship(ship_type, gm.economy)
+                can_build, _ = gm.naval.can_build_ship(ship_type, gm.economy, gm.construction)
             
             prefix = "" if can_build else "[X] "
             

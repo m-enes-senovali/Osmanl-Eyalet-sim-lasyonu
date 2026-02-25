@@ -1011,7 +1011,7 @@ class DiplomacySystem:
     # OLAY ZİNCİRLERİ (EVENT CHAINS)
     # ===================================================================
     
-    def start_event_chain(self, chain_type: str, target: str, initial_data: dict = None):
+    def start_event_chain(self, chain_type: str, target: str, initial_data: dict = None, current_turn: int = 0):
         """Yeni olay zinciri başlat"""
         chain_id = f"{chain_type}_{target}_{len(self.event_chains)}"
         
@@ -1022,7 +1022,7 @@ class DiplomacySystem:
             'stage': 0,
             'turns_in_stage': 0,
             'data': initial_data or {},
-            'started_turn': 0,
+            'started_turn': current_turn,
             'outcomes': []
         }
         

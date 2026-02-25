@@ -90,6 +90,11 @@ class BattleScreen(BaseScreen):
         self._initialize_battle()
         self._setup_tactics_menu()
         self._update_status_panel()
+        # Savaş müziğini hemen başlat
+        try:
+            get_music_manager().play_context(MusicContext.BATTLE, force=True)
+        except Exception:
+            pass
     
     def _initialize_battle(self):
         """Aktif savaşı başlat"""
@@ -176,6 +181,14 @@ class BattleScreen(BaseScreen):
                     "➤ Sonraki Aşamaya Geç (P)",
                     self._advance_siege_phase,
                     "p"
+                )
+            
+            # Abluka fazında özel buton
+            if siege.phase == SiegePhase.BLOCKADE:
+                self.tactics_menu.add_item(
+                    "Abluka Uygula — Erzak kesmeye devam et",
+                    self._tactic_blockade,
+                    "b"
                 )
         
         # === SALDIRI TAKTİKLERİ ===
@@ -432,6 +445,12 @@ class BattleScreen(BaseScreen):
     
     def _tactic_feint(self):
         self.player_tactic = 'feint'
+        self._process_round_end()
+    
+    def _tactic_blockade(self):
+        """Abluka taktigi — kuşatmada erzak kesme"""
+        self.player_tactic = 'blockade'
+        self.audio.speak("Abluka devam ediyor. Düşmanın erzakı kesiliyor.", interrupt=True)
         self._process_round_end()
     
     def _tactic_demand_surrender(self):
@@ -766,6 +785,39 @@ class BattleScreen(BaseScreen):
                     self.player_morale -= attrition_morale
                     self.player_casualties += attrition_cas
                     matchup_desc += f"(Kış aylarında çetin savaş {attrition_cas} şehit ve {attrition_morale} moral kaybına yol açtı!) "
+                    
+        # === TABUR CENGİ TOPÇU BONUSU ===
+        # Savunma formasyonunda toplar zincirle birbirine bağlanıp
+        # savunma hattının arkasına yerleştirilir. Saldıran düşmana ağır hasar.
+        if pt == 'defend' and gm and hasattr(gm, 'artillery'):
+            artillery = gm.artillery
+            if len(artillery.cannons) > 0:
+                crew_eff = artillery.get_crew_effectiveness(gm.military)
+                # Sahra gücü bazlı bonus (mühimmat çarpanı dahil)
+                tabur_artillery_power = int(artillery.get_total_power('field') * crew_eff * 0.5)
+                tabur_morale_dmg = int(artillery.get_morale_damage() * crew_eff * 0.3)
+                
+                if tabur_artillery_power > 0:
+                    # Düşmana ek hasar
+                    self.enemy_casualties += tabur_artillery_power
+                    self.enemy_morale -= tabur_morale_dmg
+                    
+                    # Barut tüketimi (tek salvo)
+                    barut_cost = artillery.get_gunpowder_consumption()
+                    if gm.economy.resources.gunpowder >= barut_cost:
+                        gm.economy.resources.gunpowder -= barut_cost
+                        matchup_desc += (
+                            f"TABUR CENGİ: Savunma hattımızdaki {len(artillery.cannons)} top "
+                            f"zincirleme ateş açtı! {tabur_artillery_power} hasar, "
+                            f"{tabur_morale_dmg} moral kaybı. ({barut_cost} barut harcandı) "
+                        )
+                    else:
+                        # Barut yoksa bonus yarıya düşer
+                        self.enemy_casualties += tabur_artillery_power // 2
+                        matchup_desc += (
+                            "TABUR CENGİ: Toplar ateş açmak istedi ama barut yetersiz! "
+                            "Yarım güçle ateş edildi. "
+                        )
                     
         # Komutan Yetenekleri (Paşalar)
         if self.current_battle and self.current_battle.attacker_army.commander:

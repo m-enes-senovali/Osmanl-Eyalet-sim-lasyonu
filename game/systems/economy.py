@@ -5,20 +5,23 @@ Osmanlı Eyalet Yönetim Simülasyonu - Ekonomi Sistemi
 
 from dataclasses import dataclass, field
 from typing import Dict
+import random
 from audio.audio_manager import get_audio_manager
 
 
 @dataclass
 class Resources:
     """Eyalet kaynakları"""
-    gold: int = 15000   # Daha fazla başlangıç altını (10000 -> 15000)
-    food: int = 10000   # Daha fazla başlangıç zahire (8000 -> 10000)
-    wood: int = 5000    # Daha fazla kereste (4000 -> 5000)
-    iron: int = 3000    # Daha fazla demir (2000 -> 3000)
-    stone: int = 1000   # Taş (top üretimi için)
-    rope: int = 500     # Halat (gemi inşası için)
-    tar: int = 300      # Katran (gemi inşası için)
-    sailcloth: int = 200  # Yelken bezi (gemi inşası için)
+    gold: int = 15000     # Başlangıç altını
+    food: int = 10000     # Zahire
+    wood: int = 5000      # Kereste
+    iron: int = 3000      # Demir
+    stone: int = 1000     # Taş (mermi/inşaat)
+    rope: int = 500       # Halat (gemi inşası)
+    tar: int = 300        # Katran (gemi inşası)
+    sailcloth: int = 200  # Yelken bezi (gemi inşası)
+    copper: int = 500     # Bakır (tunç top döküm — %90 bakır + %10 kalay)
+    gunpowder: int = 200  # Barut (topçu ateş gücü — güherçile+kükürt+kömür)
     
     def to_dict(self) -> Dict:
         return {
@@ -29,13 +32,18 @@ class Resources:
             'stone': self.stone,
             'rope': self.rope,
             'tar': self.tar,
-            'sailcloth': self.sailcloth
+            'sailcloth': self.sailcloth,
+            'copper': self.copper,
+            'gunpowder': self.gunpowder
         }
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'Resources':
         # Eski kayıtlarla uyumluluk
-        defaults = {'stone': 1000, 'rope': 500, 'tar': 300, 'sailcloth': 200}
+        defaults = {
+            'stone': 1000, 'rope': 500, 'tar': 300, 'sailcloth': 200,
+            'copper': 500, 'gunpowder': 200
+        }
         for key, default_val in defaults.items():
             if key not in data:
                 data[key] = default_val
@@ -251,6 +259,11 @@ class EconomySystem:
         self.trade_modifier = 1.0
         self.expense_modifier = 1.0
         self.base_inflation = 0.0  # Tağşiş vb. kaynaklı kalıcı enflasyon
+        
+        # Tahrir (Nüfus Sayımı) sistemi
+        # Tarihsel: "Emin, tahririne memur olduğu vilayette halkı toplar, deftere yazar"
+        self.tahrir_accuracy = 80    # Tahrir doğruluğu (0-100)
+        self.turns_since_tahrir = 0  # Son tahrirden bu yana geçen tur
     
     def calculate_inflation(self):
         """
@@ -328,10 +341,13 @@ class EconomySystem:
         return False
     
     def calculate_tax_income(self, population: int) -> int:
-        """Vergi gelirini hesapla"""
+        """Vergi gelirini hesapla (Tahrir doğruluğu etkiler)"""
         # Nüfus başına daha yüksek gelir (0.25 çarpan - eskiden 0.15)
         base_income = int(population * self.tax_rate * 0.25)
-        return int(base_income * self.tax_modifier)
+        # Tahrir doğruluğu vergi verimini etkiler
+        # %100 accuracy → %100 verim, %50 → %80, %30 → %72
+        tahrir_mult = 0.6 + 0.4 * (self.tahrir_accuracy / 100.0)
+        return int(base_income * self.tax_modifier * tahrir_mult)
     
     def calculate_trade_income(self) -> int:
         """Ticaret gelirini hesapla"""
@@ -398,7 +414,108 @@ class EconomySystem:
             self.resources.gold += 1000
             audio.speak("Acil durum! Padişahtan 1000 altın borç alındı.", interrupt=True)
         
+        # Tahrir doğruluğu zamanla düşer
+        self.turns_since_tahrir += 1
+        if self.tahrir_accuracy > 30:
+            decay = 2
+            # 20 turdan sonra hızlanır
+            if self.turns_since_tahrir > 20:
+                decay = 3
+            self.tahrir_accuracy = max(30, self.tahrir_accuracy - decay)
+        
+        # Düşük tahrir uyarısı
+        if self.tahrir_accuracy <= 50 and self.turns_since_tahrir % 5 == 0:
+            audio.speak("Uyarı: Tahrir kayıtları eskiyor. Yeniden tahrir yaptırmayı düşünün.", interrupt=False)
+        
         return net
+    
+    def conduct_tahrir(self, population_system=None) -> Dict:
+        """
+        Tahrir (Nüfus Sayımı) yaptır
+        
+        Tarihsel: 'Tahrir emini vilayeti dolaşır, hane hane yazar.
+        Mufassal defter çıkarılır, vergi matrahı güncellenir.'
+        """
+        audio = get_audio_manager()
+        
+        cost = 500
+        if not self.can_afford(gold=cost):
+            audio.announce_action_result("Tahrir", False, 
+                f"Yetersiz altın ({cost} gerekli)")
+            return {'success': False}
+        
+        self.spend(gold=cost)
+        
+        old_accuracy = self.tahrir_accuracy
+        self.tahrir_accuracy = 100
+        self.turns_since_tahrir = 0
+        
+        result = {
+            'success': True,
+            'old_accuracy': old_accuracy,
+            'bonus_gold': 0,
+            'bonus_food': 0,
+            'discovery': None
+        }
+        
+        # Gizli gelir kaynağı keşfi (%30 ihtimal)
+        if random.random() < 0.30:
+            discoveries = [
+                ("Kayıt dışı tarım arazileri tespit edildi", 'food', random.randint(500, 1500)),
+                ("Vergi kaçıran tüccarlar bulundu", 'gold', random.randint(300, 800)),
+                ("Beyan edilmemiş demir madeni keşfedildi", 'iron', random.randint(200, 600)),
+                ("Gizli kereste deposu ortaya çıktı", 'wood', random.randint(300, 700)),
+                ("Kayıtsız zanaatkar dükkânları tespit edildi", 'gold', random.randint(200, 500)),
+            ]
+            disc_text, resource_type, amount = random.choice(discoveries)
+            result['discovery'] = disc_text
+            
+            if resource_type == 'gold':
+                self.add_resources(gold=amount)
+                result['bonus_gold'] = amount
+            elif resource_type == 'food':
+                self.add_resources(food=amount)
+                result['bonus_food'] = amount
+            elif resource_type == 'iron':
+                self.add_resources(iron=amount)
+            elif resource_type == 'wood':
+                self.add_resources(wood=amount)
+            
+            audio.play_game_sound('economy', 'coin')
+            audio.announce_action_result(
+                "Tahrir Tamamlandı",
+                True,
+                f"Doğruluk %{old_accuracy} → %100. KEŞİF: {disc_text}! +{amount} {resource_type}."
+            )
+        else:
+            audio.play_game_sound('economy', 'coin')
+            audio.announce_action_result(
+                "Tahrir Tamamlandı",
+                True,
+                f"Doğruluk %{old_accuracy} → %100. Mufassal defter güncellendi, vergi verimliliği artırıldı."
+            )
+        
+        return result
+    
+    def get_tahrir_status(self) -> Dict:
+        """Tahrir durumu özeti"""
+        tahrir_mult = 0.6 + 0.4 * (self.tahrir_accuracy / 100.0)
+        tax_loss_pct = int((1.0 - tahrir_mult) * 100)
+        
+        if self.tahrir_accuracy >= 80:
+            status = "İyi"
+        elif self.tahrir_accuracy >= 50:
+            status = "Orta"
+        else:
+            status = "Kötü — Yeniden tahrir gerekli"
+        
+        return {
+            'accuracy': self.tahrir_accuracy,
+            'turns_since': self.turns_since_tahrir,
+            'tax_loss_pct': tax_loss_pct,
+            'status': status,
+            'cost': 500
+        }
     
     def can_afford(self, gold: int = 0, food: int = 0, wood: int = 0, iron: int = 0) -> bool:
         """Bir masrafı karşılayabilir mi?"""
@@ -478,7 +595,9 @@ class EconomySystem:
             'active_trade_routes': self.active_trade_routes,
             'tax_modifier': self.tax_modifier,
             'trade_modifier': self.trade_modifier,
-            'expense_modifier': self.expense_modifier
+            'expense_modifier': self.expense_modifier,
+            'tahrir_accuracy': self.tahrir_accuracy,
+            'turns_since_tahrir': self.turns_since_tahrir
         }
     
     @classmethod
@@ -492,6 +611,8 @@ class EconomySystem:
         system.trade_modifier = data.get('trade_modifier', 1.0)
         system.expense_modifier = data.get('expense_modifier', 1.0)
         system.base_inflation = data.get('base_inflation', 0.0)
+        system.tahrir_accuracy = data.get('tahrir_accuracy', 80)
+        system.turns_since_tahrir = data.get('turns_since_tahrir', 0)
         
         # Yeni alanlar (eski kayıtlarla uyumluluk)
         if 'market' in data:

@@ -12,12 +12,24 @@ import zipfile
 import shutil
 import subprocess
 import threading
-from typing import Optional, Tuple, Dict
+import queue
+from typing import Optional, Tuple, Dict, List
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 
 from config import VERSION, GITHUB_REPO
 from audio.audio_manager import get_audio_manager
+
+# Güncelleme sırasında korunacak dosya/klasörler
+# Bunlar asla silinmez veya üzerine yazılmaz
+PROTECTED_PATHS = {
+    'saves',           # Kayıt dosyaları
+    'save',            # Alternatif kayıt klasörü
+    'settings.json',   # Kullanıcı ayarları
+    'config_user.json',# Kullanıcı config
+    '__pycache__',     # Python cache
+    '.git',            # Git metadata
+}
 
 
 class UpdateChecker:
@@ -35,6 +47,25 @@ class UpdateChecker:
         self.is_downloading = False
         self.download_progress = 0
         self.error_message: Optional[str] = None
+        self.startup_result: Optional[Dict] = None
+        
+        # Thread-safe callback kuyruğu
+        # Background thread buraya yazar, main thread işler
+        self._callback_queue: queue.Queue = queue.Queue()
+    
+    def process_callbacks(self):
+        """
+        Main thread'den çağrılmalı (game loop'ta).
+        Background thread'lerden gelen callback'leri güvenli şekilde işler.
+        """
+        while not self._callback_queue.empty():
+            try:
+                callback, args = self._callback_queue.get_nowait()
+                callback(*args)
+            except queue.Empty:
+                break
+            except Exception as e:
+                print(f"Callback hatası: {e}")
     
     @property
     def current_version(self) -> str:
@@ -137,13 +168,26 @@ class UpdateChecker:
         }
     
     def check_async(self, callback):
-        """Arka planda güncelleme kontrolü"""
+        """Arka planda güncelleme kontrolü (thread-safe)"""
         def _check():
             result = self.check_for_updates()
-            callback(result)
+            # Callback'i main thread'e gönder
+            self._callback_queue.put((callback, (result,)))
         
         thread = threading.Thread(target=_check, daemon=True)
         thread.start()
+    
+    def check_on_startup(self):
+        """
+        Oyun başlangıcında arka planda güncelleme kontrolü.
+        Sonuç startup_result'a yazılır, main loop process_callbacks ile işler.
+        """
+        def _on_startup_result(result):
+            self.startup_result = result
+            if result.get('available'):
+                self.announce_status(result)
+        
+        self.check_async(_on_startup_result)
     
     def download_update(self, callback=None) -> bool:
         """
@@ -284,8 +328,12 @@ del "%~f0"
                 else:
                     source_dir = extract_dir
                 
-                # Dosyaları kopyala
+                # Dosyaları kopyala — korunan yolları ATLAYARAK
                 for item in os.listdir(source_dir):
+                    # Kayıt dosyaları ve ayarları koru!
+                    if item in PROTECTED_PATHS:
+                        continue
+                    
                     src = os.path.join(source_dir, item)
                     dst = os.path.join(app_dir, item)
                     
@@ -310,9 +358,12 @@ del "%~f0"
             return False
     
     def download_async(self, callback):
-        """Arka planda güncelleme indir"""
+        """Arka planda güncelleme indir (thread-safe)"""
+        def _safe_callback(*args):
+            self._callback_queue.put((callback, args))
+        
         def _download():
-            self.download_update(callback)
+            self.download_update(_safe_callback)
         
         thread = threading.Thread(target=_download, daemon=True)
         thread.start()

@@ -130,9 +130,9 @@ TERRAIN_MODIFIERS: Dict[TerrainType, Dict[str, float]] = {
 
 WEATHER_MODIFIERS: Dict[WeatherType, Dict[str, float]] = {
     WeatherType.CLEAR: {"attack": 1.0, "defense": 1.0, "artillery": 1.0},
-    WeatherType.RAIN: {"attack": 0.9, "defense": 1.0, "artillery": 0.5, "archer": 0.4},
-    WeatherType.SNOW: {"attack": 0.8, "defense": 0.9, "morale_loss": 10, "movement": 0.5},
-    WeatherType.FOG: {"attack": 0.85, "defense": 1.1, "ambush_chance": 0.4},
+    WeatherType.RAIN: {"attack": 0.9, "defense": 1.0, "artillery": 0.2, "archer": 0.4},
+    WeatherType.SNOW: {"attack": 0.8, "defense": 0.9, "artillery": 0.7, "morale_loss": 10, "movement": 0.5},
+    WeatherType.FOG: {"attack": 0.85, "defense": 1.1, "artillery": 0.5, "ambush_chance": 0.4},
     WeatherType.STORM: {"attack": 0.7, "defense": 0.8, "artillery": 0.0, "morale_loss": 15},
 }
 
@@ -764,10 +764,12 @@ class WarfareSystem:
         weights = [0.5, 0.2, 0.1, 0.1, 0.1]  # Açık hava en olası
         return random.choices(list(WeatherType), weights=weights)[0]
     
-    def start_raid(self, target: str, military_system, economy, turn_count: int, raid_bonus: float = 0.0) -> Tuple[bool, str]:
+    def start_raid(self, target: str, military_system, economy, turn_count: int, 
+                   raid_bonus: float = 0.0, artillery_march_penalty: float = 0.0) -> Tuple[bool, str]:
         """
         Akın başlat
         raid_bonus: Liderlik bonusu (erkek bizzat: 0.20, kadın vekil: 0.0)
+        artillery_march_penalty: Topçu ağırlığından yürüyüş cezası (0-2 tur)
         """
         can_start, reason = self.can_start_war(turn_count)
         if not can_start:
@@ -794,6 +796,9 @@ class WarfareSystem:
         bonus_morale = int(military_system.morale * raid_bonus)
         bonus_exp = int(military_system.experience * raid_bonus)
         
+        # Yürüyüş süresi + topçu ağırlık cezası
+        march_turns = 2 + int(artillery_march_penalty)
+        
         battle = Battle(
             battle_id=f"raid_{self.battle_counter}",
             battle_type=BattleType.RAID,
@@ -814,7 +819,7 @@ class WarfareSystem:
                 morale=random.randint(60, 90)
             ),
             phase=BattlePhase.MARCH,
-            turns_remaining=2,
+            turns_remaining=march_turns,
             terrain=terrain,
             weather=weather
         )
@@ -824,12 +829,16 @@ class WarfareSystem:
         
         audio = get_audio_manager()
         weather_name = {"clear": "Açık", "rain": "Yağmurlu", "snow": "Karlı", "fog": "Sisli", "storm": "Fırtınalı"}.get(weather.value, "Açık")
-        audio.announce(f"{target} bölgesine akın başlatıldı! Arazi: {battle.get_terrain_description()}, Hava: {weather_name}")
+        march_msg = f"{target} bölgesine akın başlatıldı! Arazi: {battle.get_terrain_description()}, Hava: {weather_name}"
+        if artillery_march_penalty > 0:
+            march_msg += f". Topçu ağırlığı yürüyüşü yavaşlatıyor (+{int(artillery_march_penalty)} gün)."
+        audio.announce(march_msg)
         
         return True, f"{target} bölgesine akın başlatıldı!"
     
-    def start_siege(self, target: str, military_system, economy, turn_count: int) -> Tuple[bool, str]:
-        """Kuşatma başlat"""
+    def start_siege(self, target: str, military_system, economy, turn_count: int,
+                    artillery_march_penalty: float = 0.0) -> Tuple[bool, str]:
+        """Kuşatma başlat — topçu ağırlığı yürüyüş süresini uzatır"""
         can_start, reason = self.can_start_war(turn_count)
         if not can_start:
             return False, reason
@@ -855,6 +864,9 @@ class WarfareSystem:
         terrain = TerrainType.FORTRESS  # Kuşatma her zaman kale
         weather = self.get_random_weather()
         
+        # Yürüyüş süresi + topçu ağırlık cezası
+        march_turns = 3 + int(artillery_march_penalty)
+        
         battle = Battle(
             battle_id=f"siege_{self.battle_counter}",
             battle_type=BattleType.SIEGE,
@@ -876,7 +888,7 @@ class WarfareSystem:
                 morale=random.randint(70, 95)
             ),
             phase=BattlePhase.MARCH,
-            turns_remaining=3,
+            turns_remaining=march_turns,
             terrain=terrain,
             weather=weather,
             siege_state=SiegeState()
@@ -886,9 +898,12 @@ class WarfareSystem:
         self.war_weariness += 20
         
         audio = get_audio_manager()
-        audio.announce(f"{target} kuşatması başladı! Abluka aşamasından başlanacak.")
+        march_msg = f"{target} kuşatması başladı! Abluka aşamasından başlanacak."
+        if artillery_march_penalty > 0:
+            march_msg += f" Ağır topçu yürüyüşü yavaşlatıyor (+{int(artillery_march_penalty)} gün)."
+        audio.announce(march_msg)
         
-        return True, f"{target} kuşatması başlatıldı! 3 tur içinde ulaşılacak."
+        return True, f"{target} kuşatması başlatıldı! {march_turns} tur içinde ulaşılacak."
     
     def start_naval_raid(self, target: str, naval_system, economy, turn_count: int, 
                         is_coastal: bool = False) -> Tuple[bool, str]:
@@ -1032,7 +1047,7 @@ class WarfareSystem:
         return results
     
     def _resolve_battle(self, battle: Battle, military_system, naval_system=None) -> BattleResult:
-        """Savaş sonucunu hesapla"""
+        """Savaş sonucunu hesapla — hava durumu topçu etkisi dahil"""
         terrain = battle.terrain
         weather = battle.weather
         
@@ -1042,6 +1057,25 @@ class WarfareSystem:
         artillery_bonus = getattr(self, '_current_artillery_power', 0)
         siege_bonus = getattr(self, '_current_siege_bonus', 0)
         naval_bonus = getattr(self, '_current_naval_power', 0)
+        morale_bonus = getattr(self, '_current_morale_damage', 0)
+        
+        # === HAVA DURUMU TOPÇU ETKİSİ ===
+        # Yağmurda barut ıslanır, fırtınada topçu tamamen devre dışı
+        weather_mods = WEATHER_MODIFIERS.get(weather, {})
+        artillery_weather_mult = weather_mods.get('artillery', 1.0)
+        
+        artillery_bonus = int(artillery_bonus * artillery_weather_mult)
+        siege_bonus = int(siege_bonus * artillery_weather_mult)
+        
+        # Hava durumu topçu mesajı
+        if artillery_weather_mult < 1.0 and (artillery_bonus > 0 or siege_bonus > 0):
+            audio = get_audio_manager()
+            if artillery_weather_mult == 0:
+                audio.speak("Fırtına! Topçu birliği tamamen devre dışı!", interrupt=False)
+            elif artillery_weather_mult <= 0.3:
+                audio.speak(f"Yağmur topçu etkinliğini ciddi düşürdü! (yüzde {int(artillery_weather_mult*100)})", interrupt=False)
+            else:
+                audio.speak(f"Hava koşulları topçuyu etkiliyor (yüzde {int(artillery_weather_mult*100)} etkinlik).", interrupt=False)
         
         # Savaş türüne göre bonus uygula
         if battle.battle_type == BattleType.SIEGE:

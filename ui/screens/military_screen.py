@@ -6,6 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Askeri Ekran
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, HierarchicalMenu
+from ui.text_input import AccessibleTextInput
 from game.systems.military import UnitType, UNIT_DEFINITIONS
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 
@@ -32,6 +33,14 @@ class MilitaryScreen(BaseScreen):
         self._header_font = None
         self._font = None
         
+        # Komutan isim değiştirme modu
+        self.renaming_commander = None  # Aktif rename edilen Commander nesnesi
+        self.rename_input = AccessibleTextInput(
+            x=20, y=SCREEN_HEIGHT - 120,
+            width=400, height=40,
+            placeholder="Yeni isim girin..."
+        )
+        
     def get_header_font(self):
         if self._header_font is None:
             self._header_font = get_font(FONTS['header'])
@@ -57,7 +66,11 @@ class MilitaryScreen(BaseScreen):
         eco = gm.economy
         
         # === 1. ASKER TOPLA (her birim tipi alt menü) ===
+        # Gemiler (Kadırga, Baştarda, Mavna) Donanma ekranında yönetilir
+        ship_types = {UnitType.KADIRGA, UnitType.BASTARDA, UnitType.MAVNA}
         for unit_type in UnitType:
+            if unit_type in ship_types:
+                continue  # Gemiler donanma ekranında
             stats = UNIT_DEFINITIONS[unit_type]
             current_count = mil.units.get(unit_type, 0)
             
@@ -181,6 +194,14 @@ class MilitaryScreen(BaseScreen):
                     'callback': lambda c=cmdr: self._assign_commander(c)
                 })
         
+        # Her komutan için isim değiştirme seçeneği
+        commander_items.append({'text': '', 'is_separator': True})
+        for cmdr in mil.commanders:
+            commander_items.append({
+                'text': f"✏ İsim Değiştir: {cmdr.name}",
+                'callback': lambda c=cmdr: self._start_rename(c)
+            })
+        
         self.action_menu.add_category("Komutanlar (Paşalar)", commander_items)
         
         # === GERİ BUTONU ===
@@ -271,6 +292,18 @@ class MilitaryScreen(BaseScreen):
         self.stats_panel.add_item("Kayıplar", str(mil.total_losses))
     
     def handle_event(self, event) -> bool:
+        # İsim değiştirme modu aktifse
+        if self.renaming_commander:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self._confirm_rename()
+                    return True
+                elif event.key == pygame.K_ESCAPE:
+                    self._cancel_rename()
+                    return True
+            self.rename_input.handle_event(event)
+            return True
+        
         # HierarchicalMenu tüm navigasyonu işler
         result = self.action_menu.handle_event(event)
         
@@ -501,6 +534,38 @@ class MilitaryScreen(BaseScreen):
             gm.military.assigned_commander = None
             self.audio.announce(f"{name} görevden alındı. Ordu şu an lidersiz.")
             self._setup_action_menu()
+    
+    def _start_rename(self, commander):
+        """Komutan ismini değiştirme modunu başlat"""
+        self.renaming_commander = commander
+        self.rename_input.set_text(commander.name)
+        self.rename_input.focus()
+        self.audio.speak(
+            f"{commander.name} için yeni isim girin. Enter ile onaylayın, Escape ile iptal edin.",
+            interrupt=True
+        )
+    
+    def _confirm_rename(self):
+        """İsim değişikliğini onayla"""
+        new_name = self.rename_input.get_text().strip()
+        if not new_name:
+            self.audio.speak("Lütfen bir isim girin.", interrupt=True)
+            return
+        
+        old_name = self.renaming_commander.name
+        self.renaming_commander.name = new_name
+        self.renaming_commander = None
+        self.rename_input.unfocus()
+        
+        self.audio.speak(f"İsim değiştirildi: {old_name} → {new_name}", interrupt=True)
+        self._setup_action_menu()
+        self._update_panels()
+    
+    def _cancel_rename(self):
+        """İsim değişikliğini iptal et"""
+        self.renaming_commander = None
+        self.rename_input.unfocus()
+        self.audio.speak("İsim değişikliği iptal edildi.", interrupt=True)
     
     def _go_back(self):
         """Geri dön"""

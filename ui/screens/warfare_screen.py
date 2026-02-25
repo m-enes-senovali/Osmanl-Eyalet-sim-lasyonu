@@ -184,8 +184,12 @@ class WarfareScreen(BaseScreen):
         # Erkek karakter bizzat liderlik ederse +%20 bonus
         raid_bonus = 0.20 if personal else 0.0
         
+        # Topçu ağırlık cezası
+        march_penalty = gm.artillery.get_march_speed_penalty() if hasattr(gm, 'artillery') else 0
+        
         success, message = gm.warfare.start_raid(
-            target, gm.military, gm.economy, gm.turn_count, raid_bonus
+            target, gm.military, gm.economy, gm.turn_count, raid_bonus,
+            artillery_march_penalty=march_penalty
         )
         
         if personal:
@@ -267,7 +271,13 @@ class WarfareScreen(BaseScreen):
             "TRENCHING": "Metris (siper inşası)",
         }
         
-        success, message = gm.warfare.start_siege(target, gm.military, gm.economy, gm.turn_count)
+        # Topçu ağırlık cezası
+        march_penalty = gm.artillery.get_march_speed_penalty() if hasattr(gm, 'artillery') else 0
+        
+        success, message = gm.warfare.start_siege(
+            target, gm.military, gm.economy, gm.turn_count,
+            artillery_march_penalty=march_penalty
+        )
         tactic_text = tactic_names.get(tactic, tactic)
         self.audio.speak(f"Taktik: {tactic_text}. {message}", interrupt=True)
         self._update_panels()

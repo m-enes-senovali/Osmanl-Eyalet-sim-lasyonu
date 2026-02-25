@@ -1808,6 +1808,10 @@ class ConstructionSystem:
         if building_type in self.buildings:
             return self.buildings[building_type].level
         return 0
+    
+    def get_building(self, building_type: BuildingType):
+        """Bina nesnesini döndür (yoksa None)"""
+        return self.buildings.get(building_type, None)
         
     def get_defense_bonus(self) -> int:
         """Kuşatmalarda kale ve kulelerden gelen savunma/moral bonusu"""
@@ -1919,6 +1923,15 @@ class ConstructionSystem:
         if building.level >= stats.max_level:
             return False, "Maksimum seviyeye ulaşıldı"
         
+        # Kuyrukta bekleyen yükseltmeleri say
+        pending_upgrades = sum(
+            1 for q in self.construction_queue 
+            if q.building_type == building_type and q.is_upgrade
+        )
+        effective_level = building.level + pending_upgrades
+        if effective_level >= stats.max_level:
+            return False, f"Maksimum seviye ({stats.max_level}). Kuyrukta {pending_upgrades} yükseltme bekliyor"
+        
         # Yükseltme maliyeti (seviye * temel maliyet)
         multiplier = building.level + 1
         if not economy.can_afford(
@@ -2008,7 +2021,7 @@ class ConstructionSystem:
         audio.announce_action_result(
             f"{stats.name_tr} Yükseltme",
             True,
-            f"{target_name} seviyesine yükseltiliyor"
+            f"{target_name} seviyesine yükseltiliyor ({stats.max_level}. seviyeye kadar yükseltilebilir)"
         )
         
         return True

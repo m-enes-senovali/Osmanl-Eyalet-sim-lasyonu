@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Panel
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
+from audio.music_manager import get_music_manager, MusicContext
 
 
 @dataclass
@@ -140,6 +141,12 @@ class RaidReportScreen(BaseScreen):
         # İlk duyuru
         if self.raid_story:
             self.audio.speak("Akın Raporu. Hikaye başlıyor...", interrupt=True)
+        
+        # Savaş müziğini başlat
+        try:
+            get_music_manager().play_context(MusicContext.BATTLE, force=True)
+        except Exception:
+            pass
     
     def announce_screen(self):
         self.audio.announce_screen_change("Akın Raporu")

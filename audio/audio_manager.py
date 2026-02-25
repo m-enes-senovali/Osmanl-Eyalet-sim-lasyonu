@@ -71,6 +71,7 @@ class AudioManager:
             self._ambient_channel = None
         
         self._current_ambient = None
+        self.ambient_volume = self.sfx_volume * 0.5  # Ambiyans varsayılan: SFX'in yarısı
         
         # Ses klasörlerini oluştur
         self._ensure_sound_directories()
@@ -184,7 +185,7 @@ class AudioManager:
             return  # Zaten çalıyor
         
         if sound_name in self.sounds:
-            self._ambient_channel.set_volume(volume if volume is not None else self.sfx_volume * 0.5)
+            self._ambient_channel.set_volume(volume if volume is not None else self.ambient_volume)
             self._ambient_channel.play(self.sounds[sound_name], loops=-1)
             self._current_ambient = sound_name
     
@@ -274,6 +275,26 @@ class AudioManager:
         self.set_music_volume(new_volume)
         pct = int(new_volume * 100)
         self.speak(f"Müzik sesi: %{pct}", interrupt=True)
+    
+    def set_ambient_volume(self, volume: float):
+        """Ambiyans ses seviyesi ayarla (0.0 - 1.0)"""
+        self.ambient_volume = max(0.0, min(1.0, volume))
+        if self._ambient_channel and self._ambient_channel.get_busy():
+            self._ambient_channel.set_volume(self.ambient_volume)
+    
+    def increase_ambient_volume(self, amount: float = 0.05):
+        """Ambiyans sesini artır (varsayılan %5)"""
+        new_volume = min(1.0, self.ambient_volume + amount)
+        self.set_ambient_volume(new_volume)
+        pct = int(new_volume * 100)
+        self.speak(f"Ambiyans sesi: %{pct}", interrupt=True)
+    
+    def decrease_ambient_volume(self, amount: float = 0.05):
+        """Ambiyans sesini azalt (varsayılan %5)"""
+        new_volume = max(0.0, self.ambient_volume - amount)
+        self.set_ambient_volume(new_volume)
+        pct = int(new_volume * 100)
+        self.speak(f"Ambiyans sesi: %{pct}", interrupt=True)
     
     # === EKRAN OKUYUCU FONKSİYONLARI ===
     

@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pygame
 from config import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, GAME_TITLE, COLORS
 from audio.audio_manager import get_audio_manager
+from updater import get_updater
 from game.game_manager import GameManager
 from ui.screen_manager import ScreenManager, ScreenType
 from ui.screens.main_menu import MainMenuScreen
@@ -68,6 +69,10 @@ class Game:
         
         # Ses dosyalarını yükle
         self._load_sounds()
+        
+        # Güncelleme kontrolü (arka planda)
+        self.updater = get_updater()
+        self.updater.check_on_startup()
         
         # Tuş basılı tutma özelliğini etkinleştir (ilk gecikme 400ms, tekrar 50ms)
         pygame.key.set_repeat(400, 50)
@@ -212,6 +217,13 @@ class Game:
             ReligionScreen(self.screen_manager)
         )
         
+        # Eyalet Divanı ekranı (YENİ)
+        from ui.screens.divan_screen import DivanScreen
+        self.screen_manager.register_screen(
+            ScreenType.DIVAN,
+            DivanScreen(self.screen_manager)
+        )
+        
         # Başarılar ekranı (YENİ)
         from ui.screens.achievement_screen import AchievementScreen
         self.screen_manager.register_screen(
@@ -300,6 +312,9 @@ class Game:
             # Olayları işle
             self._handle_events()
             
+            # Güncelleme callback'lerini işle (thread-safe)
+            self.updater.process_callbacks()
+            
             # Güncelle
             self.screen_manager.update(dt)
             
@@ -324,6 +339,16 @@ class Game:
             
             # Global kısayollar
             if event.type == pygame.KEYDOWN:
+                # Shift + Page Up - Ambiyans sesini artır
+                if event.key == pygame.K_PAGEUP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.audio.increase_ambient_volume(0.05)
+                    continue
+                
+                # Shift + Page Down - Ambiyans sesini azalt
+                if event.key == pygame.K_PAGEDOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.audio.decrease_ambient_volume(0.05)
+                    continue
+                
                 # Page Up - Müzik sesini artır
                 if event.key == pygame.K_PAGEUP:
                     self.audio.increase_music_volume(0.05)
@@ -340,22 +365,6 @@ class Game:
                         self.game_manager.events.current_event):
                         self.screen_manager.change_screen(ScreenType.EVENT)
                         continue
-                
-                # Page Up - Müzik sesini artır (basılı tutulabilir)
-                if event.key == pygame.K_PAGEUP:
-                    current = self.audio.music_volume
-                    new_vol = min(1.0, current + 0.05)
-                    self.audio.set_music_volume(new_vol)
-                    self.audio.speak(f"Müzik sesi: yüzde {int(new_vol * 100)}", interrupt=True)
-                    continue
-                
-                # Page Down - Müzik sesini azalt (basılı tutulabilir)
-                if event.key == pygame.K_PAGEDOWN:
-                    current = self.audio.music_volume
-                    new_vol = max(0.0, current - 0.05)
-                    self.audio.set_music_volume(new_vol)
-                    self.audio.speak(f"Müzik sesi: yüzde {int(new_vol * 100)}", interrupt=True)
-                    continue
                 
                 # J tuşu - Mevsim bilgisi (sadece oyun ekranlarında)
                 game_screens = [ScreenType.PROVINCE_VIEW, ScreenType.ECONOMY, ScreenType.MILITARY, 

@@ -72,6 +72,8 @@ class ProvinceViewScreen(BaseScreen):
         self.side_menu.add_item("Başarılar", lambda: self._open_screen(ScreenType.ACHIEVEMENT), "b")
         self.side_menu.add_item("Geçmiş", lambda: self._open_screen(ScreenType.HISTORY), "g")
         self.side_menu.add_item("Topçu", lambda: self._open_screen(ScreenType.ARTILLERY), "t")
+        self.side_menu.add_item("Akın/Savaş", lambda: self._open_screen(ScreenType.WARFARE), "k")
+        self.side_menu.add_item("Divan", lambda: self._open_screen(ScreenType.DIVAN), "v")
         
         # Donanma sadece kıyı eyaletlerinde (on_enter'da eklenir)
         self._side_menu_needs_coastal_update = True
@@ -171,6 +173,8 @@ class ProvinceViewScreen(BaseScreen):
         self.resource_panel.add_item("Zahire", f"{gm.economy.resources.food:,}")
         self.resource_panel.add_item("Kereste", f"{gm.economy.resources.wood:,}")
         self.resource_panel.add_item("Demir", f"{gm.economy.resources.iron:,}")
+        self.resource_panel.add_item("Bakır", f"{gm.economy.resources.copper:,}")
+        self.resource_panel.add_item("Barut", f"{gm.economy.resources.gunpowder:,}")
         
         # Durum paneli — önem sırasına göre (Tab ile ilk okunanlar üstte)
         self.status_panel.clear()
@@ -413,6 +417,8 @@ class ProvinceViewScreen(BaseScreen):
         self.audio.speak(f"Kereste: {res.wood:,}", interrupt=False)
         self.audio.speak(f"Demir: {res.iron:,}", interrupt=False)
         self.audio.speak(f"Taş: {res.stone:,}", interrupt=False)
+        self.audio.speak(f"Bakır: {res.copper:,}", interrupt=False)
+        self.audio.speak(f"Barut: {res.gunpowder:,}", interrupt=False)
     
     def _announce_status(self):
         """Durum özetini oku"""
@@ -472,6 +478,8 @@ class ProvinceViewScreen(BaseScreen):
         items.append(f"Zahire: {gm.economy.resources.food:,}")
         items.append(f"Kereste: {gm.economy.resources.wood:,}")
         items.append(f"Demir: {gm.economy.resources.iron:,}")
+        items.append(f"Bakır: {gm.economy.resources.copper:,}")
+        items.append(f"Barut: {gm.economy.resources.gunpowder:,}")
         
         # --- Gelir/Gider ---
         try:
@@ -636,6 +644,8 @@ class ProvinceViewScreen(BaseScreen):
             ("Kereste", gm.economy.resources.wood, (139, 90, 43)),
             ("Demir", gm.economy.resources.iron, (150, 150, 160)),
             ("Tas", gm.economy.resources.stone, (180, 170, 150)),
+            ("Bakir", gm.economy.resources.copper, (184, 115, 51)),
+            ("Barut", gm.economy.resources.gunpowder, (80, 80, 80)),
         ]
         
         font = self.get_info_font()
@@ -729,6 +739,8 @@ class ProvinceViewScreen(BaseScreen):
             prev_food = gm.economy.resources.food
             prev_wood = gm.economy.resources.wood
             prev_iron = gm.economy.resources.iron
+            prev_copper = gm.economy.resources.copper
+            prev_gunpowder = gm.economy.resources.gunpowder
             
             result = gm.process_turn()
             
@@ -740,11 +752,18 @@ class ProvinceViewScreen(BaseScreen):
             food_change = gm.economy.resources.food - prev_food
             wood_change = gm.economy.resources.wood - prev_wood
             iron_change = gm.economy.resources.iron - prev_iron
+            copper_change = gm.economy.resources.copper - prev_copper
+            gunpowder_change = gm.economy.resources.gunpowder - prev_gunpowder
             
             self.audio.speak(f"Altın: {gm.economy.resources.gold:,} ({'+' if gold_change >= 0 else ''}{gold_change})", interrupt=False)
             self.audio.speak(f"Zahire: {gm.economy.resources.food:,} ({'+' if food_change >= 0 else ''}{food_change})", interrupt=False)
             self.audio.speak(f"Kereste: {gm.economy.resources.wood:,} ({'+' if wood_change >= 0 else ''}{wood_change})", interrupt=False)
             self.audio.speak(f"Demir: {gm.economy.resources.iron:,} ({'+' if iron_change >= 0 else ''}{iron_change})", interrupt=False)
+            # Bakır ve barut sadece değişim varsa duyur (her tur değişmeyebilir)
+            if copper_change != 0:
+                self.audio.speak(f"Bakır: {gm.economy.resources.copper:,} ({'+' if copper_change >= 0 else ''}{copper_change})", interrupt=False)
+            if gunpowder_change != 0:
+                self.audio.speak(f"Barut: {gm.economy.resources.gunpowder:,} ({'+' if gunpowder_change >= 0 else ''}{gunpowder_change})", interrupt=False)
             
             # Alt sistem mesajlarını duyur (İnşaat, Casusluk vb.)
             if 'messages' in result and result['messages']:

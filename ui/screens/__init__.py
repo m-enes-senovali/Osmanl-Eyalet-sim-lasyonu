@@ -22,6 +22,7 @@ from ui.screens.espionage_screen import EspionageScreen  # YENİ
 from ui.screens.religion_screen import ReligionScreen    # YENİ
 from ui.screens.achievement_screen import AchievementScreen  # YENİ
 from ui.screens.tutorial_screen import TutorialScreen  # YENİ
+from ui.screens.divan_screen import DivanScreen  # YENİ
 
 __all__ = [
     'MainMenuScreen',
@@ -43,5 +44,6 @@ __all__ = [
     'ReligionScreen',   # YENİ
     'AchievementScreen',  # YENİ
     'TutorialScreen',  # YENİ
+    'DivanScreen',  # YENİ
 ]
 

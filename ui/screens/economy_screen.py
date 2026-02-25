@@ -48,6 +48,7 @@ class EconomyScreen(BaseScreen):
         self.tax_menu.clear()
         self.tax_menu.add_item("Vergiyi Artır (+5%)", self._increase_tax, "plus")
         self.tax_menu.add_item("Vergiyi Azalt (-5%)", self._decrease_tax, "minus")
+        self.tax_menu.add_item("Tahrir Yaptır (500 Altın)", self._conduct_tahrir)
         self.tax_menu.add_item("Sikke Tağşişi (+5000 Altın, %15 Enflasyon)", self._debase_currency)
         self.tax_menu.add_item("Sikke Tashihi (-10000 Altın, -%15 Enflasyon)", self._reform_currency)
     
@@ -99,6 +100,21 @@ class EconomyScreen(BaseScreen):
         self.resources_panel.add_item("", "")
         self.resources_panel.add_item("Vergi Oranı", f"%{int(eco.tax_rate * 100)}")
         self.resources_panel.add_item("Enflasyon", f"%{int(eco.inflation_rate * 100)}")
+        
+        # Tahrir durumu
+        tahrir = eco.get_tahrir_status()
+        tahrir_color_hint = ""
+        if tahrir['accuracy'] < 50:
+            tahrir_color_hint = " ⚠"
+        self.resources_panel.add_item(
+            "Tahrir Doğruluğu", 
+            f"%{tahrir['accuracy']} ({tahrir['status']}){tahrir_color_hint}"
+        )
+        if tahrir['tax_loss_pct'] > 0:
+            self.resources_panel.add_item(
+                "Vergi Kaybı", 
+                f"%{tahrir['tax_loss_pct']}"
+            )
     
     def handle_event(self, event) -> bool:
         if self.tax_menu.handle_event(event):
@@ -256,6 +272,14 @@ class EconomyScreen(BaseScreen):
         if gm:
             if gm.economy.reform_currency(gm.population):
                 self.audio.play_game_sound('economy', 'coin')
+                self._update_panels()
+    
+    def _conduct_tahrir(self):
+        """Tahrir yaptır"""
+        gm = self.screen_manager.game_manager
+        if gm:
+            result = gm.economy.conduct_tahrir(gm.population)
+            if result.get('success'):
                 self._update_panels()
     
     def _go_back(self):

@@ -430,7 +430,7 @@ class NegotiationScreen(BaseScreen):
                     'dowry': dowry,
                     'yearly_gift': self.offer_values.get('yearly_gift', 0),
                     'trade_agreement': self.offer_values.get('trade_agreement', 0)
-                })
+                }, current_turn=gm.turn_count)
                 self.audio.announce(f"{self.target}'e evlilik elcisi gonderildi! Cevap bekleniyor...")
                 gm.diplomacy.add_prestige(10, f"{self.target}'e evlilik teklifi")
             else:
@@ -480,7 +480,7 @@ class NegotiationScreen(BaseScreen):
                     'tribute': self.offer_values.get('tribute_rate', 200),
                     'autonomy': self.offer_values.get('autonomy', 50),
                     'military_power': gm.military.get_total_power()
-                })
+                }, current_turn=gm.turn_count)
                 self.audio.announce(f"{self.target}'e vassallasma ultimatomu gonderildi!")
                 gm.diplomacy.add_prestige(20, f"{self.target}'e ultimatom")
             else:

@@ -192,6 +192,8 @@ class VakifStats:
     maintenance: int
     effects: Dict
     required_population: int
+    akar_income: int = 0         # Tur başına akar (gelir) - ticari vakıflar için
+    historical_note: str = ""    # Tarihsel açıklama
 
 
 VAKIF_DEFINITIONS = {
@@ -201,7 +203,9 @@ VAKIF_DEFINITIONS = {
         build_cost=500,
         maintenance=10,
         effects={'piety': 10, 'happiness': 5, 'loyalty': 3},
-        required_population=1000
+        required_population=1000,
+        akar_income=0,
+        historical_note="İbadet yeri. Cuma ve bayram namazları burada kılınır. Aynı zamanda eğitim ve toplantı merkezi."
     ),
     VakifType.MEDRESE: VakifStats(
         name="Madrasa",
@@ -209,7 +213,9 @@ VAKIF_DEFINITIONS = {
         build_cost=800,
         maintenance=20,
         effects={'education': 15, 'science': 5, 'ulema_capacity': 5},
-        required_population=3000
+        required_population=3000,
+        akar_income=0,
+        historical_note="Eğitim kurumu. Nakli ve akli ilimler öğretilir. Müderrisler günlük maaş alır, talebe yemeği vakıftan karşılanır."
     ),
     VakifType.IMARET: VakifStats(
         name="Soup Kitchen",
@@ -217,7 +223,9 @@ VAKIF_DEFINITIONS = {
         build_cost=400,
         maintenance=15,
         effects={'happiness': 10, 'population_growth': 2},
-        required_population=2000
+        required_population=2000,
+        akar_income=0,
+        historical_note="Fakirlere ve yolculara yemek dağıtılır. Külliyenin sosyal merkezi, bilgi akışını sağlar."
     ),
     VakifType.KERVANSARAY: VakifStats(
         name="Caravanserai",
@@ -225,7 +233,9 @@ VAKIF_DEFINITIONS = {
         build_cost=600,
         maintenance=10,
         effects={'trade_income': 15, 'caravan_safety': 10},
-        required_population=1500
+        required_population=1500,
+        akar_income=15,
+        historical_note="Yolcuların konakladığı han. Konaklama ücreti akar olarak vakıf gelirine döner."
     ),
     VakifType.HASTANE: VakifStats(
         name="Hospital",
@@ -233,7 +243,9 @@ VAKIF_DEFINITIONS = {
         build_cost=1000,
         maintenance=25,
         effects={'health': 20, 'population_growth': 3},
-        required_population=5000
+        required_population=5000,
+        akar_income=5,
+        historical_note="Hastane. Tedavi ücretsizdir, bağışlardan gelir elde edilir. Müzikle tedavi de uygulanır."
     ),
     VakifType.HAMAM: VakifStats(
         name="Bathhouse",
@@ -241,7 +253,9 @@ VAKIF_DEFINITIONS = {
         build_cost=300,
         maintenance=8,
         effects={'health': 5, 'happiness': 5, 'income': 10},
-        required_population=500
+        required_population=500,
+        akar_income=20,
+        historical_note="Halk hamamı. Giriş ücreti alınır, vakıf için en kârlı akar kaynağıdır."
     ),
     VakifType.CESME: VakifStats(
         name="Fountain",
@@ -249,7 +263,9 @@ VAKIF_DEFINITIONS = {
         build_cost=150,
         maintenance=3,
         effects={'health': 3, 'happiness': 2},
-        required_population=200
+        required_population=200,
+        akar_income=0,
+        historical_note="Halka bedava su sağlar. En yaygın hayır eseri, her mahallede bulunur."
     ),
 }
 
@@ -420,19 +436,119 @@ class ReligionSystem:
         
         self.vakifs.append(vakif)
         
-        # Dindarlık artışı
+        # Dindairlık artışı
         self.piety = min(100, self.piety + 3)
         
         # Vakıf inşaat sesi
         audio.play_game_sound('construction', 'hammer')
         
+        akar_text = ""
+        if stats.akar_income > 0:
+            akar_text = f" Akar geliri: {stats.akar_income} altın/tur."
+        
         audio.announce_action_result(
             f"{stats.name_tr} inşası",
             True,
-            f"{name} tamamlandı"
+            f"{name} tamamlandı.{akar_text} {stats.historical_note}"
         )
         
         return vakif
+    
+    def upgrade_vakif(self, vakif_id: str, economy) -> bool:
+        """Vakıfı yüselt (Seviye 1→3, külliye genişletmesi)"""
+        audio = get_audio_manager()
+        
+        vakif = next((v for v in self.vakifs if v.vakif_id == vakif_id), None)
+        if not vakif:
+            audio.announce_action_result("Vakıf Yükseltme", False, "Vakıf bulunamadı")
+            return False
+        
+        if vakif.level >= 3:
+            audio.announce_action_result("Vakıf Yükseltme", False, 
+                f"{vakif.name} zaten en yüksek seviyede")
+            return False
+        
+        stats = VAKIF_DEFINITIONS[vakif.vakif_type]
+        cost = int(stats.build_cost * (vakif.level + 1) * 0.6)
+        
+        if not economy.can_afford(gold=cost):
+            audio.announce_action_result("Vakıf Yükseltme", False, 
+                f"Yetersiz altın ({cost} gerekli)")
+            return False
+        
+        economy.spend(gold=cost)
+        vakif.level += 1
+        
+        # Yükseltme dindairlığı artırır
+        self.piety = min(100, self.piety + 2)
+        
+        audio.play_game_sound('construction', 'hammer')
+        audio.announce_action_result(
+            f"{vakif.name} Yükseltildi",
+            True,
+            f"Seviye {vakif.level}. Etkileri %{vakif.level * 50} artırıldı."
+        )
+        
+        return True
+    
+    def repair_vakif(self, vakif_id: str, economy) -> bool:
+        """Vakıf onarımı (harap düşmeyi önler)"""
+        audio = get_audio_manager()
+        
+        vakif = next((v for v in self.vakifs if v.vakif_id == vakif_id), None)
+        if not vakif:
+            audio.announce_action_result("Vakıf Onarımı", False, "Vakıf bulunamadı")
+            return False
+        
+        if vakif.condition >= 100:
+            audio.announce_action_result("Vakıf Onarımı", False, 
+                f"{vakif.name} zaten iyi durumda")
+            return False
+        
+        stats = VAKIF_DEFINITIONS[vakif.vakif_type]
+        cost = max(20, int(stats.build_cost * 0.3))
+        
+        if not economy.can_afford(gold=cost):
+            audio.announce_action_result("Vakıf Onarımı", False, 
+                f"Yetersiz altın ({cost} gerekli)")
+            return False
+        
+        economy.spend(gold=cost)
+        old_condition = vakif.condition
+        vakif.condition = 100
+        
+        audio.play_game_sound('construction', 'hammer')
+        audio.announce_action_result(
+            f"{vakif.name} Onarıldı",
+            True,
+            f"Durum %{old_condition} → %100"
+        )
+        
+        return True
+    
+    def get_vakif_summary(self) -> Dict:
+        """Vakıf özet istatistikleri"""
+        total_akar = 0
+        total_maintenance = 0
+        needs_repair = 0
+        
+        for vakif in self.vakifs:
+            stats = VAKIF_DEFINITIONS[vakif.vakif_type]
+            # Akar geliri: seviye çarpanı ve condition oranı
+            level_mult = 1.0 + (vakif.level - 1) * 0.5
+            condition_mult = vakif.condition / 100.0 if vakif.condition > 0 else 0
+            total_akar += int(stats.akar_income * level_mult * condition_mult)
+            total_maintenance += stats.maintenance
+            if vakif.condition < 50:
+                needs_repair += 1
+        
+        return {
+            'count': len(self.vakifs),
+            'total_akar': total_akar,
+            'total_maintenance': total_maintenance,
+            'net_income': total_akar - total_maintenance,
+            'needs_repair': needs_repair
+        }
     
     def process_turn(self, economy) -> Dict:
         """Tur sonunda din sistemini işle"""
@@ -455,8 +571,16 @@ class ReligionSystem:
             stats = VAKIF_DEFINITIONS[vakif.vakif_type]
             results['expenses'] += stats.maintenance
             
-            # Vakıf gelirleri (hamam gibi)
-            if 'income' in stats.effects:
+            # Vakıf akar gelirleri (seviye ve condition çarpanı ile)
+            level_mult = 1.0 + (vakif.level - 1) * 0.5
+            condition_mult = vakif.condition / 100.0 if vakif.condition > 0 else 0
+            akar = int(stats.akar_income * level_mult * condition_mult)
+            if akar > 0:
+                results['income'] += akar
+                vakif.income = akar
+            
+            # Eski sabit gelir sistemi (geriye uyumluluk)
+            if 'income' in stats.effects and stats.akar_income == 0:
                 income = stats.effects['income']
                 results['income'] += income
                 vakif.income = income
@@ -565,12 +689,13 @@ class ReligionSystem:
             'health': 0,
         }
         
-        # Vakıf etkileri
+        # Vakıf etkileri (seviye çarpanı ile)
         for vakif in self.vakifs:
             if vakif.condition > 50:  # Sadece iyi durumdaki vakıflar
                 stats = VAKIF_DEFINITIONS[vakif.vakif_type]
+                level_mult = 1.0 + (vakif.level - 1) * 0.5
                 for key, value in stats.effects.items():
-                    effects[key] = effects.get(key, 0) + value
+                    effects[key] = effects.get(key, 0) + int(value * level_mult)
         
         # Millet etkileri
         for millet, state in self.millet_states.items():

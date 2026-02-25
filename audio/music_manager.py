@@ -20,7 +20,16 @@ class MusicContext(Enum):
     TENSE = "tense"         # Kriz/Gerilim
     VICTORY = "victory"     # Zafer
     DIPLOMACY = "diplomacy" # Diplomasi
-
+    # Ekran bazlı müzik bağlamları
+    MILITARY = "military"
+    TRADE = "trade"
+    NAVAL = "naval"
+    ESPIONAGE = "espionage"
+    ARTILLERY = "artillery"
+    CONSTRUCTION = "construction"
+    RELIGION = "religion"
+    ECONOMY = "economy"
+    DIVAN = "divan"
 
 # Müzik dosya eşlemeleri
 MUSIC_FILES = {
@@ -30,29 +39,53 @@ MUSIC_FILES = {
     MusicContext.TENSE: "tense.ogg",
     MusicContext.VICTORY: "victory.ogg",
     MusicContext.DIPLOMACY: "diplomacy.ogg",
+    MusicContext.MILITARY: "military.ogg",
+    MusicContext.TRADE: "trade.ogg",
+    MusicContext.NAVAL: "naval.ogg",
+    MusicContext.ESPIONAGE: "espionage.ogg",
+    MusicContext.ARTILLERY: "artillery.ogg",
+    MusicContext.CONSTRUCTION: "construction.ogg",
+    MusicContext.RELIGION: "religion.ogg",
+    MusicContext.ECONOMY: "economy.ogg",
+    MusicContext.DIVAN: "divan.ogg",
 }
 
 # Ekran -> Müzik bağlamı eşlemesi
+# Dosya yoksa MusicManager sessizce devam eder (fallback: AMBIENT)
 SCREEN_MUSIC_MAP = {
     'MAIN_MENU': MusicContext.MENU,
     'PROVINCE_VIEW': MusicContext.AMBIENT,
-    'ECONOMY': MusicContext.AMBIENT,
-    'MILITARY': MusicContext.AMBIENT,
-    'CONSTRUCTION': MusicContext.AMBIENT,
+    'ECONOMY': MusicContext.ECONOMY,
+    'MILITARY': MusicContext.MILITARY,
+    'CONSTRUCTION': MusicContext.CONSTRUCTION,
     'POPULATION': MusicContext.AMBIENT,
     'WORKERS': MusicContext.AMBIENT,
-    'TRADE': MusicContext.AMBIENT,
-    'ESPIONAGE': MusicContext.AMBIENT,
-    'RELIGION': MusicContext.AMBIENT,
+    'TRADE': MusicContext.TRADE,
+    'ESPIONAGE': MusicContext.ESPIONAGE,
+    'RELIGION': MusicContext.RELIGION,
     'DIPLOMACY': MusicContext.DIPLOMACY,
     'NEGOTIATION': MusicContext.DIPLOMACY,
     'WARFARE': MusicContext.BATTLE,
     'BATTLE': MusicContext.BATTLE,
+    'RAID_REPORT': MusicContext.BATTLE,
     'MAP': MusicContext.AMBIENT,
     'SETTINGS': MusicContext.MENU,
     'SAVE_LOAD': MusicContext.MENU,
-    'EVENT': MusicContext.AMBIENT,  # Olaya göre değişebilir
-    'GAME_OVER': MusicContext.MENU,
+    'EVENT': MusicContext.AMBIENT,
+    'GAME_OVER': MusicContext.TENSE,
+    'NAVAL': MusicContext.NAVAL,
+    'ARTILLERY': MusicContext.ARTILLERY,
+    'BUILDING_INTERIOR': MusicContext.CONSTRUCTION,
+    'GUILD': MusicContext.TRADE,
+    'HISTORY': MusicContext.AMBIENT,
+    'DIVAN': MusicContext.DIVAN,
+    'TUTORIAL': MusicContext.MENU,
+    'CHARACTER_CREATION': MusicContext.MENU,
+    'ACHIEVEMENT': MusicContext.VICTORY,
+    'WORKER_INTERVIEW': MusicContext.AMBIENT,
+    'PROVINCE_SELECT': MusicContext.MENU,
+    'MULTIPLAYER': MusicContext.MENU,
+    'MULTIPLAYER_GAME': MusicContext.AMBIENT,
 }
 
 
@@ -154,11 +187,8 @@ class MusicManager:
         
         if not music_file:
             # Dosya yoksa, mevcut en uygun alternatifi kullan
-            if context in (MusicContext.TENSE, MusicContext.DIPLOMACY, MusicContext.VICTORY, MusicContext.BATTLE):
-                # Alternatif olarak ambient kullan
-                music_file = self.get_music_for_context(MusicContext.AMBIENT)
-            elif context == MusicContext.MENU:
-                # Menu yoksa ambient
+            # Tüm ekran-bazlı bağlamlar AMBIENT'e düşer
+            if context != MusicContext.AMBIENT:
                 music_file = self.get_music_for_context(MusicContext.AMBIENT)
         
         if not music_file:
@@ -170,7 +200,10 @@ class MusicManager:
     def _play_file(self, filepath: str, loop: bool = True):
         """Müzik dosyasını çal"""
         if self.current_file == filepath and self.is_playing:
-            return
+            # Aynı dosya zaten çalıyor, kontrol et
+            if pygame.mixer.music.get_busy():
+                return
+            # Dosya durmuş olabilir, yeniden başlat
         
         try:
             pygame.mixer.music.stop()
@@ -183,15 +216,17 @@ class MusicManager:
             
         except Exception as e:
             print(f"Müzik çalma hatası: {e}")
+            self.is_playing = False
     
     def on_screen_change(self, screen_name: str):
         """
         Ekran değiştiğinde çağrılır.
         Otomatik olarak uygun müziği çalar.
         """
-        # Kriz aktifse müziği değiştirme
+        # Ekran değiştiğinde kriz modunu sıfırla (savaş ekranından çıkınca krizde kalmaması için)
         if self.crisis_active:
-            return
+            self.crisis_active = False
+            self.previous_context = None
         
         # Ekran için bağlam bul
         context = SCREEN_MUSIC_MAP.get(screen_name.upper(), MusicContext.AMBIENT)

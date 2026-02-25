@@ -99,13 +99,27 @@ class ReligionScreen(BaseScreen):
         
         # Vakıf paneli
         vakif_items = []
-        for vakif in rel.vakifs:
-            vakif_items.append((vakif.name, f"%{vakif.condition} durum"))
         
-        if not vakif_items:
+        # Vakıf özet istatistikleri
+        summary = rel.get_vakif_summary()
+        if summary['count'] > 0:
+            vakif_items.append(("Toplam Vakıf", f"{summary['count']} adet"))
+            vakif_items.append(("Akar Geliri", f"{summary['total_akar']} altın/tur"))
+            vakif_items.append(("Bakım Gideri", f"{summary['total_maintenance']} altın/tur"))
+            net = summary['net_income']
+            net_text = f"+{net}" if net >= 0 else str(net)
+            vakif_items.append(("Net Gelir", f"{net_text} altın/tur"))
+            
+            if summary['needs_repair'] > 0:
+                vakif_items.append(("⚠ Onarım", f"{summary['needs_repair']} vakıf harap"))
+            
+            vakif_items.append(("", ""))  # Boşluk
+            for vakif in rel.vakifs:
+                stats = VAKIF_DEFINITIONS[vakif.vakif_type]
+                level_text = f"Svy {vakif.level}" if vakif.level > 1 else ""
+                vakif_items.append((vakif.name, f"%{vakif.condition} {level_text}".strip()))
+        else:
             vakif_items.append(("Durum", "Henüz vakıf yok"))
-        
-        vakif_items.append(("Toplam", f"{len(rel.vakifs)} vakıf"))
         
         self.vakif_panel.set_content(vakif_items)
     
@@ -155,6 +169,56 @@ class ReligionScreen(BaseScreen):
         
         self.action_menu.add_category("Vakıf İnşa Et", vakif_items)
         
+        # === 2b. VAKIFLARI YÖNET ===
+        if rel.vakifs:
+            manage_items = []
+            for vakif in rel.vakifs:
+                stats = VAKIF_DEFINITIONS[vakif.vakif_type]
+                level_text = f"Svy {vakif.level}"
+                cond_text = f"%{vakif.condition}"
+                akar_text = ""
+                if stats.akar_income > 0:
+                    level_mult = 1.0 + (vakif.level - 1) * 0.5
+                    current_akar = int(stats.akar_income * level_mult * (vakif.condition / 100.0))
+                    akar_text = f", Akar: {current_akar}"
+                
+                # Alt menü: yükseltme ve onarım
+                sub_items = []
+                
+                if vakif.level < 3:
+                    upgrade_cost = int(stats.build_cost * (vakif.level + 1) * 0.6)
+                    can_upgrade = gm.economy.can_afford(gold=upgrade_cost) if hasattr(gm.economy, 'can_afford') else False
+                    prefix = "" if can_upgrade else "[X] "
+                    sub_items.append({
+                        'text': f"{prefix}Yükselt → Svy {vakif.level + 1} ({upgrade_cost} altın)",
+                        'callback': lambda vid=vakif.vakif_id: self._upgrade_vakif(vid),
+                        'disabled': not can_upgrade
+                    })
+                
+                if vakif.condition < 100:
+                    repair_cost = max(20, int(stats.build_cost * 0.3))
+                    can_repair = gm.economy.can_afford(gold=repair_cost) if hasattr(gm.economy, 'can_afford') else False
+                    prefix = "" if can_repair else "[X] "
+                    sub_items.append({
+                        'text': f"{prefix}Onar ({repair_cost} altın, %{vakif.condition} → %100)",
+                        'callback': lambda vid=vakif.vakif_id: self._repair_vakif(vid),
+                        'disabled': not can_repair
+                    })
+                
+                if not sub_items:
+                    sub_items.append({
+                        'text': 'İyi durumda, işlem gerekmiyor',
+                        'callback': None,
+                        'disabled': True
+                    })
+                
+                manage_items.append({
+                    'text': f"{vakif.name} ({level_text}, {cond_text}{akar_text})",
+                    'children': sub_items
+                })
+            
+            self.action_menu.add_category("Vakıfları Yönet", manage_items)
+        
         # === 3. FETVA ===
         if rel.has_seyhulislam:
             # Fetva kısıtlamaları (1 turda 1 fetva)
@@ -203,6 +267,22 @@ class ReligionScreen(BaseScreen):
         if gm:
             population = gm.population.population.total
             gm.religion.build_vakif(vakif_type, gm.economy, population)
+            self._update_panels()
+            self._setup_action_menu()
+    
+    def _upgrade_vakif(self, vakif_id: str):
+        """Vakıf yükselt"""
+        gm = self.screen_manager.game_manager
+        if gm:
+            gm.religion.upgrade_vakif(vakif_id, gm.economy)
+            self._update_panels()
+            self._setup_action_menu()
+    
+    def _repair_vakif(self, vakif_id: str):
+        """Vakıf onar"""
+        gm = self.screen_manager.game_manager
+        if gm:
+            gm.religion.repair_vakif(vakif_id, gm.economy)
             self._update_panels()
             self._setup_action_menu()
     

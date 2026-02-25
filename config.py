@@ -9,8 +9,8 @@ SCREEN_HEIGHT = 720
 FPS = 60
 
 # Sürüm Bilgisi (Güncelleme Sistemi için)
-VERSION = "1.0.0"
-GITHUB_REPO = "rodoslavaleksandrov/Osmanl-Eyalet-sim-lasyonu"
+VERSION = "1.1.0"
+GITHUB_REPO = "m-enes-senovali/Osmanl-Eyalet-sim-lasyonu"
 
 GAME_TITLE = "Osmanlı Eyalet Yönetimi"
 

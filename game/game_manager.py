@@ -24,6 +24,7 @@ from game.systems.artillery import ArtillerySystem
 from game.systems.espionage import EspionageSystem  # YENİ
 from game.systems.religion import ReligionSystem    # YENİ
 from game.systems.history import HistorySystem      # YENİ
+from game.systems.divan import DivanSystem          # YENİ
 
 
 def get_base_path():
@@ -105,6 +106,7 @@ class GameManager:
         self.espionage = EspionageSystem()  # Casusluk sistemi (YENİ)
         self.religion = ReligionSystem()    # Din/Kültür sistemi (YENİ)
         self.history = HistorySystem()      # Geçmiş Olaylar (YENİ)
+        self.divan = DivanSystem()          # Eyalet Divanı (YENİ)
         
         # Ses yöneticisi
         self.audio = get_audio_manager()
@@ -300,6 +302,25 @@ class GameManager:
             sailcloth=naval_supplies['sailcloth']
         )
         
+        # 2b. Barut ve Bakır üretimi (Topçu kaynakları)
+        # Baruthane modülü kuruluysa barut üretilir
+        try:
+            foundry = self.construction.get_building(BuildingType.ARTILLERY_FOUNDRY)
+            if foundry and hasattr(foundry, 'has_module') and foundry.has_module('baruthane'):
+                barut_production = 3 + getattr(foundry, 'level', 1) * 2  # Sev 1=5, Sev 5=13
+                self.economy.resources.gunpowder += barut_production
+        except Exception:
+            pass
+        
+        # Maden binası seviyesine göre bakır üretimi
+        try:
+            mine = self.construction.get_building(BuildingType.MINE)
+            if mine:
+                copper_production = getattr(mine, 'level', 1) * 2  # Sev 1=2, Sev 5=10
+                self.economy.resources.copper += copper_production
+        except Exception:
+            pass
+        
         # 3. Nüfus
         has_mosque = self.construction.has_building(BuildingType.MOSQUE)
         has_hospital = self.construction.has_building(BuildingType.HOSPITAL)
@@ -384,6 +405,15 @@ class GameManager:
         if self.province.is_coastal:
             self.naval.process_construction()
         
+        # 8b. Liman durumunu senkronize et (tersane → military + trade)
+        has_shipyard = self.construction.has_building(BuildingType.SHIPYARD)
+        self.military.has_port = has_shipyard
+        if hasattr(self, 'trade'):
+            shipyard_level = 0
+            if has_shipyard:
+                shipyard_level = self.construction.buildings[BuildingType.SHIPYARD].level
+            self.trade.update_port_status(has_shipyard, shipyard_level)
+        
         # 9. Diplomasi
         diplomacy_messages = self.diplomacy.process_turn()
         
@@ -404,8 +434,11 @@ class GameManager:
                 self.diplomacy.fail_mission(i)
         
         # 10. Savaşlar - topçu ve deniz gücü desteği ile
-        artillery_power = self.artillery.get_total_power()
-        siege_bonus = self.artillery.get_siege_bonus()
+        # Personel etkinliği çarpanı (Topçu-Cebeci oranı)
+        crew_eff = self.artillery.get_crew_effectiveness(self.military)
+        artillery_power = int(self.artillery.get_total_power() * crew_eff)
+        siege_bonus = int(self.artillery.get_siege_bonus() * crew_eff)
+        morale_damage = int(self.artillery.get_morale_damage() * crew_eff)
         naval_power = self.naval.get_fleet_power() if self.province.is_coastal else 0
         
         # Erkek karakter: Kuşatma saldırı bonusu (+%10)
@@ -413,6 +446,17 @@ class GameManager:
             siege_attack_bonus = self.player.get_bonus('siege_attack')
             if siege_attack_bonus > 0:
                 siege_bonus = int(siege_bonus * (1.0 + siege_attack_bonus))
+        
+        # Personel uyarısı (her 10 turda bir)
+        if crew_eff < 0.8 and self.turn_count % 10 == 0:
+            self.audio.speak(
+                f"Uyarı: Topçu personeli yetersiz! Etkinlik yüzde {int(crew_eff * 100)}. "
+                f"Daha fazla Topçu ve Cebeci askeri alın.",
+                interrupt=False
+            )
+        
+        # Moral hasarını warfare sistemine aktar
+        self.warfare._current_morale_damage = morale_damage
         
         battle_results = self.warfare.process_battles(
             self.military,
@@ -573,7 +617,8 @@ class GameManager:
             'net_income': net_income,
             'population_change': pop_result['population_change'],
             'event': event is not None,
-            'messages': messages
+            'messages': messages,
+            'divan_reports': len(self.divan.analyze_turn(self))
         }
     
     def _check_game_over(self):
@@ -785,6 +830,7 @@ class GameManager:
             'artillery': self.artillery.to_dict(),
             'espionage': self.espionage.to_dict(),
             'religion': self.religion.to_dict(),
+            'divan': self.divan.to_dict(),
         }
         
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -928,7 +974,8 @@ class GameManager:
             'religion': self.religion.to_dict(),
             'guilds': self.guilds.to_dict() if hasattr(self, 'guilds') else {},
             'achievements': self.achievements.to_dict() if hasattr(self, 'achievements') else {},
-            'history': self.history.to_dict() if hasattr(self, 'history') else {}
+            'history': self.history.to_dict() if hasattr(self, 'history') else {},
+            'divan': self.divan.to_dict() if hasattr(self, 'divan') else {}
         }
         
         try:
@@ -1017,6 +1064,8 @@ class GameManager:
                 self.history.from_dict(save_data['history'])
             if 'achievements' in save_data and hasattr(self, 'achievements'):
                 self.achievements.from_dict(save_data['achievements'])
+            if 'divan' in save_data:
+                self.divan = DivanSystem.from_dict(save_data['divan'])
             
             # Oyuncu karakteri yükle (YENİ)
             if 'player' in save_data and save_data['player']:

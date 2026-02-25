@@ -1,0 +1,105 @@
+# =============================================================
+# OSMANLI EYALET SİMÜLASYONU — GEREKLİ SES DOSYALARI
+# =============================================================
+# Dosya yoksa oyun sessizce devam eder, hata vermez.
+# Format: .ogg (önerilen), .wav veya .mp3
+# =============================================================
+
+# =============================================================
+# 1. MÜZİK DOSYALARI (audio/sounds/music/)
+# =============================================================
+# Her ekran için tema müziği. Yoksa background.ogg çalar.
+
+menu_theme.ogg          # Ana menü müziği — Mehter/Osmanlı temalı
+background.ogg          # Genel arka plan müziği — Sakin, huzurlu
+battle.ogg              # Savaş müziği — Hızlı, gerilimli, davullar
+tense.ogg               # Kriz/gerilim müziği — Tehdit hissi
+victory.ogg             # Zafer müziği — Görkemli, kutlama
+diplomacy.ogg           # Diplomasi müziği — Zarif, saray havası
+
+# --- Ekran Bazlı Müzikler (YENİ) ---
+military.ogg            # Askeri ekran — Mehter marşı, davul
+trade.ogg               # Ticaret ekranı — Çarşı/bedesten havası
+naval.ogg               # Deniz kuvvetleri — Denizci şarkısı, dalga
+espionage.ogg           # Casusluk ekranı — Gizem, karanlık
+artillery.ogg           # Topçu ekranı — Ağır, güçlü, çelik
+construction.ogg        # İnşaat ekranı — Ritmik, üretken
+religion.ogg            # Din ekranı — İlahi, ezan ambiyansı
+economy.ogg             # Ekonomi ekranı — Hafif, ticari
+divan.ogg               # Divan ekranı — Resmi, saray müziği
+
+# Ek ambient playlist (isteğe bağlı, otomatik taranır)
+# ambient_morning.ogg   # Sabah ambiyansı
+# ambient_night.ogg     # Gece ambiyansı
+# ambient_rain.ogg      # Yağmur ambiyansı
+
+
+# =============================================================
+# 2. AMBİYANS SES DOSYALARI (audio/sounds/ambient/)
+# =============================================================
+# Loop olarak çalar, ekran değişince durur.
+# Dosya adı: {isim}.ogg şeklinde olmalı
+
+city.ogg                # Şehir sesleri — Kalabalık, at arabaları, kuş
+                        # [Eyalet Görünümü ekranı]
+
+market.ogg              # Pazar sesleri — Satıcı bağırtıları, madeni para
+                        # [Ekonomi ekranı]
+
+camp.ogg                # Askeri kamp — Kılıç sesi, at kişnemesi, emir
+                        # [Askeri ekran]
+
+workshop.ogg            # Atölye — Çekiç, testere, odun kırılması
+                        # [İnşaat ekranı, Bina İçi ekranı]
+
+crowd.ogg               # Kalabalık — Uğultu, çocuk sesleri, konuşma
+                        # [Nüfus ekranı, İşçiler ekranı]
+
+bazaar.ogg              # Çarşı/Bedesten — Tezgahtar, deve çanı, müzik
+                        # [Ticaret ekranı, Lonca ekranı]
+
+night.ogg               # Gece — Cırcır böceği, baykuş, hafif rüzgar
+                        # [Casusluk ekranı]
+
+mosque.ogg              # Cami — Ezan, kuş, çeşme suyu
+                        # [Din ekranı]
+
+court.ogg               # Saray — Fısıltı, kapı, adımlar, halı
+                        # [Diplomasi, Müzakere, Divan ekranı]
+
+march.ogg               # Yürüyüş — Toplu yürüyüş, davul, zırh takırtısı
+                        # [Savaş Hazırlık ekranı]
+
+battlefield.ogg         # Savaş alanı — Kılıç, bağırtı, top, at
+                        # [Savaş ekranı]
+
+wind.ogg                # Rüzgar — Açık hava, yaprak hışırtısı
+                        # [Harita ekranı]
+
+sea.ogg                 # Deniz — Dalga, martı, gemi gıcırtısı
+                        # [Deniz Kuvvetleri ekranı]
+
+foundry.ogg             # Dökümhane — Erimiş metal, körük, ağır çekiç
+                        # [Topçu ekranı]
+
+
+# =============================================================
+# 3. UI SES EFEKTLERİ (audio/sounds/ui/)
+# =============================================================
+# Zaten tanımlı, isteğe bağlı eklenebilir
+
+click.ogg               # Menü tıklama
+hover.ogg               # Menü gezinme
+notification.ogg        # Bildirim sesi
+error.ogg               # Hata sesi
+success.ogg             # Başarı sesi
+
+
+# =============================================================
+# NOTLAR
+# =============================================================
+# - Tüm dosyalar .ogg formatında olmalı (en uyumlu)
+# - Ambiyans sesleri loop olarak çalar, 10-30 sn uzunluk yeterli
+# - Müzikler 2-5 dakika arası ideal
+# - Ses seviyesi normalize edilmeli (clipping olmamalı)
+# - Dosya yoksa oyun sessizce devam eder, HATA VERMEZ

@@ -191,6 +191,30 @@ class AchievementScreen(BaseScreen):
         self.detail_panel.add_item("Açıklama", ach.description)
         self.detail_panel.add_item("Puan", str(ach.points))
         
+        # Başarı kriterleri (condition_key'den Türkçe açıklama)
+        criteria_map = {
+            'gold_10000': '10.000 altın biriktir',
+            'gold_50000': '50.000 altın biriktir',
+            'trade_routes_5': '5 ticaret yolu aç',
+            'trade_routes_10': '10 ticaret yolu aç',
+            'soldiers_1000': '1.000 asker topla',
+            'soldiers_5000': '5.000 asker topla',
+            'total_victories_5': '5 zafer kazan',
+            'total_victories_20': '20 zafer kazan',
+            'vassals_3': '3 vassal edin',
+            'vassals_5': '5 vassal edin',
+            'buildings_10': '10 bina inşa et',
+            'buildings_20': '20 bina inşa et',
+            'population_10000': '10.000 nüfusa ulaş',
+            'happiness_90': '%90 mutluluk sağla',
+            'piety_90': '%90 dindarlık ulaş',
+            'legitimacy_90': '%90 meşruiyet ulaş',
+            'turns_100': '100 tur hayatta kal',
+            'turns_without_war_20': '20 tur savaşsız geçir',
+        }
+        criteria_text = criteria_map.get(ach.condition_key, ach.condition_key)
+        self.detail_panel.add_item("Kriter", criteria_text)
+        
         if ach.unlocked:
             self.detail_panel.add_item("Durum", "✓ Açıldı")
             if ach.unlock_date:

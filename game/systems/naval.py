@@ -228,8 +228,14 @@ class NavalSystem:
         # Audio
         self.audio = get_audio_manager()
     
-    def can_build_ship(self, ship_type: ShipType, economy) -> tuple:
+    def can_build_ship(self, ship_type: ShipType, economy, construction_system=None) -> tuple:
         """Gemi inşa edilebilir mi?"""
+        # Tersane kontrolü - Tersane olmadan gemi yapılamaz!
+        if construction_system:
+            from game.systems.construction import BuildingType
+            if not construction_system.has_building(BuildingType.SHIPYARD):
+                return False, "Tersane inşa edilmeden gemi yapılamaz!"
+        
         definition = SHIP_DEFINITIONS[ship_type]
         res = economy.resources
         
@@ -250,7 +256,7 @@ class NavalSystem:
     
     def start_construction(self, ship_type: ShipType, economy, construction_system=None, custom_name: str = "") -> bool:
         """Gemi inşasını başlat"""
-        can_build, reason = self.can_build_ship(ship_type, economy)
+        can_build, reason = self.can_build_ship(ship_type, economy, construction_system)
         if not can_build:
             self.audio.speak(f"Gemi inşa edilemedi: {reason}", interrupt=True)
             return False

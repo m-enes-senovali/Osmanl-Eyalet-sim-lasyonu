@@ -134,8 +134,6 @@ class CharacterCreationScreen(BaseScreen):
                 "Askeri güç ve akınlarda avantajlısınız.",
                 interrupt=True
             )
-            # Varsayılan erkek isimleri
-            self.name_input.set_text("Kasım")
         else:
             self.audio.speak(
                 "Kadın seçildi. Vali Hatun olarak oynayacaksınız. "
@@ -143,13 +141,12 @@ class CharacterCreationScreen(BaseScreen):
                 "Başlangıçta bazı beyler şüpheyle bakacak, ama başarınızla güven kazanacaksınız.",
                 interrupt=True
             )
-            # Varsayılan kadın isimleri
-            self.name_input.set_text("Mihrimah")
         
-        # İsim aşamasına geç
+        # İsim aşamasına geç — varsayılan isim yok, oyuncu kendi girsin
         self.stage = "name"
+        self.name_input.set_text("")
         self.name_input.focus()
-        self.audio.speak("Şimdi karakterinize bir isim verin.", interrupt=False)
+        self.audio.speak("Şimdi karakterinize bir isim verin. İsim yazıp Enter'a basın.", interrupt=False)
     
     def _next_stage(self):
         """Sonraki aşamaya geç"""

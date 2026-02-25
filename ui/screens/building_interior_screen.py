@@ -379,7 +379,7 @@ class BuildingInteriorScreen(BaseScreen):
         if not gm or not hasattr(gm, 'naval'):
             return
         
-        gm.naval.start_construction(ship_type, gm.economy)
+        gm.naval.start_construction(ship_type, gm.economy, gm.construction)
         self._update_panels()
     
     def _train_unit(self, unit_type):
