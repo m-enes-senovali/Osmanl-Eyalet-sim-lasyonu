@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 Muhammet Enes Şenovalı. Tüm Hakları Saklıdır.
+# Bu yazılım hiçbir şekilde satılamaz veya ticari amaçla kullanılamaz.
 """
 Osmanlı Eyalet Yönetim Simülasyonu - HTTP Polling Sunucusu
 REST API tabanlı çok oyunculu sunucu (Güçlendirilmiş)
