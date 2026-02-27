@@ -112,6 +112,13 @@ class Game:
             EventPopupScreen(self.screen_manager)
         )
         
+        # Oyun Sonu ekranı
+        from ui.screens.game_over_screen import GameOverScreen
+        self.screen_manager.register_screen(
+            ScreenType.GAME_OVER,
+            GameOverScreen(self.screen_manager)
+        )
+        
         # Kayıt/Yükleme ekranı
         from ui.screens.save_load_screen import SaveLoadScreen
         self.screen_manager.register_screen(
@@ -138,6 +145,13 @@ class Game:
         self.screen_manager.register_screen(
             ScreenType.WARFARE,
             WarfareScreen(self.screen_manager)
+        )
+        
+        # Danışman (Kethüda) ekranı
+        from ui.screens.advisor_screen import AdvisorScreen
+        self.screen_manager.register_screen(
+            ScreenType.ADVISOR,
+            AdvisorScreen(self.screen_manager)
         )
         
         # Ticaret ekranı
@@ -323,6 +337,11 @@ class Game:
             
             # Olay kontrolü (oyun ekranındayken)
             self._check_event_popup()
+            
+            # Oyun Sonu kontrolü (Win / Loss)
+            if self.game_manager and getattr(self.game_manager, 'game_over', False):
+                if self.screen_manager.current_screen_type != ScreenType.GAME_OVER:
+                    self.screen_manager.change_screen(ScreenType.GAME_OVER)
             
             # Ekranı güncelle
             pygame.display.flip()

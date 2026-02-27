@@ -156,12 +156,21 @@ def _init_tutorial_steps():
         TutorialStep(
             id="nav_h_help",
             chapter=TutorialChapter.NAVIGATION,
-            title="Yardım — H",
-            description="H tuşu Kethüda'nızdan (yardımcınızdan) hızlı yardım alır. "
-                        "Mevcut durumunuza göre size tavsiyelerde bulunur. "
-                        "Ne yapacağınızı bilemediğinizde H tuşuna basın.",
+            title="Hızlı Yardım — H",
+            description="H tuşu hızlı bir sesli yardım komutudur. "
+                        "Hangi tuşun ne işe yaradığını unuttuğunuzda size yardımcı olur.",
             instruction="Devam etmek için Enter'a basın.",
             required_key="return"
+        ),
+        TutorialStep(
+            id="nav_f_advisor",
+            chapter=TutorialChapter.NAVIGATION,
+            title="Danışman (Kethüda) Ekranı — F",
+            description="F tuşu doğrudan Danışman ekranını açar. "
+                        "Burada Kethüda size devletin durumu hakkında öncelikli ve acil uyarılarını (Kritik, Uyarı, Bilgi) raporlar. "
+                        "Düzenli olarak danışmanınıza danışmak krizleri önler.",
+            instruction="F tuşuna basın.",
+            required_key="f"
         ),
         TutorialStep(
             id="nav_r_resources",
@@ -239,8 +248,8 @@ def _init_tutorial_steps():
             chapter=TutorialChapter.NAVIGATION,
             title="Gezinme Tamamlandı",
             description="Eyalet ekranı tuş kısayollarını öğrendiniz! Özetleyelim: "
-                        "Space: tur geç, F1: tam durum, H: yardım, R: kaynaklar, "
-                        "W: uyarılar, I: gelir-gider, Y: tarih, Tab: istatistik paneli, "
+                        "Space: tur geç, F1: tam durum, F: Danışman Ekranı, H: hızlı yardım, "
+                        "R: kaynaklar, W: uyarılar, I: gelir-gider, Y: tarih, Tab: istatistik, "
                         "F5: kayıt, Escape: ana menü, PageUp-Down: müzik sesi.",
             instruction="Devam etmek için Enter'a basın.",
             required_key="return"
@@ -768,10 +777,21 @@ def _init_tutorial_steps():
             title="Özel Kısayol Tuşları",
             description="Ek kısayollar: "
                         "R: Tüm kaynakları oku, I: Gelir-gider özeti, "
-                        "W: Uyarıları oku, O: İşçi ekranı, X: Ticaret ekranı, "
-                        "Y: Yıl ve tur bilgisi, H: Yardım al, "
+                        "W: Uyarıları oku, F: Danışman Ekranı, O: İşçi ekranı, X: Ticaret ekranı, "
+                        "Y: Yıl ve tur bilgisi, H: Hızlı yardım al, "
                         "Space: Tur geç, F1: Durum özeti, F5: Kayıt. "
                         "Tab: İstatistik paneli, PageUp-Down: Müzik sesi.",
+            instruction="Devam etmek için Enter'a basın.",
+            required_key="return"
+        ),
+        TutorialStep(
+            id="adv_endgame",
+            chapter=TutorialChapter.ADVANCED,
+            title="Zafer ve Mağlubiyet",
+            description="Oyunun belirli sonları vardır. "
+                        "Zafer koşulları: 500,000 altın biriktirmek, 50 savaş kazanmak, 5 ittifak kurmak veya büyük nüfusa ulaşmak. "
+                        "Mağlubiyet: Padişah sadakatinin sıfırlanması (idam), hazine iflası veya önlenemeyen büyük halk isyanları. "
+                        "Akıllıca yönetin ve Sadrazamlığa yükselin!",
             instruction="Devam etmek için Enter'a basın.",
             required_key="return"
         ),

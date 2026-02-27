@@ -11,8 +11,8 @@
     "raids_completed": 0,
     "rebellions_crushed": 0,
     "defense_victories": 0,
-    "turns_played": 50,
-    "turns_without_war": 50,
+    "turns_played": 100,
+    "turns_without_war": 100,
     "turns_without_tax": 0
   },
   "achievements": {
@@ -49,8 +49,8 @@
     "worker_army": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 11.0,
-      "current_value": 11
+      "progress": 10.0,
+      "current_value": 10
     },
     "conqueror": {
       "unlocked": false,
@@ -61,8 +61,8 @@
     "sea_lord": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 4.0,
-      "current_value": 2
+      "progress": 0.0,
+      "current_value": 0
     },
     "artillery_master": {
       "unlocked": false,
@@ -73,8 +73,8 @@
     "janissary_aga": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 1.34,
-      "current_value": 134
+      "progress": 0.3,
+      "current_value": 30
     },
     "defender": {
       "unlocked": false,
@@ -91,14 +91,14 @@
     "peacemaker": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 20.0,
-      "current_value": 1
+      "progress": 0.0,
+      "current_value": 0
     },
     "spy_master": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 5.0,
-      "current_value": 1
+      "progress": 0.0,
+      "current_value": 0
     },
     "negotiator": {
       "unlocked": false,
@@ -109,14 +109,14 @@
     "tribute_collector": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 66.66666666666666,
-      "current_value": 2
+      "progress": 0.0,
+      "current_value": 0
     },
     "peoples_sultan": {
       "unlocked": false,
       "unlock_date": null,
-      "progress": 49.999,
-      "current_value": 49999
+      "progress": 33.678000000000004,
+      "current_value": 33678
     },
     "millet_father": {
       "unlocked": true,
@@ -149,10 +149,10 @@
       "current_value": 90
     },
     "survivor": {
-      "unlocked": false,
-      "unlock_date": null,
-      "progress": 50.0,
-      "current_value": 50
+      "unlocked": true,
+      "unlock_date": "2026-02-27 10:31",
+      "progress": 100.0,
+      "current_value": 100
     },
     "pacifist": {
       "unlocked": true,

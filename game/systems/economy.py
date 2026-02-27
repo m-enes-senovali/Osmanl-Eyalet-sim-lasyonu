@@ -408,11 +408,10 @@ class EconomySystem:
         if self.resources.gold < 500 and self.resources.gold > 0:
             audio.speak("Uyarı: Hazine çok düşük! Vergiyi artırın veya giderleri azaltın.", interrupt=False)
         
-        # Bankrota karşı koruma - borç limiti
+        # Bankrota karşı uyarı (İflas durumu GameManager'da oyunu bitirir)
         if self.resources.gold < -2000:
-            # Acil durum: Padişahtan borç al
-            self.resources.gold += 1000
-            audio.speak("Acil durum! Padişahtan 1000 altın borç alındı.", interrupt=True)
+            if self.resources.gold > -3000: # Sürekli spam yapmasını engellemek için
+                audio.speak("Acil durum! Hazine iflas noktasında! Padişah durumu öğrenmek üzere.", interrupt=True)
         
         # Tahrir doğruluğu zamanla düşer
         self.turns_since_tahrir += 1

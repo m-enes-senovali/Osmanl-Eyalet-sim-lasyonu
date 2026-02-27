@@ -8,6 +8,7 @@ import pygame
 import random
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, MenuList
+from ui.visual_effects import GradientRenderer, ScreenShake, FlashEffect
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, get_font
 from game.systems.warfare import (
     BattleType, BattlePhase, SiegePhase, TerrainType, WeatherType,
@@ -71,6 +72,11 @@ class BattleScreen(BaseScreen):
         self._header_font = None
         self.battle_ended = False
         self.victory = False
+        
+        # Görsel efektler
+        self._gradient = GradientRenderer.get_gradient('battle')
+        self._shake = ScreenShake()
+        self._flash = FlashEffect()
     
     def get_header_font(self):
         if self._header_font is None:
@@ -622,6 +628,10 @@ class BattleScreen(BaseScreen):
     
     def update(self, dt: float):
         """Düşman turunu işle"""
+        # Efektleri güncelle
+        self._shake.update(dt)
+        self._flash.update(dt)
+        
         if self.enemy_action_pending and not self.battle_ended:
             self.enemy_turn_timer += dt
             
@@ -631,6 +641,10 @@ class BattleScreen(BaseScreen):
                 enemy_tactic = self._get_enemy_tactic_by_doctrine()
                 # Savaştır
                 self._resolve_tactics(self.player_tactic, enemy_tactic)
+                
+                # Sarsıntı + flaş efekti
+                self._shake.trigger(intensity=6.0, duration=0.3)
+                self._flash.trigger(color=(255, 220, 150), duration=0.1)
                 
                 self.enemy_turn_timer = 0
                 self.enemy_action_pending = False
@@ -926,6 +940,16 @@ class BattleScreen(BaseScreen):
         self.audio.speak(self.last_action_result, interrupt=True)
     
     def draw(self, surface: pygame.Surface):
+        # Gradient arka plan
+        surface.blit(self._gradient, (0, 0))
+        
+        # Sarsıntı offset
+        shake_x = self._shake.offset_x
+        shake_y = self._shake.offset_y
+        if shake_x != 0 or shake_y != 0:
+            # Offset'li bir subsurface oluşturmak yerine, çizim koordinatlarına offset ekliyoruz
+            pass  # Aşağıdaki çizimler normal devam eder, flaş efekti üstüne eklenir
+        
         # Başlık
         header_font = self.get_header_font()
         
@@ -968,3 +992,6 @@ class BattleScreen(BaseScreen):
                 True, COLORS['text']
             )
             surface.blit(result_render, (50, SCREEN_HEIGHT - 100))
+        
+        # Flaş efekti (üst katman)
+        self._flash.draw(surface)

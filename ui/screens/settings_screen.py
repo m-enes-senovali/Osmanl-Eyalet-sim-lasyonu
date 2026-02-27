@@ -427,7 +427,6 @@ class SettingsScreen(BaseScreen):
         pass
     
     def draw(self, surface: pygame.Surface):
-        surface.fill(COLORS['background'])
         
         # Başlık
         font = self.get_header_font()

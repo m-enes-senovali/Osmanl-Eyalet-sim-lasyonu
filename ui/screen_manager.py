@@ -47,6 +47,7 @@ class ScreenType(Enum):
     GUILD = "guild"  # Lonca yönetim ekranı (YENİ)
     HISTORY = "history"  # Geçmiş olaylar ekranı (YENİ)
     DIVAN = "divan"  # Eyalet Divanı ekranı (YENİ)
+    ADVISOR = "advisor"  # Kethüda ekranı (YENİ)
 
 
 class BaseScreen:
@@ -229,10 +230,50 @@ class ScreenManager:
         if self.current_screen:
             self.current_screen.update(dt)
     
+    # Ekran tipi → gradient tema eşleştirmesi
+    SCREEN_GRADIENT_MAP = {
+        'main_menu': 'menu',
+        'province_view': 'default',
+        'economy': 'economy',
+        'military': 'military',
+        'construction': 'construction',
+        'diplomacy': 'diplomacy',
+        'population': 'default',
+        'trade': 'trade',
+        'save_load': 'default',
+        'event': 'default',
+        'settings': 'default',
+        'espionage': 'espionage',
+        'warfare': 'battle',
+        'battle': 'battle',
+        'raid_report': 'battle',
+        'negotiation': 'diplomacy',
+        'workers': 'construction',
+        'worker_interview': 'construction',
+        'multiplayer': 'menu',
+        'multiplayer_game': 'default',
+        'religion': 'religion',
+        'map': 'map',
+        'achievement': 'default',
+        'tutorial': 'menu',
+        'naval': 'naval',
+        'artillery': 'artillery',
+        'province_select': 'menu',
+        'character_creation': 'menu',
+        'guild': 'trade',
+        'history': 'default',
+        'divan': 'diplomacy',
+    }
+    
     def draw(self, surface: pygame.Surface):
         """Aktif ekranı ve fade overlay'i çiz"""
-        # Arka plan
-        surface.fill(COLORS['background'])
+        # Gradient arka plan (ekran tipine göre)
+        from ui.visual_effects import GradientRenderer
+        theme = 'default'
+        if self.current_screen_type:
+            theme = self.SCREEN_GRADIENT_MAP.get(self.current_screen_type.value, 'default')
+        gradient = GradientRenderer.get_gradient(theme)
+        surface.blit(gradient, (0, 0))
         
         if self.current_screen:
             self.current_screen.draw(surface)

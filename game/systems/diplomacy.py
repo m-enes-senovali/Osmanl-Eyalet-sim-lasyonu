@@ -771,9 +771,15 @@ class DiplomacySystem:
                 self.neighbors[marriage['partner']].value = min(100, 
                     self.neighbors[marriage['partner']].value + 1)
         
-        # Sadakat doğal olarak çok yavaş azalır (sadece 70 üstünde ve %20 şansla)
-        if self.sultan_loyalty > 70 and random.random() < 0.2:
-            self.sultan_loyalty -= 1
+        # Sadakat doğal olarak azalır (padişah sürekli başarı bekler)
+        decay_chance = 0.1  # Temel %10 ihtimalle her tur 1 düşer
+        if self.sultan_loyalty > 70:
+            decay_chance = 0.2  # Yüksek sadakati korumak daha zordur (%20 ihtimal)
+        elif self.sultan_loyalty < 30:
+            decay_chance = 0.25 # Padişah gözden düşene daha acımasızdır (%25 ihtimal)
+            
+        if random.random() < decay_chance:
+            self.sultan_loyalty = max(0, self.sultan_loyalty - 1)
         
         # Lütuf daha yavaş azalır
         if self.sultan_favor > 30 and random.random() < 0.5:

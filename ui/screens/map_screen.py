@@ -241,7 +241,6 @@ class MapScreen(BaseScreen):
         pass
     
     def draw(self, surface: pygame.Surface):
-        surface.fill(COLORS['background'])
         
         # Başlık
         header_text = self.get_header_font().render(

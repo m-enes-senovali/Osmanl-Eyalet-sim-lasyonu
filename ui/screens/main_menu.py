@@ -6,6 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Ana Menü Ekranı
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import MenuList, Button
+from ui.visual_effects import GradientRenderer, SparkleSystem, OttomanPatterns, PulseText
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, KEYBINDS, get_font
 
 
@@ -47,6 +48,11 @@ class MainMenuScreen(BaseScreen):
         # Başlık fontları
         self._title_font = None
         self._subtitle_font = None
+        
+        # Görsel efektler
+        self._gradient = GradientRenderer.get_gradient('menu')
+        self._sparkles = SparkleSystem(count=25)
+        self._pulse = PulseText()
     
     def get_title_font(self):
         if self._title_font is None:
@@ -92,12 +98,27 @@ class MainMenuScreen(BaseScreen):
         
         return False
     
+    def update(self, dt: float):
+        """Efektleri güncelle"""
+        self._sparkles.update(dt)
+        self._pulse.update(dt)
+    
     def draw(self, surface: pygame.Surface):
-        # Başlık
+        # Gradient arka plan
+        surface.blit(self._gradient, (0, 0))
+        
+        # Kıvılcım parçacıkları (arka planda)
+        self._sparkles.draw(surface)
+        
+        # Başlık — nabız efektli
         title_font = self.get_title_font()
-        title = title_font.render("OSMANLI EYALET YÖNETİMİ", True, COLORS['gold'])
+        title_color = self._pulse.get_color(COLORS['gold'], speed=1.2)
+        title = title_font.render("OSMANLI EYALET YÖNETİMİ", True, title_color)
         title_rect = title.get_rect(centerx=SCREEN_WIDTH // 2, top=80)
         surface.blit(title, title_rect)
+        
+        # Başlık çerçevesi — Osmanlı süslemeli
+        OttomanPatterns.draw_title_frame(surface, title_rect)
         
         # Alt başlık
         subtitle_font = self.get_subtitle_font()
@@ -110,13 +131,8 @@ class MainMenuScreen(BaseScreen):
         period_rect = period.get_rect(centerx=SCREEN_WIDTH // 2, top=190)
         surface.blit(period, period_rect)
         
-        # Dekoratif çizgi
-        pygame.draw.line(
-            surface, COLORS['gold'],
-            (SCREEN_WIDTH // 2 - 200, 250),
-            (SCREEN_WIDTH // 2 + 200, 250),
-            3
-        )
+        # Süslü ayırıcı (eski düz çizgi yerine)
+        OttomanPatterns.draw_ornamental_divider(surface, y=250, width=420)
         
         # Menü
         self.menu.draw(surface)

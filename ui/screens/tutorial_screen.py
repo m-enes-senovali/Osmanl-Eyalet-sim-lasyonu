@@ -44,6 +44,7 @@ class TutorialScreen(BaseScreen):
         'o': pygame.K_o,
         'x': pygame.K_x,
         'n': pygame.K_n,
+        'f': pygame.K_f,
     }
     
     # Tuş adı → Türkçe görüntü adı
@@ -57,6 +58,7 @@ class TutorialScreen(BaseScreen):
         'right': 'Sağ ok',
         'f1': 'F1',
         'f5': 'F5',
+        'f': 'F',
     }
     
     CHAPTER_NAMES = {

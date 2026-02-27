@@ -239,6 +239,10 @@ class Panel:
         # Kenarlık
         pygame.draw.rect(surface, COLORS['panel_border'], self.rect, width=2, border_radius=12)
         
+        # Osmanlı köşe süslemeleri
+        from ui.visual_effects import OttomanPatterns
+        OttomanPatterns.draw_panel_ornaments(surface, self.rect)
+        
         y_offset = 15
         
         # Başlık
@@ -251,13 +255,14 @@ class Panel:
             )
             surface.blit(title_surface, title_rect)
             
-            # Ayırıcı çizgi
+            # Süslü ayırıcı çizgi
             y_offset += 35
-            pygame.draw.line(
-                surface, COLORS['panel_border'],
-                (self.rect.left + 20, self.rect.top + y_offset),
-                (self.rect.right - 20, self.rect.top + y_offset),
-                2
+            OttomanPatterns.draw_ornamental_divider(
+                surface, 
+                y=self.rect.top + y_offset,
+                width=self.rect.width - 60,
+                center_x=self.rect.centerx,
+                color=COLORS['panel_border']
             )
             y_offset += 15
         
@@ -945,3 +950,59 @@ class HierarchicalMenu:
                 arrow = font.render(">", True, color)
                 arrow_rect = arrow.get_rect(right=item_rect.right - 10, centery=item_rect.centery)
                 surface.blit(arrow, arrow_rect)
+
+class TextBlock:
+    """Çok satırlı metin bloğu bileşeni (Word wrap destekli)"""
+    def __init__(self, x: int, y: int, width: int, text: str, color=(255, 255, 255)):
+        self.rect = pygame.Rect(x, y, width, 0)
+        self.text = text
+        self.color = color
+        self._font = None
+        self._rendered_lines = []
+        
+    def get_font(self):
+        if self._font is None:
+            self._font = get_font(FONTS['body'])
+        return self._font
+        
+    def set_text(self, new_text: str):
+        self.text = new_text
+        self._render_text()
+        
+    def _render_text(self):
+        font = self.get_font()
+        words = self.text.replace('\n', ' \n ').split(' ')
+        lines = []
+        current_line = []
+        
+        for word in words:
+            if word == '\n':
+                lines.append(' '.join(current_line))
+                current_line = []
+                continue
+                
+            test_line = current_line + [word]
+            test_surface = font.render(' '.join(test_line), True, self.color)
+            if test_surface.get_width() > self.rect.width and current_line:
+                lines.append(' '.join(current_line))
+                current_line = [word]
+            else:
+                current_line = test_line
+                
+        if current_line:
+            lines.append(' '.join(current_line))
+            
+        self._rendered_lines = [font.render(line, True, self.color) for line in lines]
+        
+        if self._rendered_lines:
+            total_height = sum(surf.get_height() for surf in self._rendered_lines)
+            self.rect.height = total_height
+            
+    def draw(self, surface: pygame.Surface):
+        if not self._rendered_lines:
+            self._render_text()
+            
+        current_y = self.rect.y
+        for line_surf in self._rendered_lines:
+            surface.blit(line_surf, (self.rect.x, current_y))
+            current_y += line_surf.get_height()

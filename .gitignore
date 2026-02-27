@@ -3,3 +3,11 @@ build/
 *.exe
 __pycache__/
 *.spec
+
+# Kullanıcıya Özel Veriler (GitHub'a gitmemeli)
+saves/
+game_settings.json
+*.log
+.env
+.vscode/
+.idea/

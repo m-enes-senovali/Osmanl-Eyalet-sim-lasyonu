@@ -4,27 +4,32 @@ Osmanlı Eyalet Yönetim Simülasyonu - Oyun Yöneticisi
 Tüm sistemleri koordine eden ana sınıf.
 """
 
-import json
 import os
-import sys
-from typing import Dict, Optional
+import json
+import logging
+from typing import Dict, List, Optional
 from dataclasses import dataclass
-from audio.audio_manager import get_audio_manager
+from config import SAVE_FORMAT_VERSION
+from game.player import PlayerCharacter
 from game.systems.economy import EconomySystem
-from game.systems.military import MilitarySystem
+from game.systems.trade import TradeSystem
+from game.systems.military import MilitarySystem, UnitType
 from game.systems.population import PopulationSystem
 from game.systems.construction import ConstructionSystem, BuildingType
 from game.systems.diplomacy import DiplomacySystem
 from game.systems.events import EventSystem
-from game.systems.workers import WorkerSystem
-from game.systems.warfare import WarfareSystem
-from game.systems.trade import TradeSystem
-from game.systems.naval import NavalSystem
 from game.systems.artillery import ArtillerySystem
-from game.systems.espionage import EspionageSystem  # YENİ
-from game.systems.religion import ReligionSystem    # YENİ
-from game.systems.history import HistorySystem      # YENİ
-from game.systems.divan import DivanSystem          # YENİ
+from game.systems.warfare import WarfareSystem
+from game.systems.divan import DivanSystem
+from game.systems.advisor import AdvisorSystem
+from game.save_migration import SaveMigrator
+from game.systems.espionage import EspionageSystem
+from game.systems.religion import ReligionSystem
+from game.systems.history import HistorySystem
+from game.systems.workers import WorkerSystem
+from game.systems.naval import NavalSystem
+from audio.audio_manager import get_audio_manager
+import sys
 
 
 def get_base_path():
@@ -107,6 +112,7 @@ class GameManager:
         self.religion = ReligionSystem()    # Din/Kültür sistemi (YENİ)
         self.history = HistorySystem()      # Geçmiş Olaylar (YENİ)
         self.divan = DivanSystem()          # Eyalet Divanı (YENİ)
+        self.advisor = AdvisorSystem(self)  # Danışman sistemi (YENİ)
         
         # Ses yöneticisi
         self.audio = get_audio_manager()
@@ -623,20 +629,26 @@ class GameManager:
     
     def _check_game_over(self):
         """Oyun sonu koşullarını kontrol et"""
-        # Padişah sadakati çok düşük
+        # 1. Zafer Kontrolü
+        victory_data = self.check_victory()
+        if victory_data and victory_data.get('won'):
+            self.game_over = True
+            return
+            
+        # 2. Kaybetme (İdam)
         if self.diplomacy.sultan_loyalty <= 0:
             self.game_over = True
             self.game_over_reason = "Padişah sizi hain ilan etti ve idam ettirdi!"
             self.audio.announce(self.game_over_reason)
         
-        # Halk isyanı çok uzun sürdü
-        if self.population.active_revolt and self.population.unrest >= 100:
+        # 3. Kaybetme (İsyan)
+        elif self.population.active_revolt and self.population.unrest >= 100:
             self.game_over = True
             self.game_over_reason = "Halk ayaklanması kontrol altına alınamadı. Eyalet kaybedildi!"
             self.audio.announce(self.game_over_reason)
         
-        # İflas
-        if self.economy.resources.gold < -5000:
+        # 4. Kaybetme (İflas)
+        elif self.economy.resources.gold < -5000:
             self.game_over = True
             self.game_over_reason = "Hazine iflas etti. Görevden alındınız!"
             self.audio.announce(self.game_over_reason)
@@ -800,7 +812,7 @@ class GameManager:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         save_data = {
-            'version': '1.1',
+            'version': SAVE_FORMAT_VERSION,
             'game_id': self.game_id,
             'save_slot': slot,
             'auto_save': True,  # Otomatik kayıt işareti
@@ -943,7 +955,7 @@ class GameManager:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         save_data = {
-            'version': '1.1',  # Versiyon güncellendi
+            'version': SAVE_FORMAT_VERSION,
             'game_id': self.game_id,
             'save_slot': slot,
             'player': self.player.to_dict() if self.player else None,  # YENİ
@@ -1020,7 +1032,10 @@ class GameManager:
         
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
-                save_data = json.load(f)
+                raw_data = json.load(f)
+            
+            # Eski JSON formatlarını (v1.1 vb.) güncel yapıya uygun olarak dönüştür (Göç et)
+            save_data = SaveMigrator.migrate(raw_data)
             
             # Verileri yükle
             self.game_id = save_data.get('game_id', str(hash(filepath))[:8])

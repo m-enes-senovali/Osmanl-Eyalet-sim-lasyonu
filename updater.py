@@ -115,26 +115,51 @@ class UpdateChecker:
                 data = json.loads(response.read().decode('utf-8'))
             
             # Release bilgilerini al
-            self.latest_version = data.get('tag_name', '0.0.0')
+            # Bazen tag "first-update" gibi sürüm içermeyen bir metin olabiliyor
+            # Bazen ise sürüm başlıkta (name) yazıyor. İkisini de kontrol et
+            tag_name = str(data.get('tag_name', ''))
+            release_name = str(data.get('name', ''))
+            
+            self.latest_version = tag_name
+            # Eğer tag_name düzgün bir sürüm numarası vermiyorsa (0,0,0)
+            if self._parse_version(self.latest_version) == (0, 0, 0):
+                # Başlığa (name) bak
+                if self._parse_version(release_name) != (0, 0, 0):
+                    self.latest_version = release_name
+                else:
+                    self.latest_version = "0.0.0"
+                    
             self.changelog = data.get('body', 'Değişiklik notu yok.')
             self.latest_release_url = data.get('html_url', '')
+            
+            # Çalışma ortamını belirle (.exe mi yoksa python kaynak kodu mu?)
+            is_frozen = getattr(sys, 'frozen', False)
             
             # İndirme linkini bul (.exe veya .zip)
             assets = data.get('assets', [])
             for asset in assets:
                 name = asset.get('name', '').lower()
-                if name.endswith('.exe') or name.endswith('.zip'):
+                if is_frozen and name.endswith('.exe'):
+                    self.download_url = asset.get('browser_download_url')
+                    break
+                elif not is_frozen and name.endswith('.zip'):
                     self.download_url = asset.get('browser_download_url')
                     break
             
-            # Eğer asset yoksa zip ball kullan
-            if not self.download_url:
+            # Eğer asset yoksa ve kaynak koddan çalışıyorsak zip ball kullan
+            if not self.download_url and not is_frozen:
                 self.download_url = data.get('zipball_url')
             
             is_update_available = self.is_newer_version(
                 self.latest_version, 
                 self.current_version
             )
+            
+            # Exe formatında çalışıyorsak ancak GitHub'da .exe dosyası yoksa (sadece kaynak kod varsa)
+            # güncellemeyi indirmeyi reddet ve hata göster, çünkü exe'yi zip ile yamalayamayız.
+            if is_update_available and is_frozen and not self.download_url:
+                is_update_available = False
+                self.error_message = "Yeni sürüm var ancak GitHub'da .exe dosyası paylaşılmamış."
             
             self.is_checking = False
             
@@ -143,7 +168,7 @@ class UpdateChecker:
                 'current': self.current_version,
                 'latest': self.latest_version,
                 'changelog': self.changelog,
-                'error': None
+                'error': self.error_message
             }
             
         except HTTPError as e:
@@ -216,6 +241,12 @@ class UpdateChecker:
                 filename = filename.split('?')[0]
             if not filename:
                 filename = "update.zip"
+                
+            # Zipball indiriyorsak uzantı olmayabilir, zorla .zip yap
+            if 'zipball' in self.download_url and not filename.endswith('.zip'):
+                filename += '.zip'
+            elif not (filename.endswith('.exe') or filename.endswith('.zip')):
+                filename += '.zip'
             
             temp_file = os.path.join(temp_dir, filename)
             
@@ -284,6 +315,7 @@ class UpdateChecker:
                 # Mevcut exe yolu
                 current_exe = sys.executable
                 backup_exe = current_exe + '.backup'
+                current_pid = os.getpid()
                 
                 # Yedekle
                 if os.path.exists(backup_exe):
@@ -295,21 +327,30 @@ class UpdateChecker:
                     f.write(f'''@echo off
 echo Güncelleme uygulanıyor...
 timeout /t 2 /nobreak > nul
+taskkill /f /pid {current_pid} 2>nul
 move /y "{current_exe}" "{backup_exe}"
 move /y "{file_path}" "{current_exe}"
 start "" "{current_exe}"
 del "%~f0"
 ''')
                 
-                # Batch'i çalıştır ve çık
+                # Batch'i tamamen ayrı (detached) bir proses olarak çalıştır
+                # Böylece PyInstaller kapanırken kendi _MEI geçici dizinini silebilir
+                DETACHED_PROCESS = 0x00000008
+                CREATE_NEW_PROCESS_GROUP = 0x00000200
+                CREATE_NO_WINDOW = 0x08000000
+                
+                flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+                
                 subprocess.Popen(['cmd', '/c', batch_script], 
-                               creationflags=subprocess.CREATE_NO_WINDOW)
+                               creationflags=flags,
+                               close_fds=True)
                 
                 if callback:
                     callback(100, "Oyun yeniden başlatılıyor...")
                 
-                # Çık
-                sys.exit(0)
+                # Çık (Tüm sistemi anında sonlandır, sadece thread'i değil)
+                os._exit(0)
                 
             elif file_path.endswith('.zip'):
                 # Zip'i aç

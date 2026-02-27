@@ -6,6 +6,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - Ana Oyun Ekranı (Eyalet Görünümü)
 import pygame
 from ui.screen_manager import BaseScreen, ScreenType
 from ui.components import Button, Panel, ProgressBar, MenuList
+from ui.visual_effects import GradientRenderer, ParticleSystem, OttomanPatterns
 from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, KEYBINDS, get_font
 from game.tutorial import get_tutorial
 
@@ -40,6 +41,11 @@ class ProvinceViewScreen(BaseScreen):
         
         # Çıkış onayı durumu
         self.exit_confirmation_pending = False
+        
+        # Görsel efektler
+        self._gradient = GradientRenderer.get_gradient('default')
+        self._particles = ParticleSystem(max_particles=40)
+        self._particles.set_season('spring')  # Varsayılan, on_enter'da güncellenecek
     
     def _create_panels(self):
         """Bilgi panellerini oluştur"""
@@ -74,6 +80,7 @@ class ProvinceViewScreen(BaseScreen):
         self.side_menu.add_item("Topçu", lambda: self._open_screen(ScreenType.ARTILLERY), "t")
         self.side_menu.add_item("Akın/Savaş", lambda: self._open_screen(ScreenType.WARFARE), "k")
         self.side_menu.add_item("Divan", lambda: self._open_screen(ScreenType.DIVAN), "v")
+        self.side_menu.add_item("Danışman", lambda: self._open_screen(ScreenType.ADVISOR), "f")
         
         # Donanma sadece kıyı eyaletlerinde (on_enter'da eklenir)
         self._side_menu_needs_coastal_update = True
@@ -602,11 +609,29 @@ class ProvinceViewScreen(BaseScreen):
     
     def update(self, dt: float):
         self._update_panels()
+        self._particles.update(dt)
+        
+        # Mevsimi güncelle
+        gm = self.screen_manager.game_manager
+        if gm:
+            season_map = {
+                'İlkbahar': 'spring', 'Yaz': 'summer',
+                'Sonbahar': 'autumn', 'Kış': 'winter'
+            }
+            current = season_map.get(gm.get_season(), 'spring')
+            if getattr(self._particles, '_season', '') != current:
+                self._particles.set_season(current)
     
     def draw(self, surface: pygame.Surface):
         gm = self.screen_manager.game_manager
         if not gm:
             return
+        
+        # Gradient arka plan
+        surface.blit(self._gradient, (0, 0))
+        
+        # Mevsimsel parçacıklar (panellerin arkasında)
+        self._particles.draw(surface)
         
         # Kaynak paneli (yatay düzen)
         self._draw_resource_bar(surface, gm)

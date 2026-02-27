@@ -8,8 +8,9 @@ SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
 
-# Sürüm Bilgisi (Güncelleme Sistemi için)
-VERSION = "1.1.0"
+# Sürüm ve GitHub
+VERSION = "v1.1.1" # Kod tabanlı sürüm numaramız (github etiketleriyle uyumlu olsun diye v kalabilir, ama oyunda v görünecek)
+SAVE_FORMAT_VERSION = "1.2" # Kayıt dosyası altyapısının sürümü (veri yapısı değiştikçe artar)
 GITHUB_REPO = "m-enes-senovali/Osmanl-Eyalet-sim-lasyonu"
 
 GAME_TITLE = "Osmanlı Eyalet Yönetimi"
@@ -53,6 +54,14 @@ GAME = {
     'starting_loyalty': 80,
     'tax_rate_default': 0.15,
     'turn_year_start': 1520,
+}
+
+# Zafer (Oyun Sonu) Koşulları
+VICTORY_CONDITIONS = {
+    'economic_gold': 500000,           # 500k altın zaferi
+    'military_victories': 50,          # 50 muharebe zaferi
+    'diplomatic_alliances': 5,         # 5 aktif ittifak zaferi
+    'dominance_population_multiplier': 10 # 50K * 10 = 500,000 nüfus zaferi
 }
 
 # Klavye Kısayolları
