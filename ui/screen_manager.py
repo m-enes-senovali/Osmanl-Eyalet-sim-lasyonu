@@ -48,6 +48,7 @@ class ScreenType(Enum):
     HISTORY = "history"  # Geçmiş olaylar ekranı (YENİ)
     DIVAN = "divan"  # Eyalet Divanı ekranı (YENİ)
     ADVISOR = "advisor"  # Kethüda ekranı (YENİ)
+    SUPPORT = "support"  # Destek ve Bildirim ekranı (YENİ)
 
 
 class BaseScreen:

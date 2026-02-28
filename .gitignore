@@ -11,3 +11,7 @@ game_settings.json
 .env
 .vscode/
 .idea/
+
+# Güvenlik Anahtarları (Kesinlikle gitmemeli)
+secured_keys.json
+mail_kaydet.py

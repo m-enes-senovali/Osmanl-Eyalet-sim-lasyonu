@@ -30,6 +30,7 @@ class MainMenuScreen(BaseScreen):
         self.menu.add_item("Çok Oyunculu", self._on_multiplayer, "m")
         self.menu.add_item("Eğitim", self._on_tutorial, "e")
         self.menu.add_item("Ayarlar", self._on_settings, "a")
+        self.menu.add_item("Destek / Bildirim", self._on_support, "d")
         self.menu.add_item("Hakkında", self._on_about, "h")
         self.menu.add_item("Çıkış", self._on_exit, "q")
         
@@ -186,6 +187,10 @@ class MainMenuScreen(BaseScreen):
     def _on_settings(self):
         """Ayarlar ekranına git"""
         self.screen_manager.change_screen(ScreenType.SETTINGS)
+        
+    def _on_support(self):
+        """Destek (Ticket) Ekranına Git"""
+        self.screen_manager.change_screen(ScreenType.SUPPORT)
     
     def _on_about(self):
         """Oyun hakkında bilgi"""

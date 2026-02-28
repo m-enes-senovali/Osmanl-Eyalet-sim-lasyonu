@@ -242,6 +242,13 @@ class Game:
             DivanScreen(self.screen_manager)
         )
         
+        # Destek ve Bildirim ekranı (YENİ)
+        from ui.screens.support_screen import SupportScreen
+        self.screen_manager.register_screen(
+            ScreenType.SUPPORT,
+            SupportScreen(self.screen_manager)
+        )
+        
         # Başarılar ekranı (YENİ)
         from ui.screens.achievement_screen import AchievementScreen
         self.screen_manager.register_screen(

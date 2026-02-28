@@ -20,6 +20,7 @@ REM Tek dosya EXE olustur
 pyinstaller --onefile --noconsole --name OsmanliEyaletSimulasyonu ^
     --add-data "audio/sounds;audio/sounds" ^
     --add-data "config.py;." ^
+    --add-data "secured_keys.json;." ^
     --hidden-import pygame ^
     --hidden-import pygame.mixer ^
     --hidden-import accessible_output2 ^
