@@ -60,7 +60,7 @@ class AudioManager:
         
         # Pygame mixer başlat
         try:
-            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
             self.mixer_available = True
             # Ambiyans için ayrı kanal
             pygame.mixer.set_num_channels(16)

@@ -230,6 +230,10 @@ class HTTPNetworkClient:
     def get_pending_messages(self) -> list:
         """Uyumluluk için - HTTP'de mesaj kuyruğu yok"""
         return []
+
+    def get_pending_proposals(self) -> list:
+        """Uyumluluk İçin - Bekleyen teklifleri döndür"""
+        return []
     
     def register_callback(self, event_type: str, callback: Callable):
         """Olay için callback kaydet"""
@@ -465,3 +469,74 @@ class HTTPNetworkClient:
         if not self.room_data:
             return False
         return self.room_data.get('game_started', False)
+
+    # ===== DIPLOMASI VE SAVAS METODLARI =====
+
+    def is_allied_with(self, player_id: str) -> bool:
+        if not self.room_data: return False
+        for a in self.room_data.get('diplomacy', {}).get('alliances', []):
+            if self.player_id in a and player_id in a:
+                return True
+        return False
+
+    def is_at_war_with(self, player_id: str) -> bool:
+        if not self.room_data: return False
+        for w in self.room_data.get('diplomacy', {}).get('wars', []):
+            if (w.get('attacker_id') == self.player_id and w.get('defender_id') == player_id) or \
+               (w.get('defender_id') == self.player_id and w.get('attacker_id') == player_id):
+                return True
+        return False
+
+    def propose_alliance(self, player_id: str):
+        try:
+            requests.post(f"{self.server_url}/room/{self.room_code}/diplomacy/propose", 
+                          json={'from_player_id': self.player_id, 'to_player_id': player_id, 'type': 'alliance', 'terms': {}}, timeout=2)
+        except: pass
+
+    def propose_trade(self, player_id: str):
+        try:
+            requests.post(f"{self.server_url}/room/{self.room_code}/diplomacy/propose", 
+                          json={'from_player_id': self.player_id, 'to_player_id': player_id, 'type': 'trade', 'terms': {}}, timeout=2)
+        except: pass
+
+    def declare_war(self, player_id: str):
+        try:
+            requests.post(f"{self.server_url}/room/{self.room_code}/diplomacy/war", 
+                          json={'attacker_id': self.player_id, 'defender_id': player_id}, timeout=2)
+        except: pass
+
+    def attack(self, target_id: str, power: int) -> dict:
+        try:
+            r = requests.post(f"{self.server_url}/room/{self.room_code}/battle", 
+                              json={'attacker_id': self.player_id, 'defender_id': target_id, 'power': power}, timeout=5)
+            if r.status_code == 200: return r.json()
+        except Exception as e:
+            self.last_error = str(e)
+        return {}
+
+    def get_player_info(self, target_id: str) -> dict:
+        try:
+            r = requests.get(f"{self.server_url}/room/{self.room_code}/player/{target_id}", timeout=2)
+            if r.status_code == 200: return r.json()
+        except: pass
+        return {}
+        
+    def respond_proposal(self, proposal_id: str, accept: bool) -> bool:
+        try:
+            r = requests.post(f"{self.server_url}/room/{self.room_code}/diplomacy/respond", 
+                              json={'player_id': self.player_id, 'proposal_id': proposal_id, 'accept': accept}, timeout=2)
+            return r.status_code == 200
+        except Exception as e:
+            self.last_error = str(e)
+            return False
+
+    def save_room(self) -> bool:
+        """Sunucuda odayı kaydet"""
+        try:
+            r = requests.post(f"{self.server_url}/room/{self.room_code}/save", 
+                              json={'player_id': self.player_id}, timeout=2)
+            return r.status_code == 200
+        except Exception as e:
+            self.last_error = str(e)
+            return False
+

@@ -170,7 +170,7 @@ class MultiplayerGameScreen(BaseScreen):
         self.action_menu.clear()
         
         # Bekleyen teklifler (her zaman göster)
-        proposals = self.network.get_pending_proposals() if self.network else []
+        proposals = self.pending_proposals
         if proposals:
             self.action_menu.add_item(f"Gelen Teklifler ({len(proposals)})", self._open_proposals)
         
@@ -443,7 +443,7 @@ class MultiplayerGameScreen(BaseScreen):
         if not self.network:
             return
         
-        proposals = self.network.get_pending_proposals()
+        proposals = self.pending_proposals
         
         if not proposals:
             self.audio.speak("Bekleyen teklif yok.", interrupt=True)

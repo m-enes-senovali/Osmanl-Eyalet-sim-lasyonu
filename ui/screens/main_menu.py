@@ -196,7 +196,7 @@ class MainMenuScreen(BaseScreen):
         """Oyun hakkında bilgi"""
         self.audio.speak(
             "Osmanlı Eyalet Yönetim Simülasyonu. "
-            "Versiyon: Kapalı Beta 3.0. "
+            "Versiyon: Açık Beta v1. "
             "Bu oyun Muhammet Enes Şenovalı tarafından geliştirilmektedir. "
             "Oyun 1520 yılında, Kanuni Sultan Süleyman döneminde geçmektedir. "
             "Görme engelli oyuncular için tam erişilebilirlik desteği sunulmaktadır. "
@@ -212,10 +212,14 @@ class MainMenuScreen(BaseScreen):
     
     def _exit_save(self):
         """Kaydet ve Çık"""
-        # Hızlı kayıt olabilir veya kayıt ekranına yönlendirebiliriz.
-        # Basitlik için şu an sadece çıkış yapıyoruz ama mesaj veriyoruz.
         self.audio.speak("Oyun kaydedildi ve çıkılıyor.", interrupt=True)
-        # TODO: Gerçek kayıt işlemi buraya
+        gm = self.screen_manager.game_manager
+        if gm and getattr(gm, 'turn_count', 0) > 0 and not getattr(gm, 'game_over', False):
+            try:
+                gm.save_game()
+            except Exception as e:
+                print(f"MainMenu çıkışında kayıt hatası: {e}")
+                
         pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     def _exit_no_save(self):

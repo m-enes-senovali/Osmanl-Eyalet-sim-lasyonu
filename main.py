@@ -451,8 +451,15 @@ def main():
         # Pygame'i temizle
         pygame.quit()
         
-        # Hata durumunda bekle
-        input("Devam etmek için Enter'a basın...")
+        # Hata durumunda dosyaya yaz (noconsole'da input Crash ettirir)
+        try:
+            import datetime
+            with open("crash_log.txt", "w", encoding="utf-8") as f:
+                f.write(f"Tarih: {datetime.datetime.now()}\n")
+                f.write(f"Kritik Hata: {e}\n\n")
+                f.write(traceback.format_exc())
+        except:
+            pass
 
 
 if __name__ == "__main__":
