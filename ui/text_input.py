@@ -28,7 +28,7 @@ def set_clipboard(text):
 
 class AccessibleTextInput:
     """Erişilebilir, çok satırlı ve seçilebilir metin kutusu."""
-    def __init__(self, x: int, y: int, width: int, height: int, max_chars: int = 500, placeholder: str = "(Yazmaya başlamak için Enter'a basın)", **kwargs):
+    def __init__(self, x: int, y: int, width: int, height: int, max_chars: int = 500, placeholder: str = "(Yazmaya başlamak için Enter'a basın)", multiline: bool = True, **kwargs):
         # Desteklenmeyen veya eski sürümden kalma argümanları sönümle (label, max_length vb.)
         if 'max_length' in kwargs:
             max_chars = kwargs.get('max_length')
@@ -36,6 +36,7 @@ class AccessibleTextInput:
         self.rect = pygame.Rect(x, y, width, height)
         self.max_chars = max_chars
         self.placeholder = placeholder
+        self.multiline = multiline
         self.text = ""
         
         # İmleç (Cursor) Yönetimi
@@ -113,6 +114,12 @@ class AccessibleTextInput:
         """Dışarıdan (kod üzerinden) metni doğrudan değiştirmeyi sağlar."""
         self.text = str(new_text)[:self.max_chars]
         self.cursor_pos = len(self.text)
+        self.selection_start = None
+
+    def clear(self):
+        """Metin kutusunun içini tamamen temizler."""
+        self.text = ""
+        self.cursor_pos = 0
         self.selection_start = None
 
     def _get_char_at(self, pos):
@@ -310,7 +317,7 @@ class AccessibleTextInput:
                 return True
 
             elif event.key == pygame.K_RETURN:
-                if not ctrl_pressed:
+                if self.multiline and not ctrl_pressed:
                     self._insert_text("\n")
                     self.audio.play_game_sound('ui', 'type')
                     self.audio.speak("Yeni satır", interrupt=True)
@@ -320,7 +327,7 @@ class AccessibleTextInput:
             # --- NORMAL YAZI GİRİŞİ ---
             else:
                 if event.unicode and len(self.text) < self.max_chars:
-                    if event.unicode >= ' ' or event.unicode in ('\n',):
+                    if event.unicode >= ' ' or (self.multiline and event.unicode in ('\n',)):
                         self._insert_text(event.unicode)
                         try:
                             if event.unicode == ' ':

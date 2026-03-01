@@ -39,7 +39,8 @@ class CharacterCreationScreen(BaseScreen):
             height=50,
             label="Karakter İsmi",
             placeholder="İsminizi yazın...",
-            max_length=30
+            max_length=30,
+            multiline=False
         )
         
         # Onay paneli
