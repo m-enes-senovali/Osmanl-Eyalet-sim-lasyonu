@@ -1,0 +1,27 @@
+name: Testleri Calistir
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Kodlari Cek
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Gereksinimleri Yukle
+        run: |
+          pip install pygame accessible_output2 websockets requests flask flask-cors
+
+      - name: Testleri Calistir
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: python test_event_chains.py
