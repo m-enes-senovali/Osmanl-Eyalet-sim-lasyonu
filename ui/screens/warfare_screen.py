@@ -112,6 +112,16 @@ class WarfareScreen(BaseScreen):
         else:
             self.action_menu.add_item(f"⚠ {reason}", None)
         
+        # Erken oyun koruması toggle seçeneği
+        if gm.warfare.is_protection_active(gm.turn_count):
+            remaining = gm.warfare.EARLY_GAME_PROTECTION - gm.turn_count
+            self.action_menu.add_item("", None)
+            self.action_menu.add_item(
+                f"P: Erken Oyun Korumasını Kaldır ({remaining} gün kaldı)",
+                self._toggle_protection,
+                "p"
+            )
+        
         self.action_menu.add_item("", None)
         self.action_menu.add_item("F1: Durumu oku", None)
     
@@ -133,9 +143,13 @@ class WarfareScreen(BaseScreen):
         self.status_panel.add_item("Savaş Yorgunluğu", f"%{war.war_weariness}")
         
         # Barış dönemi kontrolü
-        if gm.turn_count < war.EARLY_GAME_PROTECTION:
+        if war.is_protection_active(gm.turn_count):
             remaining = war.EARLY_GAME_PROTECTION - gm.turn_count
-            self.status_panel.add_item("Barış Dönemi", f"{remaining} tur kaldı")
+            self.status_panel.add_item("Barış Koruması", f"{remaining} gün kaldı (P ile kaldır)")
+        elif not war.protection_disabled:
+            self.status_panel.add_item("Barış Koruması", "Süresi doldu")
+        else:
+            self.status_panel.add_item("Barış Koruması", "Oyuncu tarafından kaldırıldı")
         
         # Aktif savaşlar paneli
         self.battles_panel.clear()
@@ -329,3 +343,11 @@ class WarfareScreen(BaseScreen):
     
     def _go_back(self):
         self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
+    
+    def _toggle_protection(self):
+        """Erken oyun korumasını kaldır"""
+        gm = self.screen_manager.game_manager
+        if gm:
+            gm.warfare.disable_protection()
+            self._update_panels()
+            self._setup_action_menu()

@@ -19,15 +19,16 @@ from audio.music_manager import get_music_manager, MusicContext
 
 
 class BattleScreen(BaseScreen):
-    """İnteraktif savaş ekranı - kuşatmalar için"""
+    """İnteraktif savaş ekranı - kuşatma, akın ve deniz akını için"""
     
     def __init__(self, screen_manager):
         super().__init__(screen_manager)
         
         # Savaş durumu
         self.current_battle = None
+        self.battle_mode = 'siege'  # 'siege', 'raid', 'naval'
         self.current_round = 1
-        self.max_rounds = 5  # 5 tur taktik savaş
+        self.max_rounds = 5  # Kuşatma: 5, Akın/Deniz: 3
         self.player_morale = 100
         self.enemy_morale = 100
         self.player_casualties = 0
@@ -73,6 +74,10 @@ class BattleScreen(BaseScreen):
         self.battle_ended = False
         self.victory = False
         
+        # Savaşa konuşlandırılmış toplar (moda göre filtrelenir)
+        self.deployed_cannons = []
+        self._artillery_result = None
+        
         # Görsel efektler
         self._gradient = GradientRenderer.get_gradient('battle')
         self._shake = ScreenShake()
@@ -86,8 +91,9 @@ class BattleScreen(BaseScreen):
     def set_battle_data(self, battle_data: dict):
         """Dışarıdan savaş verisi ayarla"""
         self.external_battle_data = battle_data
-        # Veriyi kullanarak savaş durumunu başlat
+        # Modu belirle
         if battle_data:
+            self.battle_mode = battle_data.get('battle_type', 'siege')
             self.player_morale = battle_data.get('attacker_army', {}).get('morale', 100)
             self.enemy_morale = battle_data.get('defender_army', {}).get('morale', 80)
     
@@ -117,9 +123,16 @@ class BattleScreen(BaseScreen):
         self.current_battle = None
         
         if not self.is_defending:
-            # İlk aktif kuşatmayı al
+            # Battle moduna göre doğru savaşı bul
+            target_types = {
+                'siege': BattleType.SIEGE,
+                'raid': BattleType.RAID,
+                'naval': BattleType.NAVAL_RAID,
+            }
+            target_type = target_types.get(self.battle_mode, BattleType.SIEGE)
+            
             for battle in gm.warfare.active_battles:
-                if battle.battle_type == BattleType.SIEGE:
+                if battle.battle_type == target_type and getattr(battle, 'combat_ready', False):
                     self.current_battle = battle
                     break
             
@@ -133,7 +146,6 @@ class BattleScreen(BaseScreen):
             # İstila için değerleri kur
             self.player_morale = 100
             self.enemy_morale = 100
-            # Kalemiz varsa morale/savunma bonusu ekleyelim
             if gm:
                 self.player_morale += gm.construction.get_defense_bonus() * 10
             
@@ -144,33 +156,148 @@ class BattleScreen(BaseScreen):
         self.victory = False
         self.combat_log = []
         self.player_tactic = None
+        
+        # Moda göre tur sayısı
+        if self.battle_mode in ('raid', 'naval'):
+            self.max_rounds = 3
+        else:
+            self.max_rounds = 5
             
         # Düşman Komutan Profili Atama (Doktrin)
         doctrines = ['SERDENGECTI', 'MUHENDIS', 'AKINCI_BEYI', 'DENGE']
         self.enemy_doctrine = random.choice(doctrines)
+        
+        # Topları moda göre filtrele
+        self.deployed_cannons = []
+        gm_art = self.screen_manager.game_manager
+        if gm_art and hasattr(gm_art, 'artillery') and gm_art.artillery.cannons:
+            if self.battle_mode == 'raid':
+                # Akında top yok — hafif akıncı birliği
+                self.deployed_cannons = []
+            elif self.battle_mode == 'naval':
+                # Denizde sadece deniz topları (is_naval=True)
+                from game.systems.artillery import CANNON_DEFINITIONS
+                self.deployed_cannons = [
+                    c for c in gm_art.artillery.cannons
+                    if CANNON_DEFINITIONS[c.cannon_type].is_naval and c.condition > 0
+                ]
+            else:
+                # Kuşatma/kara: tüm kara topları (is_naval=False)
+                from game.systems.artillery import CANNON_DEFINITIONS
+                self.deployed_cannons = [
+                    c for c in gm_art.artillery.cannons
+                    if not CANNON_DEFINITIONS[c.cannon_type].is_naval and c.condition > 0
+                ]
     
     def _setup_tactics_menu(self):
-        """Taktik seçeneklerini ayarla - organize menü"""
+        """Taktik seçeneklerini ayarla - moda göre farklı"""
         self.tactics_menu.clear()
         
         if self.battle_ended:
             self.tactics_menu.add_item(
-                "Savaş Alanından Ayrıl",
+                "Escape: Ayrıl",
                 self._end_battle,
                 "escape"
             )
             return
-            
+        
+        # Savunma modu
+        if getattr(self, 'is_defending', False):
+            # Savunma her modda aynı
+            pass  # Alttaki ortak taktikler eklenir
+        
+        # DENİZ AKINI MODU — Gemi taktikleri
+        if self.battle_mode == 'naval':
+            self.tactics_menu.add_item(
+                "1. Rampa: Gemiye borda atıp göğüs göğüse savaş. [Manevra yapana karşı üstün, kaçana karşı zayıf.]",
+                lambda: self._naval_tactic('boarding'),
+                "1"
+            )
+            self.tactics_menu.add_item(
+                "2. Bordoya Ateş: Top atışıyla düşman gemisini batmaya zorla. [Kaçana karşı üstün, rampa yapana karşı zayıf.]",
+                lambda: self._naval_tactic('broadside'),
+                "2"
+            )
+            self.tactics_menu.add_item(
+                "3. Manevra: Gemi konumunu değiştir, avantajlı açı yakala. [Rampaya karşı üstün, top atışına karşı zayıf.]",
+                lambda: self._naval_tactic('maneuver'),
+                "3"
+            )
+            self.tactics_menu.add_item(
+                "4. Teslim Çağrısı - Savaşsız zafer şansı.",
+                self._tactic_demand_surrender,
+                "4"
+            )
+        else:
+            # === KARA SALDIRI TAKTİKLERİ (Akın + Kuşatma ortak) ===
+            self.tactics_menu.add_item(
+                "1. Merkez Hücumu: Yüksek hasar, risk. [Savunan düşmana karşı ağır üstünlük sağlar, kanat saldırısına karşı zayıftır.]",
+                self._tactic_center_attack,
+                "1"
+            )
+            self.tactics_menu.add_item(
+                "2. Kanat Manevrası: Çevik ve dengeli. [Merkez hücumunu ezer geçer, sağlam savunmaya karşı çöker.]",
+                self._tactic_flank,
+                "2"
+            )
+            self.tactics_menu.add_item(
+                "3. Savunma (Tabur Cengi): Güvenli mevzi. [Kanat süvarilerini parçalar, topçu ve ağır merkez hücumuna karşı kırılgandır.]",
+                self._tactic_defend,
+                "3"
+            )
+            # Topçu butonu — sadece konuşlandırılmış top varsa (akında gizli)
+            if self.battle_mode != 'raid' and self.deployed_cannons:
+                barut_cost = sum(c.get_definition().gunpowder_per_shot for c in self.deployed_cannons)
+                ammo_name = self.deployed_cannons[0].get_ammo_multipliers().get('name', 'Bilinmeyen') if self.deployed_cannons else ''
+                art_label = (
+                    f"4. Topçu Ateşi ({len(self.deployed_cannons)} top, {barut_cost} barut, "
+                    f"Mühimmat: {ammo_name}): [M tuşu: Mühimmat değiştir]"
+                )
+                self.tactics_menu.add_item(
+                    art_label,
+                    self._tactic_artillery,
+                    "4"
+                )
+                self.tactics_menu.add_item(
+                    "5. Sahte Ricat (Turan): Şansa dayalı büyük kumar. [Başarılı olursa orduyu yok eder, başarısızlık felakettir.]",
+                    self._tactic_feint,
+                    "5"
+                )
+            elif self.battle_mode != 'raid':
+                # Top yok ama akın da değil — bilgi göster
+                self.tactics_menu.add_item(
+                    "4. Topçu Ateşi: Uygun top yok!",
+                    None,
+                    ""
+                )
+                self.tactics_menu.add_item(
+                    "5. Sahte Ricat (Turan): Şansa dayalı büyük kumar.",
+                    self._tactic_feint,
+                    "5"
+                )
+            else:
+                # Akın modunda topçu yok, sahte ricatı 4. sıraya al
+                self.tactics_menu.add_item(
+                    "4. Sahte Ricat (Turan): Şansa dayalı büyük kumar. [Başarılı olursa orduyu yok eder, başarısızlık felakettir.]",
+                    self._tactic_feint,
+                    "4"
+                )
+            teslim_no = "5" if self.battle_mode == 'raid' else "6"
+            self.tactics_menu.add_item(
+                f"{teslim_no}. Teslim Çağrısı - Savaşsız zafer şansı.",
+                self._tactic_demand_surrender,
+                teslim_no
+            )
         # Savaş devam ederken kaçış tuşu (Sadece Saldıran Bizsek)
         if not self.is_defending and not getattr(self, 'battle_ended', False):
              self.tactics_menu.add_item(
-                "[GERİ ÇEKİL] Savaş Alamından Ayrıl (Escape)",
+                "[GERİ ÇEKİL] Savaş Alanından Ayrıl (Escape)",
                 self._end_battle,
                 "escape"
             )
         
-        # === KUŞATMA DURUMU ===
-        if self.current_battle and hasattr(self.current_battle, 'siege_state') and self.current_battle.siege_state:
+        # === KUŞATMA DURUMU (Sadece siege modunda) ===
+        if self.battle_mode == 'siege' and self.current_battle and hasattr(self.current_battle, 'siege_state') and self.current_battle.siege_state:
             siege = self.current_battle.siege_state
             wall_status = f"Sur: %{siege.wall_integrity}" if siege.wall_integrity < 100 else ""
             
@@ -196,40 +323,6 @@ class BattleScreen(BaseScreen):
                     self._tactic_blockade,
                     "b"
                 )
-        
-        # === SALDIRI TAKTİKLERİ ===
-        # Taktik Önizlemeleri (Forecasting)
-        
-        self.tactics_menu.add_item(
-            "1. Merkez Hücumu: Yüksek hasar, risk. [Savunan düşmana karşı ağır üstünlük sağlar, kanat saldırısına karşı zayıftır.]",
-            self._tactic_center_attack,
-            "1"
-        )
-        self.tactics_menu.add_item(
-            "2. Kanat Manevrası: Çevik ve dengeli. [Merkez hücumunu ezer geçer, sağlam savunmaya karşı çöker.]",
-            self._tactic_flank,
-            "2"
-        )
-        self.tactics_menu.add_item(
-            "3. Savunma (Tabur Cengi): Güvenli mevzi. [Kanat süvarilerini parçalar, topçu ve ağır merkez hücumuna karşı kırılgandır.]",
-            self._tactic_defend,
-            "3"
-        )
-        self.tactics_menu.add_item(
-            "4. Topçu Bombardımanı: Güvenli hasar. [Surları döver ve moral bozar, demir harcar.]",
-            self._tactic_artillery,
-            "4"
-        )
-        self.tactics_menu.add_item(
-            "5. Sahte Ricat (Turan): Şansa dayalı büyük kumar. [Başarılı olursa orduyu yok eder, başarısızlık felakettir.]",
-            self._tactic_feint,
-            "5"
-        )
-        self.tactics_menu.add_item(
-            "6. Teslim Çağrısı - Savaşsız zafer şansı.",
-            self._tactic_demand_surrender,
-            "6"
-        )
         
         # Arazi/Hava Uyarıları (Forecasting)
         if self.current_battle:
@@ -270,40 +363,41 @@ class BattleScreen(BaseScreen):
                     ""
                 )
         
-        # === ÖZEL YETENEKLER ===
+        # === ÖZEL YETENEKLER (Kara modlarında) ===
         abilities_available = False
         
-        if self._can_use_ability(SpecialAbilityType.JANISSARY_VOLLEY):
-            abilities_available = True
-            self.tactics_menu.add_item(
-                "Y: Yeniceri Atesi",
-                lambda: self._use_special_ability(SpecialAbilityType.JANISSARY_VOLLEY),
-                "y"
-            )
-        
-        if self._can_use_ability(SpecialAbilityType.AKINCI_RAID):
-            abilities_available = True
-            self.tactics_menu.add_item(
-                "A: 🐎 Akıncı Baskını",
-                lambda: self._use_special_ability(SpecialAbilityType.AKINCI_RAID),
-                "a"
-            )
-        
-        if self._can_use_ability(SpecialAbilityType.CANNON_BARRAGE):
-            abilities_available = True
-            self.tactics_menu.add_item(
-                "B: 💣 Top Bombardımanı",
-                lambda: self._use_special_ability(SpecialAbilityType.CANNON_BARRAGE),
-                "b"
-            )
-        
-        if self._can_use_ability(SpecialAbilityType.CAVALRY_CHARGE):
-            abilities_available = True
-            self.tactics_menu.add_item(
-                "S: Suvari Sarji",
-                lambda: self._use_special_ability(SpecialAbilityType.CAVALRY_CHARGE),
-                "s"
-            )
+        if self.battle_mode != 'naval':
+            if self._can_use_ability(SpecialAbilityType.JANISSARY_VOLLEY):
+                abilities_available = True
+                self.tactics_menu.add_item(
+                    "Y: Yeniçeri Ateşi",
+                    lambda: self._use_special_ability(SpecialAbilityType.JANISSARY_VOLLEY),
+                    "y"
+                )
+            
+            if self._can_use_ability(SpecialAbilityType.AKINCI_RAID):
+                abilities_available = True
+                self.tactics_menu.add_item(
+                    "A: Akıncı Baskını",
+                    lambda: self._use_special_ability(SpecialAbilityType.AKINCI_RAID),
+                    "a"
+                )
+            
+            if self._can_use_ability(SpecialAbilityType.CANNON_BARRAGE):
+                abilities_available = True
+                self.tactics_menu.add_item(
+                    "B: Top Bombardımanı",
+                    lambda: self._use_special_ability(SpecialAbilityType.CANNON_BARRAGE),
+                    "b"
+                )
+            
+            if self._can_use_ability(SpecialAbilityType.CAVALRY_CHARGE):
+                abilities_available = True
+                self.tactics_menu.add_item(
+                    "S: Süvari Şarjı",
+                    lambda: self._use_special_ability(SpecialAbilityType.CAVALRY_CHARGE),
+                    "s"
+                )
             
         # Savaş ve Teslimiyet (Savunan ise ekleme)
         if getattr(self, 'is_defending', False):
@@ -330,7 +424,9 @@ class BattleScreen(BaseScreen):
         self.status_panel.add_item("Düşman Kayıpları", str(self.enemy_casualties))
     
     def announce_screen(self):
-        self.audio.announce_screen_change("Savaş Meydanı")
+        mode_names = {'siege': 'Kuşatma', 'raid': 'Akın', 'naval': 'Deniz Akını'}
+        mode_name = mode_names.get(self.battle_mode, 'Savaş')
+        self.audio.announce_screen_change(f"{mode_name} Meydanı")
         
         # Savaş bittiyse sadece sonucu söyle
         if self.battle_ended:
@@ -342,11 +438,15 @@ class BattleScreen(BaseScreen):
         
         if self.current_battle or getattr(self, 'is_defending', False):
             target_name = self.current_battle.defender_name if self.current_battle else getattr(self.screen_manager.game_manager, 'current_invasion', {}).get('invader', 'Düşman')
-            context_str = f"{target_name} kuşatması." if self.current_battle else f"Şehrimiz {target_name} tarafından kuşatılıyor."
+            
+            if self.is_defending:
+                context_str = f"Şehrimiz {target_name} tarafından kuşatılıyor."
+            else:
+                context_str = f"{target_name} {mode_name.lower()}ı."
             
             self.audio.speak(
                 f"{context_str} "
-                f"Tur {self.current_round}. "
+                f"Tur {self.current_round}, toplam {self.max_rounds} tur. "
                 f"Moralimiz yüzde {self.player_morale}, düşman morali yüzde {self.enemy_morale}. "
                 "Taktik seçin.",
                 interrupt=False
@@ -376,6 +476,11 @@ class BattleScreen(BaseScreen):
             # F2 - Savaş Kaydı (Combat Log)
             if event.key == pygame.K_F2:
                 self._read_combat_log()
+                return True
+            
+            # M - Mühimmat değiştir
+            if event.key == pygame.K_m and not self.battle_ended:
+                self._cycle_ammo()
                 return True
             
             # ESC - Savaş bittiyse çık
@@ -442,25 +547,117 @@ class BattleScreen(BaseScreen):
         self._process_round_end()
     
     def _tactic_artillery(self):
-        gm = self.screen_manager.game_manager
-        if gm and gm.economy.resources.iron < 50:
-            self.audio.speak("Yeterli mühimmat yok! En az 50 demir gerekli.", interrupt=True)
+        """Topçu taktiği — konuşlandırılmış top yoksa engelle"""
+        if not self.deployed_cannons:
+            self.audio.speak("Bu savaşta kullanılabilir top yok!", interrupt=True)
             return
+        
+        gm = self.screen_manager.game_manager
+        if not gm:
+            return
+        
+        # Barut kontrolü
+        gunpowder_needed = sum(c.get_definition().gunpowder_per_shot for c in self.deployed_cannons)
+        if gm.economy.resources.gunpowder < gunpowder_needed:
+            self.audio.speak(
+                f"Yetersiz barut! {gunpowder_needed} barut gerekli, "
+                f"{gm.economy.resources.gunpowder} mevcut.",
+                interrupt=True
+            )
+            return
+        
+        self._fire_artillery_and_resolve()
+    
+    def _fire_artillery_and_resolve(self):
+        """Konuşlandırılmış topları ateşle, kaynakları harca"""
+        gm = self.screen_manager.game_manager
+        if not gm or not self.deployed_cannons:
+            return
+        
+        combat_type = 'siege' if self.battle_mode == 'siege' else 'field'
+        
+        # Sadece konuşlandırılmış topları ateşle
+        result = gm.artillery.fire_subset(self.deployed_cannons, combat_type)
+        
+        # Barut tüketimi
+        if result['gunpowder_used'] > 0:
+            gm.economy.resources.gunpowder = max(0, 
+                gm.economy.resources.gunpowder - result['gunpowder_used'])
+        
+        # Demir tüketimi (mühimmat bazlı)
+        iron_used = sum(c.get_ammo_multipliers().get('iron_cost', 0) 
+                       for c in self.deployed_cannons if c.condition > 0)
+        if iron_used > 0:
+            gm.economy.resources.iron = max(0, gm.economy.resources.iron - iron_used)
+        
+        # Patlayan topları deployed listesinden de kaldır
+        if result['bursts'] > 0:
+            burst_msg = f"DİKKAT: {', '.join(result['burst_names'])} patladı!"
+            self.audio.speak(burst_msg, interrupt=True)
+            self.deployed_cannons = [c for c in self.deployed_cannons if c.condition > 0]
+        
+        self._artillery_result = result
         self.player_tactic = 'artillery'
         self._process_round_end()
+    
+    def _cycle_ammo(self):
+        """M tuşu: Konuşlandırılmış topların mühimmatını döngüsel değiştir"""
+        if not self.deployed_cannons:
+            self.audio.speak("Aktif top yok.", interrupt=True)
+            return
+        
+        from game.systems.artillery import AmmoType, AMMO_MULTIPLIERS
+        ammo_order = [AmmoType.STONE_BALL, AmmoType.IRON_BALL, AmmoType.GRAPESHOT,
+                     AmmoType.INCENDIARY, AmmoType.CHAIN_SHOT]
+        
+        # Mevcut mühimmatı al
+        current_ammo = self.deployed_cannons[0].get_ammo_type()
+        try:
+            idx = ammo_order.index(current_ammo)
+            next_ammo = ammo_order[(idx + 1) % len(ammo_order)]
+        except ValueError:
+            next_ammo = AmmoType.STONE_BALL
+        
+        # Tüm konuşlandırılmış toplara uygula
+        for cannon in self.deployed_cannons:
+            cannon.selected_ammo = next_ammo.value
+        
+        # Mühimmat bilgisini duyur
+        ammo_info = AMMO_MULTIPLIERS[next_ammo]
+        self.audio.speak(
+            f"Mühimmat değiştirildi: {ammo_info['name']}. {ammo_info['description']}",
+            interrupt=True
+        )
+        
+        # Taktik menüsünü yeniden oluştur (yeni mühimmat bilgisi için)
+        self._setup_tactics_menu()
     
     def _tactic_feint(self):
         self.player_tactic = 'feint'
         self._process_round_end()
     
     def _tactic_blockade(self):
-        """Abluka taktigi — kuşatmada erzak kesme"""
+        """Abluka taktiği — kuşatmada erzak kesme"""
         self.player_tactic = 'blockade'
         self.audio.speak("Abluka devam ediyor. Düşmanın erzakı kesiliyor.", interrupt=True)
         self._process_round_end()
     
     def _tactic_demand_surrender(self):
         self.player_tactic = 'surrender'
+        self._process_round_end()
+    
+    def _naval_tactic(self, tactic: str):
+        """Deniz taktiği seç — kara taktiklerine eşleştir"""
+        # Deniz taktikleri kara matrisine eşlenir:
+        # boarding (rampa) = center (göğüs göğüse)
+        # broadside (top ateşi) = artillery
+        # maneuver (manevra) = flank (kanat)
+        naval_to_land = {
+            'boarding': 'center',
+            'broadside': 'artillery',
+            'maneuver': 'flank',
+        }
+        self.player_tactic = naval_to_land.get(tactic, 'center')
         self._process_round_end()
     
     def _can_use_ability(self, ability_type: SpecialAbilityType) -> bool:
@@ -588,28 +785,77 @@ class BattleScreen(BaseScreen):
             if self.current_battle in gm.warfare.active_battles:
                 gm.warfare.active_battles.remove(self.current_battle)
             
+            # Savaş tarihçesine ekle
+            if self.current_battle:
+                gm.warfare.war_history.append({
+                    'target': self.current_battle.defender_name,
+                    'type': self.current_battle.battle_type.value,
+                    'victory': self.victory,
+                    'terrain': self.current_battle.terrain.value,
+                    'weather': self.current_battle.weather.value
+                })
+            
             # Kriz müziğini kapat
             get_music_manager().set_crisis(False)
+            
+            # Asker kayıplarını MilitarySystem'e uygula
+            if self.player_casualties > 0:
+                gm.military.apply_casualties(self.player_casualties)
             
             # Savunma Savaşıysa Farklı Sonuçlar Uygula
             if getattr(self, 'is_defending', False):
                 if self.victory:
-                    # Savunmayı başardık!
                     get_music_manager().play_context(MusicContext.VICTORY, force=True)
                     gm.diplomacy.sultan_loyalty = min(100, gm.diplomacy.sultan_loyalty + 20)
                     gm.military.experience = min(100, gm.military.experience + 20)
                     self.audio.speak(f"ZAFER! Kuşatmayı yardık ve düşmanı topraklarımızdan attık! Padişah bizden razı olsun.", interrupt=True)
                 else:
-                    # Şehri savunamadık, Yağmalandık!
-                    loot_lost = int(gm.economy.resources.gold * 0.4)  # Kasanın %40'ı çalınır
+                    loot_lost = int(gm.economy.resources.gold * 0.4)
                     gm.economy.spend(gold=loot_lost)
                     gm.diplomacy.sultan_loyalty = max(0, gm.diplomacy.sultan_loyalty - 30)
                     gm.military.morale = max(0, gm.military.morale - 30)
                     gm.population.unrest = min(100, gm.population.unrest + 25)
                     self.audio.speak(f"HEZİMET! Eyaletimiz düştü, hazinemizden {loot_lost} altın yağmalandı ve halk isyanın eşiğinde!", interrupt=True)
-                
-                # Savunma savaşını listeden sil
                 gm.current_invasion = None
+            
+            # Akın veya Deniz Akını Sonu
+            elif self.battle_mode in ('raid', 'naval'):
+                is_naval = self.battle_mode == 'naval'
+                target_name = self.current_battle.defender_name if self.current_battle else 'Bilinmeyen'
+                
+                # Yağma hesapla
+                loot_gold = 0
+                loot_food = 0
+                if self.victory:
+                    loot_gold = random.randint(500, 2000)
+                    loot_food = random.randint(100, 500)
+                    if is_naval:
+                        loot_gold = int(loot_gold * 1.5)
+                    gm.economy.add_resources(gold=loot_gold, food=loot_food)
+                    gm.military.experience = min(100, gm.military.experience + 5)
+                    get_music_manager().play_context(MusicContext.VICTORY, force=True)
+                    self.audio.speak(f"ZAFER! {loot_gold} altın ve {loot_food} zahire yağma ettik!", interrupt=True)
+                else:
+                    gm.military.morale = max(0, gm.military.morale - 10)
+                    gm.military.experience = min(100, gm.military.experience + 2)
+                    self.audio.speak("Akın başarısız oldu. Geri çekiliyoruz.", interrupt=True)
+                
+                # Deniz akınında gemi hasarı
+                if is_naval and hasattr(gm, 'naval'):
+                    damage_roll = random.randint(10, 30)
+                    if not self.victory:
+                        damage_roll = int(damage_roll * 1.5)
+                    warships = [s for s in gm.naval.ships if s.get_definition().is_warship]
+                    for ship in warships:
+                        dmg = int(damage_roll * random.uniform(0.5, 1.5))
+                        ship.health -= dmg
+                        if ship.health <= 0:
+                            gm.naval.ships.remove(ship)
+                            gm.naval.ships_lost += 1
+                
+                # Akın raporu artık oluşturulmaz — interaktif savaş ekranı yeterli
+                # (Eski hikayeli akın raporu devre dışı bırakıldı)
+            
             else:
                 # Normal Kuşatma Sonu (Saldıran Biziz)
                 if self.victory:
@@ -626,6 +872,7 @@ class BattleScreen(BaseScreen):
         # Ana ekrana dön
         self.screen_manager.change_screen(ScreenType.PROVINCE_VIEW)
     
+
     def update(self, dt: float):
         """Düşman turunu işle"""
         # Efektleri güncelle
@@ -702,13 +949,23 @@ class BattleScreen(BaseScreen):
         # Tabur Cengi (Savunma), Süvari Kanat Şarjını ezer
         # Süvari Kanat Şarjı, Merkez Hücumu ezer
         
-        tactic_names = {
-            'center': 'Merkez Hücumu',
-            'flank': 'Kanat Manevrası',
-            'defend': 'Savunma (Tabur Cengi)',
-            'artillery': 'Topçu Ateşi',
-            'feint': 'Sahte Ricat'
-        }
+        # Taktik isimleri — moda göre farklı
+        if self.battle_mode == 'naval':
+            tactic_names = {
+                'center': 'Rampa (Borda)',
+                'flank': 'Manevra',
+                'defend': 'Savunma Düzeni',
+                'artillery': 'Bordoya Ateş',
+                'feint': 'Sahte Ricat'
+            }
+        else:
+            tactic_names = {
+                'center': 'Merkez Hücumu',
+                'flank': 'Kanat Manevrası',
+                'defend': 'Savunma (Tabur Cengi)',
+                'artillery': 'Topçu Ateşi',
+                'feint': 'Sahte Ricat'
+            }
         
         is_special = pt.startswith("special_")
         ability = None
@@ -739,7 +996,37 @@ class BattleScreen(BaseScreen):
                 self.player_morale -= 15
                 matchup_desc += "(AÇLIK: Erzak tükendiği için ordunun morali hızla çöküyor!) "
         
-        if pt == 'center' and et == 'defend':
+        # === DENIZ SAVAŞI MATRİSİ ===
+        if self.battle_mode == 'naval':
+            # Rampa (center) > Manevra (flank): gemiye atlayınca manevra işe yaramaz
+            if pt == 'center' and et == 'flank':
+                p_dmg_mult = 1.5; e_dmg_mult = 0.5
+                matchup_desc += "Gemiye borda atıp düşman mürettebatını kılıçtan geçirdik! Manevraları boşa çıktı. "
+            elif et == 'center' and pt == 'flank':
+                e_dmg_mult = 1.5; p_dmg_mult = 0.5
+                matchup_desc += "Düşman gemimize borda attı! Manevra yapamadan yakalandık. "
+            # Bordoya Ateş (artillery) > Rampa (center): top ateşi yaklaşanı vurur  
+            elif pt == 'artillery' and et == 'center':
+                p_dmg_mult = 1.5; e_dmg_mult = 0.5
+                matchup_desc += "Bordoya ateş açtık! Yaklaşmaya çalışan düşman gemisini delik deşik ettik. "
+            elif et == 'artillery' and pt == 'center':
+                e_dmg_mult = 1.5; p_dmg_mult = 0.5
+                matchup_desc += "Borda ateşe yaklaşırken düşman toplarına yakalandık! "
+            # Manevra (flank) > Bordoya Ateş (artillery): hızlı gemi top menzilinden kaçar
+            elif pt == 'flank' and et == 'artillery':
+                p_dmg_mult = 1.5; e_dmg_mult = 0.5
+                matchup_desc += "Rüzgârı arkamıza alıp düşman top menzilinden sıyrıldık ve karşı ateşe geçtik! "
+            elif et == 'flank' and pt == 'artillery':
+                e_dmg_mult = 1.5; p_dmg_mult = 0.5
+                matchup_desc += "Düşman gemileri çevik manevrayla toplarımızın menzilinden kaçtı! "
+            # Aynı taktik = berabere
+            elif pt == et:
+                matchup_desc += "İki filo da aynı stratejiyi uyguladı, dengeli bir çatışma yaşandı. "
+            else:
+                matchup_desc += "Deniz savaşı devam ediyor. "
+        
+        # === KARA SAVAŞI MATRİSİ ===
+        elif pt == 'center' and et == 'defend':
             p_dmg_mult = 1.5; e_dmg_mult = 0.5
             matchup_desc += "Ağır taarruzumuz düşman savunma hattını (Tabur Cengini) yarmayı başardı! "
         elif pt == 'defend' and et == 'flank':
@@ -758,6 +1045,36 @@ class BattleScreen(BaseScreen):
         elif et == 'flank' and pt == 'center':
             e_dmg_mult = 1.5; p_dmg_mult = 0.5
             matchup_desc += "Merkezden ilerlerken düşman süvarisi kanatlarımızı sardı. "
+        
+        # === GENİŞLETİLMİŞ MATRİS: Topçu ve Sahte Ricat ===
+        # Topçu, savunmayı ezer (sabit mevzide toplar etkili)
+        elif pt == 'artillery' and et == 'defend':
+            p_dmg_mult = 1.5; e_dmg_mult = 0.5
+            matchup_desc += "Top atışlarımız düşmanın sabit savunma mevzilerini yerle bir etti! "
+        elif et == 'artillery' and pt == 'defend':
+            e_dmg_mult = 1.5; p_dmg_mult = 0.5
+            matchup_desc += "Düşman topları savunma mevzilerimizi paramparça etti! "
+        # Kanat, topçuyu ezer (süvariler top mevzilerine dalar)
+        elif pt == 'flank' and et == 'artillery':
+            p_dmg_mult = 1.5; e_dmg_mult = 0.5
+            matchup_desc += "Süvarilerimiz düşman top mevzilerine saldırdı ve topçuları dağıttı! "
+        elif et == 'flank' and pt == 'artillery':
+            e_dmg_mult = 1.5; p_dmg_mult = 0.5
+            matchup_desc += "Düşman süvarileri topçu mevzilerimize saldırdı! "
+        # Sahte Ricat, kanat man. ezer (kanat takip ederken tuzak)
+        elif pt == 'feint' and et == 'flank':
+            p_dmg_mult = 1.8; e_dmg_mult = 0.4
+            matchup_desc += "Turan Taktiği! Sahte geri çekilme düşman süvarilerini pusuya düşürdü! "
+        elif et == 'feint' and pt == 'flank':
+            e_dmg_mult = 1.8; p_dmg_mult = 0.4
+            matchup_desc += "Düşman sahte geri çekildi, süvarilerimiz tuzaktaki pusucuların eline düştü! "
+        # Savunma, Sahte Ricatı ezer (disiplinli hat tuzakları bozar)
+        elif pt == 'defend' and et == 'feint':
+            p_dmg_mult = 1.4; e_dmg_mult = 0.6
+            matchup_desc += "Disiplinli savunma hattımız düşmanın Turan taktiğine kanmadı! "
+        elif et == 'defend' and pt == 'feint':
+            e_dmg_mult = 1.4; p_dmg_mult = 0.6
+            matchup_desc += "Sahte geri çekilmemiz işe yaramadı, düşman yerinden kıpırdamadı! "
             
         # Arazi ve Hava Etkileri
         if self.current_battle:
@@ -849,11 +1166,29 @@ class BattleScreen(BaseScreen):
                 p_dmg_mult += 0.4
                 matchup_desc += f"[Paşa {cmdr.name}] Kuşatmacı topyekün bombardımanı etkili oldu. "
         
-        # Topçu 
+        # Topçu — gerçek toplarla entegre
         if pt == 'artillery':
             gm = self.screen_manager.game_manager
-            if gm: gm.economy.resources.iron -= 50
-            p_dmg_mult = 1.2; e_dmg_mult = 0.8
+            art_result = getattr(self, '_artillery_result', None)
+            if art_result and art_result['total_damage'] > 0:
+                # Gerçek top hasarını çarpanlara yansıt
+                power_bonus = art_result['total_damage'] / 100  # %1 bonus per power point
+                morale_bonus = art_result['morale_damage']
+                p_dmg_mult = 1.0 + min(1.0, power_bonus)  # Max 2x çarpan
+                e_dmg_mult = max(0.3, 1.0 - power_bonus * 0.5)  # Bize gelen hasar azalır
+                # Ek moral hasarı — toplardan gelen
+                self.enemy_morale -= min(20, morale_bonus)
+                
+                cannon_count = len(gm.artillery.cannons) if gm else 0
+                matchup_desc += f"{cannon_count} topumuz ateş açtı! "
+                if art_result['bursts'] > 0:
+                    matchup_desc += f"({art_result['bursts']} top patladı!) "
+                matchup_desc += f"Barut: {art_result['gunpowder_used']} harcandı. "
+            else:
+                # Top yoksa veya sonuç yoksa zayıf etki
+                p_dmg_mult = 1.1; e_dmg_mult = 0.9
+                matchup_desc += "Topçu ateşi zayıf kaldı. "
+            self._artillery_result = None  # Temizle
         
         # Çözümleme ve Ses Efekti (Stereo Panning)
         base_e_dmg = random.randint(15, 30)
@@ -897,7 +1232,7 @@ class BattleScreen(BaseScreen):
             elif ability_type == SpecialAbilityType.AKINCI_RAID:
                 matchup_desc += "Hafif süvariler düşman gerisine sızıp panik yarattı! "
             elif ability_type == SpecialAbilityType.CANNON_BARRAGE:
-                matchup_desc += "Tüm toplar ateş açıp suru sarstı! "
+                matchup_desc += "Tüm toplar ateş açıp surları sarstı! "
                 if self.current_battle and self.current_battle.siege_state:
                     self.current_battle.siege_state.wall_integrity -= random.randint(10, 25)
             elif ability_type == SpecialAbilityType.CAVALRY_CHARGE:
@@ -959,7 +1294,9 @@ class BattleScreen(BaseScreen):
             invader = gm.current_invasion['invader'] if gm and hasattr(gm, 'current_invasion') and gm.current_invasion else "Düşman"
             title = f"!!! {invader} ŞEHRİMİZİ KUŞATIYOR !!! TUR {self.current_round}"
         elif self.current_battle:
-            title = f"{self.current_battle.defender_name} KUSATMASI - TUR {self.current_round}"
+            mode_titles = {'siege': 'KUSATMASI', 'raid': 'AKINI', 'naval': 'DENIZ AKINI'}
+            mode_title = mode_titles.get(self.battle_mode, 'SAVASI')
+            title = f"{self.current_battle.defender_name} {mode_title} - TUR {self.current_round}"
         
         title_render = header_font.render(title, True, COLORS['gold'])
         surface.blit(title_render, (50, 30))

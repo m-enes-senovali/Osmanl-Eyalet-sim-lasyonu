@@ -433,6 +433,30 @@ class MilitarySystem:
                 self.units.get(UnitType.MAVNA, 0) * 35 +
                 self.units.get(UnitType.LEVENT, 0) * 20)
     
+    def apply_casualties(self, total_casualties: int):
+        """Kayıpları kara birlikleri arasında orantılı dağıt"""
+        land_types = [
+            UnitType.YENICHERI, UnitType.KAPIKULU_SIPAHI, UnitType.TOPCU,
+            UnitType.CEBECI, UnitType.TIMARLI_SIPAHI, UnitType.AKINCI, UnitType.AZAP
+        ]
+        total_land = sum(self.units.get(ut, 0) for ut in land_types)
+        if total_land <= 0 or total_casualties <= 0:
+            return
+        
+        remaining = total_casualties
+        for ut in land_types:
+            count = self.units.get(ut, 0)
+            if count <= 0:
+                continue
+            share = max(1, int(total_casualties * count / total_land))
+            loss = min(share, count, remaining)
+            self.units[ut] = count - loss
+            remaining -= loss
+            if remaining <= 0:
+                break
+        
+        self.total_losses += total_casualties - remaining
+    
     def can_recruit(self, unit_type: UnitType, count: int, economy) -> tuple:
         """
         Asker alabilir mi kontrol et

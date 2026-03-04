@@ -321,21 +321,33 @@ class UpdateChecker:
                 if os.path.exists(backup_exe):
                     os.remove(backup_exe)
                 
-                # Batch script oluştur (exe'yi kapatıp güncellemek için)
+                from os.path import basename, dirname
+                exe_name = basename(current_exe)
+                app_dir = dirname(current_exe)
+                log_file = os.path.join(app_dir, "update_log.txt")
+                
+                # Batch script oluştur (exe'yi kapatıp temiz ortamda güncellemek için)
                 batch_script = os.path.join(temp_dir, 'update.bat')
                 with open(batch_script, 'w', encoding='utf-8') as f:
                     f.write(f'''@echo off
-echo Güncelleme uygulanıyor...
-timeout /t 2 /nobreak > nul
-taskkill /f /pid {current_pid} 2>nul
-move /y "{current_exe}" "{backup_exe}"
-move /y "{file_path}" "{current_exe}"
-start "" "{current_exe}"
+echo OYUN GUNCELLENIYOR BAT > "{log_file}"
+echo process wait >> "{log_file}"
+timeout /t 3 /nobreak > nul
+echo taskkill executing >> "{log_file}"
+taskkill /f /im "{exe_name}" 2>> "{log_file}"
+timeout /t 1 /nobreak > nul
+echo moving backup >> "{log_file}"
+move /y "{current_exe}" "{backup_exe}" >> "{log_file}" 2>&1
+echo moving new exe >> "{log_file}"
+move /y "{file_path}" "{current_exe}" >> "{log_file}" 2>&1
+echo starting game cleanly >> "{log_file}"
+:: En kritik nokta: Explorer uzerinden baslatmak MEIPASS mirasini kiritik sekilde kirar
+explorer.exe "{current_exe}"
+echo cleanup >> "{log_file}"
 del "%~f0"
 ''')
                 
                 # Batch'i tamamen ayrı (detached) bir proses olarak çalıştır
-                # Böylece PyInstaller kapanırken kendi _MEI geçici dizinini silebilir
                 DETACHED_PROCESS = 0x00000008
                 CREATE_NEW_PROCESS_GROUP = 0x00000200
                 CREATE_NO_WINDOW = 0x08000000

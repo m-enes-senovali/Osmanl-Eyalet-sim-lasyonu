@@ -1206,7 +1206,7 @@ class DiplomacySystem:
     
     def add_relationship_momentum(self, target: str, total_change: int, turns: int, reason: str):
         """Yavaş yavaş uygulanacak ilişki değişimi ekle"""
-        per_turn = total_change / turns
+        per_turn = total_change / max(1, turns)
         
         self.relationship_momentum.append({
             'target': target,

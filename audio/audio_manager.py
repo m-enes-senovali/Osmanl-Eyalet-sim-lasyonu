@@ -60,7 +60,7 @@ class AudioManager:
         
         # Pygame mixer başlat
         try:
-            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=2048)
             self.mixer_available = True
             # Ambiyans için ayrı kanal
             pygame.mixer.set_num_channels(16)
@@ -150,7 +150,7 @@ class AudioManager:
         if sound_name in self.sounds:
             sound = self.sounds[sound_name]
             # Müsait boş bir kanal bul
-            channel = pygame.mixer.find_channel()
+            channel = pygame.mixer.find_channel(force=True)
             if channel:
                 base_vol = volume if volume is not None else self.sfx_volume
                 
@@ -215,6 +215,11 @@ class AudioManager:
         
         try:
             if os.path.exists(path):
+                # Mevcut müzik çalıyorsa yumuşak geçiş
+                if pygame.mixer.music.get_busy():
+                    pygame.mixer.music.fadeout(300)
+                    # Kısa bekleme — fadeout'un başlaması için
+                    pygame.time.wait(50)
                 pygame.mixer.music.load(path)
                 pygame.mixer.music.set_volume(self.music_volume)
                 pygame.mixer.music.play(-1 if loop else 0)

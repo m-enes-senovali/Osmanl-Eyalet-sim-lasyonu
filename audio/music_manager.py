@@ -132,10 +132,22 @@ class MusicManager:
         # Kriz durumu
         self.crisis_active = False
         self.previous_context: Optional[MusicContext] = None
+        self._last_crisis_change = 0  # Kriz cooldown (ticks)
         
         # Ambient playlist
         self.ambient_playlist: List[str] = []
         self.playlist_index = 0
+        
+        # Non-blocking müzik geçişi
+        self._pending_file: Optional[str] = None
+        self._pending_loop: bool = True
+        self._fading_out: bool = False
+        
+        # ENDEVENT ayarla (fadeout bitince tetiklenir)
+        try:
+            pygame.mixer.music.set_endevent(pygame.USEREVENT + 10)
+        except Exception:
+            pass
         
         # Yüklü müzikler
         self.available_music: dict = {}
@@ -198,7 +210,7 @@ class MusicManager:
         self.current_context = context
     
     def _play_file(self, filepath: str, loop: bool = True):
-        """Müzik dosyasını çal"""
+        """Müzik dosyasını çal — non-blocking fadeout geçişli"""
         if self.current_file == filepath and self.is_playing:
             # Aynı dosya zaten çalıyor, kontrol et
             if pygame.mixer.music.get_busy():
@@ -206,17 +218,48 @@ class MusicManager:
             # Dosya durmuş olabilir, yeniden başlat
         
         try:
-            pygame.mixer.music.stop()
-            pygame.mixer.music.load(filepath)
-            pygame.mixer.music.set_volume(self.volume)
-            pygame.mixer.music.play(-1 if loop else 0)
+            # Mevcut müzik çalıyorsa non-blocking fadeout başlat
+            if pygame.mixer.music.get_busy():
+                self._pending_file = filepath
+                self._pending_loop = loop
+                self._fading_out = True
+                pygame.mixer.music.fadeout(400)  # 400ms fade-out
+                return  # ENDEVENT tetiklenince _on_music_end yükleyecek
             
-            self.current_file = filepath
-            self.is_playing = True
+            # Müzik çalmıyorsa doğrudan yükle
+            self._load_and_play(filepath, loop)
             
         except Exception as e:
             print(f"Müzik çalma hatası: {e}")
             self.is_playing = False
+    
+    def _load_and_play(self, filepath: str, loop: bool = True):
+        """Müzik dosyasını yükle ve çal (internal)"""
+        try:
+            pygame.mixer.music.load(filepath)
+            pygame.mixer.music.set_volume(self.volume)
+            pygame.mixer.music.play(-1 if loop else 0)
+            self.current_file = filepath
+            self.is_playing = True
+            self._fading_out = False
+        except Exception as e:
+            print(f"Müzik yükleme hatası: {e}")
+            self.is_playing = False
+    
+    def handle_event(self, event):
+        """Pygame event'lerini işle — ENDEVENT için"""
+        if event.type == pygame.USEREVENT + 10:
+            self._on_music_end()
+    
+    def _on_music_end(self):
+        """Müzik bittiğinde veya fadeout tamamlandığında çağrılır"""
+        if self._fading_out and self._pending_file:
+            # Fadeout bitti, yeni dosyayı yükle
+            filepath = self._pending_file
+            loop = self._pending_loop
+            self._pending_file = None
+            self._fading_out = False
+            self._load_and_play(filepath, loop)
     
     def on_screen_change(self, screen_name: str):
         """
@@ -236,16 +279,24 @@ class MusicManager:
         """
         Kriz modunu aç/kapa.
         Kriz aktifken gerilim müziği çalar.
+        5 saniye cooldown — hızlı toggling'i önler.
         """
+        # Cooldown: 5 saniye içinde ikinci geçiş yapma
+        now = pygame.time.get_ticks()
+        if now - self._last_crisis_change < 5000:
+            return
+        
         if active and not self.crisis_active:
             # Kriz başladı
             self.previous_context = self.current_context
             self.crisis_active = True
+            self._last_crisis_change = now
             self.play_context(MusicContext.TENSE)
             
         elif not active and self.crisis_active:
             # Kriz bitti
             self.crisis_active = False
+            self._last_crisis_change = now
             if self.previous_context:
                 self.play_context(self.previous_context)
                 self.previous_context = None

@@ -29,6 +29,7 @@ class ProvinceViewScreen(BaseScreen):
         # Fontlar
         self._header_font = None
         self._info_font = None
+        self._value_font = None
         
         # Seçili panel index (klavye navigasyonu için)
         self.selected_panel_index = 0
@@ -82,8 +83,7 @@ class ProvinceViewScreen(BaseScreen):
         self.side_menu.add_item("Divan", lambda: self._open_screen(ScreenType.DIVAN), "v")
         self.side_menu.add_item("Danışman", lambda: self._open_screen(ScreenType.ADVISOR), "f")
         
-        # Donanma sadece kıyı eyaletlerinde (on_enter'da eklenir)
-        self._side_menu_needs_coastal_update = True
+        # Donanma kontrolü on_enter'da yapılır
     
     def _create_buttons(self):
         """Butonları oluştur"""
@@ -143,12 +143,13 @@ class ProvinceViewScreen(BaseScreen):
             pass
         
         # Donanma sadece kıyı eyaletlerinde
-        if self._side_menu_needs_coastal_update:
-            gm = self.screen_manager.game_manager
-            if gm and gm.province.is_coastal:
+        gm = self.screen_manager.game_manager
+        if gm and gm.province.is_coastal:
+            # Zaten eklenmemişse ekle
+            has_naval = any(item[0] == "Donanma" for item in self.side_menu.items)
+            if not has_naval:
                 # Ordu'dan sonra (index 2) Donanma ekle
                 self.side_menu.items.insert(2, ("Donanma", lambda: self._open_screen(ScreenType.NAVAL), "n"))
-            self._side_menu_needs_coastal_update = False
         
         # İlk giriş rehberi
         gm = self.screen_manager.game_manager
@@ -608,7 +609,6 @@ class ProvinceViewScreen(BaseScreen):
             self.audio.speak("Aktif uyarı yok.", interrupt=True)
     
     def update(self, dt: float):
-        self._update_panels()
         self._particles.update(dt)
         
         # Mevsimi güncelle
@@ -627,8 +627,7 @@ class ProvinceViewScreen(BaseScreen):
         if not gm:
             return
         
-        # Gradient arka plan
-        surface.blit(self._gradient, (0, 0))
+        # Gradient arka plan screen_manager tarafından çiziliyor, tekrar çizmeye gerek yok.
         
         # Mevsimsel parçacıklar (panellerin arkasında)
         self._particles.draw(surface)
@@ -685,8 +684,9 @@ class ProvinceViewScreen(BaseScreen):
             surface.blit(name_surface, (x, 40))
             
             # Değer
-            value_font = get_font(FONTS['subheader'])
-            value_surface = value_font.render(f"{value:,}", True, color)
+            if self._value_font is None:
+                self._value_font = get_font(FONTS['subheader'])
+            value_surface = self._value_font.render(f"{value:,}", True, color)
             surface.blit(value_surface, (x, 70))
     
     def _draw_summary(self, surface: pygame.Surface, gm):
@@ -756,41 +756,52 @@ class ProvinceViewScreen(BaseScreen):
         self.screen_manager.change_screen(screen_type)
     
     def _on_next_turn(self):
-        """Tur bitir"""
+        """Tur bitir — Minimal duyuru (sadece önemli bilgiler)"""
         gm = self.screen_manager.game_manager
         if gm:
-            # Önceki durumu kaydet
+            # Önceki durumu kaydet (sadece altın ve kritik kaynaklar)
             prev_gold = gm.economy.resources.gold
             prev_food = gm.economy.resources.food
-            prev_wood = gm.economy.resources.wood
-            prev_iron = gm.economy.resources.iron
-            prev_copper = gm.economy.resources.copper
-            prev_gunpowder = gm.economy.resources.gunpowder
             
             result = gm.process_turn()
             
-            # Tur duyurusu
-            self.audio.speak(f"Tur {gm.turn_count} tamamlandı.", interrupt=True)
+            # Panelleri güncelle
+            self._update_panels()
             
-            # Kaynak değişimi
+            # === KATMAN 1: Minimal (her tur) ===
             gold_change = gm.economy.resources.gold - prev_gold
+            change_str = f"+{gold_change}" if gold_change >= 0 else str(gold_change)
+            self.audio.speak(
+                f"Tur {gm.turn_count}. Altın: {gm.economy.resources.gold:,} ({change_str})",
+                interrupt=True
+            )
+            
+            # === KATMAN 2: Kritik eşik uyarıları (sadece tehlike varsa) ===
             food_change = gm.economy.resources.food - prev_food
-            wood_change = gm.economy.resources.wood - prev_wood
-            iron_change = gm.economy.resources.iron - prev_iron
-            copper_change = gm.economy.resources.copper - prev_copper
-            gunpowder_change = gm.economy.resources.gunpowder - prev_gunpowder
+            if gm.economy.resources.food < 500:
+                self.audio.speak(
+                    f"Uyarı! Zahire kritik: {gm.economy.resources.food:,}",
+                    interrupt=False
+                )
+            elif food_change < -200:
+                self.audio.speak(
+                    f"Zahire hızla azalıyor: {food_change}",
+                    interrupt=False
+                )
             
-            self.audio.speak(f"Altın: {gm.economy.resources.gold:,} ({'+' if gold_change >= 0 else ''}{gold_change})", interrupt=False)
-            self.audio.speak(f"Zahire: {gm.economy.resources.food:,} ({'+' if food_change >= 0 else ''}{food_change})", interrupt=False)
-            self.audio.speak(f"Kereste: {gm.economy.resources.wood:,} ({'+' if wood_change >= 0 else ''}{wood_change})", interrupt=False)
-            self.audio.speak(f"Demir: {gm.economy.resources.iron:,} ({'+' if iron_change >= 0 else ''}{iron_change})", interrupt=False)
-            # Bakır ve barut sadece değişim varsa duyur (her tur değişmeyebilir)
-            if copper_change != 0:
-                self.audio.speak(f"Bakır: {gm.economy.resources.copper:,} ({'+' if copper_change >= 0 else ''}{copper_change})", interrupt=False)
-            if gunpowder_change != 0:
-                self.audio.speak(f"Barut: {gm.economy.resources.gunpowder:,} ({'+' if gunpowder_change >= 0 else ''}{gunpowder_change})", interrupt=False)
+            if gm.economy.resources.gold < 0:
+                self.audio.speak("Dikkat! Hazine ekside!", interrupt=False)
             
-            # Alt sistem mesajlarını duyur (İnşaat, Casusluk vb.)
+            if gm.population.active_revolt:
+                self.audio.speak("Dikkat! İsyan devam ediyor!", interrupt=False)
+            
+            if gm.diplomacy.sultan_loyalty < 30:
+                self.audio.speak("Tehlike! Padişah sadakati çok düşük!", interrupt=False)
+            
+            if gm.population.happiness < 30:
+                self.audio.speak("Uyarı! Halk memnuniyeti kritik!", interrupt=False)
+            
+            # === Alt sistem mesajları (inşaat bitti, kervan geldi vb.) ===
             if 'messages' in result and result['messages']:
                 for msg in result['messages']:
                     self.audio.speak(msg, interrupt=False)
@@ -798,15 +809,22 @@ class ProvinceViewScreen(BaseScreen):
             # Olay varsa duyur
             if result.get('event', False):
                 if gm.events.current_event:
-                    self.audio.speak(f"Yeni olay: {gm.events.current_event.title}. O tuşuna basın.", interrupt=False)
+                    self.audio.speak(
+                        f"Yeni olay: {gm.events.current_event.title}. O tuşuna basın.",
+                        interrupt=False
+                    )
             
-            # Kritik uyarılar
-            if gm.economy.resources.gold < 0:
-                self.audio.speak("Dikkat! Hazine ekside!")
-            if gm.population.active_revolt:
-                self.audio.speak("Dikkat! İsyan devam ediyor!")
-            if gm.diplomacy.sultan_loyalty < 30:
-                self.audio.speak("Tehlike! Padişah sadakati çok düşük!")
+            # === KATMAN 3: Tam rapor (her 30 turda = ayda bir) ===
+            if gm.turn_count % 30 == 0:
+                self.audio.speak(
+                    f"Aylık Rapor: Yıl {gm.current_year}, {gm.current_month}. ay. "
+                    f"Nüfus: {gm.population.population.total:,}. "
+                    f"Memnuniyet: yüzde {gm.population.happiness}. "
+                    f"Sadakat: yüzde {gm.diplomacy.sultan_loyalty}. "
+                    f"Asker: {gm.military.get_total_soldiers():,}. "
+                    f"Detay için R, S, I tuşlarını kullanın.",
+                    interrupt=False
+                )
             
             # Bekleyen akın raporu kontrolü
             pending_raid = gm.get_pending_raid_report()
@@ -846,6 +864,17 @@ class ProvinceViewScreen(BaseScreen):
                 battle_screen = self.screen_manager.screens.get(ScreenType.BATTLE)
                 if battle_screen:
                     battle_screen.set_battle_data(siege_data)
+                    self.screen_manager.change_screen(ScreenType.BATTLE)
+                    return  # Oyun sonu kontrolüne geçme
+            
+            # Bekleyen akın/deniz akını savaşı kontrolü
+            pending_raid_bt = gm.get_pending_raid_battle()
+            if pending_raid_bt:
+                raid_bt_data = gm.consume_pending_raid_battle()
+                
+                battle_screen = self.screen_manager.screens.get(ScreenType.BATTLE)
+                if battle_screen:
+                    battle_screen.set_battle_data(raid_bt_data)
                     self.screen_manager.change_screen(ScreenType.BATTLE)
                     return  # Oyun sonu kontrolüne geçme
                     

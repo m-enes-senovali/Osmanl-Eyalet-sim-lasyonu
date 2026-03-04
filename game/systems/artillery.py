@@ -722,6 +722,51 @@ class ArtillerySystem:
         
         return result
     
+    def fire_subset(self, cannon_list: List['Cannon'], combat_type: str = "field") -> dict:
+        """
+        Sadece verilen top listesini ateş et — savaş loadout filtresi için.
+        fire_all() ile aynı mantık ama sadece belirtilen toplar.
+        """
+        result = {
+            'total_damage': 0,
+            'morale_damage': 0,
+            'gunpowder_used': 0,
+            'bursts': 0,
+            'burst_names': [],
+            'messages': []
+        }
+        
+        burst_cannons = []
+        
+        for cannon in cannon_list:
+            if cannon.condition <= 0:
+                continue
+            
+            fire_result = cannon.fire()
+            result['gunpowder_used'] += fire_result['gunpowder_used']
+            
+            if fire_result['burst']:
+                burst_cannons.append(cannon)
+                result['bursts'] += 1
+                result['burst_names'].append(cannon.name)
+                result['messages'].append(fire_result['message'])
+            elif fire_result['success']:
+                result['total_damage'] += cannon.get_power(combat_type)
+                result['morale_damage'] += cannon.get_morale_damage()
+                
+                if fire_result.get('message'):
+                    result['messages'].append(fire_result['message'])
+        
+        # Patlayan topları ana listeden kaldır
+        for burst in burst_cannons:
+            if burst in self.cannons:
+                self.cannons.remove(burst)
+                self.cannons_destroyed += 1
+        
+        self.total_gunpowder_used += result['gunpowder_used']
+        
+        return result
+    
     def get_total_power(self, combat_type: str = "field") -> int:
         """Toplam topçu gücü"""
         return sum(c.get_power(combat_type) for c in self.cannons if c.condition > 0)

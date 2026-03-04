@@ -9,7 +9,8 @@ from enum import Enum
 from typing import Optional
 from audio.audio_manager import get_audio_manager
 from audio.music_manager import get_music_manager
-from config import COLORS
+from config import COLORS, SCREEN_WIDTH, SCREEN_HEIGHT
+from ui.visual_effects import GradientRenderer
 
 
 class ScreenType(Enum):
@@ -122,6 +123,11 @@ class ScreenManager:
         
         # Multiplayer mod flag - alt ekranların geri dönüşünü belirler
         self.is_multiplayer_mode = False
+        
+        # Önbellekli yüzeyler (her karede yeniden oluşturmamak için)
+        self._fade_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self._fade_surface.fill((0, 0, 0))
+        self._current_gradient = GradientRenderer.get_gradient('default')
     
     def register_screen(self, screen_type: ScreenType, screen: BaseScreen):
         """Ekran kaydet"""
@@ -165,6 +171,10 @@ class ScreenManager:
         
         if announce:
             self.current_screen.announce_screen()
+        
+        # Gradient 'ı ekrana göre önbelleğe al
+        theme = self.SCREEN_GRADIENT_MAP.get(screen_type.value, 'default')
+        self._current_gradient = GradientRenderer.get_gradient(theme)
     
     # Ekran -> Ambiyans ses eşlemesi
     # Her ekran için tematik çevre sesi. Dosya yoksa sessizce devam eder.
@@ -268,20 +278,13 @@ class ScreenManager:
     
     def draw(self, surface: pygame.Surface):
         """Aktif ekranı ve fade overlay'i çiz"""
-        # Gradient arka plan (ekran tipine göre)
-        from ui.visual_effects import GradientRenderer
-        theme = 'default'
-        if self.current_screen_type:
-            theme = self.SCREEN_GRADIENT_MAP.get(self.current_screen_type.value, 'default')
-        gradient = GradientRenderer.get_gradient(theme)
-        surface.blit(gradient, (0, 0))
+        # Önbellekli gradient arka plan
+        surface.blit(self._current_gradient, (0, 0))
         
         if self.current_screen:
             self.current_screen.draw(surface)
             
-        # Karartma (Fade) Overlay
+        # Karartma (Fade) Overlay — önbellekli Surface
         if self.fade_state is not None and self.fade_alpha > 0:
-            fade_surface = pygame.Surface(surface.get_size())
-            fade_surface.fill((0, 0, 0))
-            fade_surface.set_alpha(int(self.fade_alpha))
-            surface.blit(fade_surface, (0, 0))
+            self._fade_surface.set_alpha(int(self.fade_alpha))
+            surface.blit(self._fade_surface, (0, 0))

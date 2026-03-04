@@ -31,6 +31,10 @@ from game.systems.naval import NavalSystem
 from audio.audio_manager import get_audio_manager
 import sys
 
+# Sabit takvim verileri (her turda yeniden oluşturmamak için modül seviyesinde)
+DAYS_IN_MONTH = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+MONTH_NAMES = ("", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+               "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
 
 def get_base_path():
     """
@@ -113,6 +117,12 @@ class GameManager:
         self.history = HistorySystem()      # Geçmiş Olaylar (YENİ)
         self.divan = DivanSystem()          # Eyalet Divanı (YENİ)
         self.advisor = AdvisorSystem(self)  # Danışman sistemi (YENİ)
+        
+        # Lazy-init edilmeyen yeni sistemler (önceden sadece new_game'de oluşuyordu)
+        from game.systems.guilds import GuildSystem
+        from game.systems.achievements import AchievementSystem
+        self.guilds = GuildSystem()
+        self.achievements = AchievementSystem()
         
         # Ses yöneticisi
         self.audio = get_audio_manager()
@@ -213,17 +223,17 @@ class GameManager:
         # Günü ilerlet
         self.current_day += 1
         
+        # Tur boyunca biriken mesajlar
+        messages = []
+        
         # Ay geçişi (her ayda farklı gün sayısı)
-        days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        if self.current_day > days_in_month[self.current_month - 1]:
+        if self.current_day > DAYS_IN_MONTH[self.current_month - 1]:
             self.current_day = 1
             self.current_month += 1
             
             # Ay başı bildirimi
-            month_names = ["", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-                          "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
             if self.current_month <= 12:
-                self.audio.announce(f"{month_names[self.current_month]} ayı başladı")
+                self.audio.announce(f"{MONTH_NAMES[self.current_month]} ayı başladı")
         
         if self.current_month > 12:
             self.current_month = 1
@@ -380,6 +390,7 @@ class GameManager:
         
         # 4. İnşaat
         construction_messages = self.construction.process_turn()
+        messages.extend(construction_messages)
         
         # 5. İşçiler
         worker_result = self.workers.process_turn()
@@ -394,8 +405,26 @@ class GameManager:
         if trade_bonus > 0:
             self.economy.trade_modifier += trade_bonus
         
+        # Zanaatkar işçilerin inşaat hız bonusu
+        construction_speed = worker_result['bonuses'].get('construction_speed', 0)
+        if construction_speed > 0:
+            # Aktif inşaatların süresini azalt (her 0.5 bonus = 1 tur hızlandırma)
+            extra_ticks = int(construction_speed / 0.5)
+            if extra_ticks > 0 and hasattr(self.construction, 'build_queue'):
+                for item in self.construction.build_queue:
+                    if item.turns_remaining > 1:
+                        item.turns_remaining = max(1, item.turns_remaining - extra_ticks)
+        
+        # Elçi işçilerin diplomasi bonusu (her 10 turda etki)
+        diplomacy_bonus = worker_result['bonuses'].get('diplomacy_bonus', 0)
+        if diplomacy_bonus > 0 and self.turn_count % 10 == 0:
+            loyalty_boost = min(2, int(diplomacy_bonus * 10))
+            if loyalty_boost > 0:
+                self.diplomacy.sultan_loyalty = min(100, self.diplomacy.sultan_loyalty + loyalty_boost)
+        
         # 6. Askeri
         military_messages = self.military.process_turn()
+        messages.extend(military_messages)
         
         # Erkek karakter: Yeniçeri sadakat bonusu (+%15)
         # Her 3 turda +1 moral (0.15 * 3 turda bir = sürekli küçük etki)
@@ -404,6 +433,19 @@ class GameManager:
             if janissary_bonus > 0 and self.turn_count % 3 == 0:
                 self.military.morale = min(100, self.military.morale + 1)
         
+        # 6b. Savaş Yorgunluğu Etkileri
+        weariness = self.warfare.war_weariness
+        if weariness >= 30:
+            # Orta yorgunluk: asker morali düşer
+            self.military.morale = max(0, self.military.morale - 1)
+        if weariness >= 50:
+            # Yüksek yorgunluk: ekonomiye yansır (halk savaştan bıktı)
+            war_tax_penalty = int(self.economy.income.tax * 0.10)
+            self.economy.resources.gold -= war_tax_penalty
+        if weariness >= 70:
+            # Kritik yorgunluk: padişah memnuniyetsiz
+            self.diplomacy.sultan_loyalty = max(0, self.diplomacy.sultan_loyalty - 2)
+        
         # 7. Topçu üretimi (Topçu Ocağı)
         self.artillery.process_production()
         
@@ -411,17 +453,13 @@ class GameManager:
         if self.province.is_coastal:
             self.naval.process_construction()
         
-        # 8b. Liman durumunu senkronize et (tersane → military + trade)
+        # 8b. Liman durumunu senkronize et (military tarafı)
         has_shipyard = self.construction.has_building(BuildingType.SHIPYARD)
         self.military.has_port = has_shipyard
-        if hasattr(self, 'trade'):
-            shipyard_level = 0
-            if has_shipyard:
-                shipyard_level = self.construction.buildings[BuildingType.SHIPYARD].level
-            self.trade.update_port_status(has_shipyard, shipyard_level)
         
         # 9. Diplomasi
         diplomacy_messages = self.diplomacy.process_turn()
+        messages.extend(diplomacy_messages)
         
         # Vassal haraçlarını ekonomiye ekle
         if getattr(self.diplomacy, 'tribute_income', 0) > 0:
@@ -464,6 +502,11 @@ class GameManager:
         # Moral hasarını warfare sistemine aktar
         self.warfare._current_morale_damage = morale_damage
         
+        # Erkek karakter: Akın gücü bonusu (+%20)
+        raid_bonus = 0.0
+        if self.player:
+            raid_bonus = self.player.get_bonus('raid_power')
+        
         battle_results = self.warfare.process_battles(
             self.military,
             artillery_power=artillery_power,
@@ -497,7 +540,11 @@ class GameManager:
             self.diplomacy.sultan_loyalty = max(0, min(100, 
                 self.diplomacy.sultan_loyalty + loyalty_change))
             if result.loot_gold > 0:
-                self.economy.add_resources(gold=result.loot_gold)
+                loot = result.loot_gold
+                # Erkek karakter: Akın gücü bonusu → daha fazla yağma
+                if raid_bonus > 0:
+                    loot = int(loot * (1.0 + raid_bonus))
+                self.economy.add_resources(gold=loot)
                 
         # 10.5 DÜŞMAN İSTİLALARI (Savunma Savaşı Kontrolü)
         is_invaded, invader_name, invader_power = self.diplomacy.check_enemy_invasions(self.military.get_total_power())
@@ -520,12 +567,44 @@ class GameManager:
             shipyard_level = self.construction.buildings[BuildingType.SHIPYARD].level
         self.trade.update_port_status(has_shipyard, shipyard_level)
         
+        # Mevsimsel pazar fiyatlarını güncelle
+        season_map = {"Kış": "winter", "İlkbahar": "spring", "Yaz": "summer", "Sonbahar": "autumn"}
+        self.trade.update_market(season=season_map.get(current_season))
+        
+        # Kadın karakter: Tekstil ticareti bonusu (+%15 ticaret geliri)
+        if self.player:
+            textile_bonus = self.player.get_bonus('textile_trade')
+            if textile_bonus > 0:
+                self.economy.trade_modifier += textile_bonus
+        
         # Ticaret işle
         trade_result = self.trade.process_turn(self.economy)
         
-        # 13. Casusluk
+        # 13. Casusluk (Kadın +%15 bonus: espionage_screen → start_mission'da uygulanıyor)
         espionage_result = self.espionage.process_turn()
         espionage_messages = espionage_result.get('messages', [])
+        messages.extend(espionage_messages)
+        
+        # 14. Loncalar (Çeyreklik — her 90 turda = üç ayda bir)
+        if hasattr(self, 'guilds') and self.turn_count % 90 == 0:
+            guild_result = self.guilds.process_quarterly()
+            # Lonca vergisini hazineye ekle
+            if guild_result['total_tax'] > 0:
+                self.economy.add_resources(gold=int(guild_result['total_tax']))
+            # Lonca olaylarını mesajlara ekle
+            for ge in guild_result.get('events', []):
+                msg = ge.get('message', '') if isinstance(ge, dict) else str(ge)
+                if msg:
+                    messages.append(msg)
+        
+        # Askeri lonca desteği (her 10 turda bir pasif etki)
+        if hasattr(self, 'guilds') and self.turn_count % 10 == 0:
+            mil_support = self.guilds.get_military_support()
+            # Deri teçhizat + Silah üretimi → asker morali
+            total_supply = mil_support.get('leather', 0) + mil_support.get('weapons', 0)
+            if total_supply > 0:
+                morale_boost = min(2, total_supply // 10)
+                self.military.morale = min(100, self.military.morale + morale_boost)
         
         # Casusluk etkilerini oyuna yansıt (Keşif, Sabotaj, Fitne vb.)
         if espionage_result.get('completed'):
@@ -548,6 +627,9 @@ class GameManager:
         
         # 14. Din ve Kültür (YENİ)
         religion_result = self.religion.process_turn(self.economy)
+        # Din sistemi uyarılarını oyuncuya bildir
+        if religion_result.get('events'):
+            messages.extend(religion_result['events'])
         
         # 15. Vakıf bonusu (Kadın karakter: +%30 vakıf etkisi)
         # Her 3 turda +1 huzur (küçük ama birikimli etki)
@@ -605,17 +687,7 @@ class GameManager:
         # === OTOMATİK KAYIT ===
         self._check_auto_save()
         
-        # Toplanan mesajları birleştir
-        messages = []
-        if 'construction_messages' in locals():
-            messages.extend(construction_messages)
-        if 'espionage_messages' in locals():
-            messages.extend(espionage_messages)
-        if 'diplomacy_messages' in locals():
-            messages.extend(diplomacy_messages)
-        if 'military_messages' in locals():
-            messages.extend(military_messages)
-        
+        # Toplanan mesajları döndür
         return {
             'year': self.current_year,
             'month': self.current_month,
@@ -654,16 +726,11 @@ class GameManager:
             self.audio.announce(self.game_over_reason)
     
     def _announce_turn_summary(self, net_income: int, pop_result: dict):
-        """Tur özeti duyur"""
-        # Her 3 turda bir özet
-        if self.turn_count % 3 == 0:
-            self.audio.announce_value("Yıl", str(self.current_year))
-            self.audio.announce_value("Altın", str(self.economy.resources.gold))
-            
-            if net_income >= 0:
-                self.audio.speak(f"Gelir fazlası: {net_income}")
-            else:
-                self.audio.speak(f"Zarar: {net_income}")
+        """Tur özeti — artık province_view.py minimal duyuru yapıyor,
+        burada sadece kritik uyarılar kalıyor (hazine düşük vb.)"""
+        # Kritik uyarılar economy.process_turn() içinde zaten yapılıyor.
+        # Province_view'deki minimal sistem yeterli.
+        pass
     
     def _apply_event_memory_effects(self):
         """Olay zincirlerinden gelen kalıcı etkileri her tur uygula"""
@@ -811,11 +878,18 @@ class GameManager:
         
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
-        save_data = {
+        save_data = self._build_save_data(slot)
+        save_data['auto_save'] = True  # Otomatik kayıt işareti
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(save_data, f, ensure_ascii=False, indent=2)
+    
+    def _build_save_data(self, slot: int) -> dict:
+        """Ortak kayıt verisi oluştur (Çift dict sorunu önleme)"""
+        return {
             'version': SAVE_FORMAT_VERSION,
             'game_id': self.game_id,
             'save_slot': slot,
-            'auto_save': True,  # Otomatik kayıt işareti
             'player': self.player.to_dict() if self.player else None,
             'province': {
                 'name': self.province.name,
@@ -842,11 +916,11 @@ class GameManager:
             'artillery': self.artillery.to_dict(),
             'espionage': self.espionage.to_dict(),
             'religion': self.religion.to_dict(),
+            'guilds': self.guilds.to_dict(),
+            'achievements': self.achievements.to_dict(),
+            'history': self.history.to_dict(),
             'divan': self.divan.to_dict(),
         }
-        
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(save_data, f, ensure_ascii=False, indent=2)
     
     def apply_event_effects(self, effects: Dict[str, int]):
         """Olay etkilerini uygula"""
@@ -930,6 +1004,16 @@ class GameManager:
         self.warfare.pending_siege_battle = None
         return battle
     
+    def get_pending_raid_battle(self):
+        """Bekleyen akın/deniz akını savaşı var mı?"""
+        return self.warfare.pending_raid_battle
+    
+    def consume_pending_raid_battle(self):
+        """Bekleyen akın savaşını al ve temizle"""
+        battle = self.warfare.pending_raid_battle
+        self.warfare.pending_raid_battle = None
+        return battle
+    
     def save_game(self, slot: int = None) -> bool:
         """
         Oyunu kaydet
@@ -954,41 +1038,7 @@ class GameManager:
         # Saves klasörünü oluştur
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
-        save_data = {
-            'version': SAVE_FORMAT_VERSION,
-            'game_id': self.game_id,
-            'save_slot': slot,
-            'player': self.player.to_dict() if self.player else None,  # YENİ
-            'province': {
-                'name': self.province.name,
-                'capital': self.province.capital,
-                'region': self.province.region,
-                'is_coastal': self.province.is_coastal
-            },
-            'time': {
-                'year': self.current_year,
-                'month': self.current_month,
-                'day': self.current_day,
-                'turn': self.turn_count
-            },
-            'economy': self.economy.to_dict(),
-            'military': self.military.to_dict(),
-            'population': self.population.to_dict(),
-            'construction': self.construction.to_dict(),
-            'diplomacy': self.diplomacy.to_dict(),
-            'events': self.events.to_dict(),
-            'warfare': self.warfare.to_dict(),
-            'trade': self.trade.to_dict(),
-            'workers': self.workers.to_dict(),
-            'naval': self.naval.to_dict(),
-            'artillery': self.artillery.to_dict(),
-            'espionage': self.espionage.to_dict(),
-            'religion': self.religion.to_dict(),
-            'guilds': self.guilds.to_dict() if hasattr(self, 'guilds') else {},
-            'achievements': self.achievements.to_dict() if hasattr(self, 'achievements') else {},
-            'history': self.history.to_dict() if hasattr(self, 'history') else {},
-            'divan': self.divan.to_dict() if hasattr(self, 'divan') else {}
-        }
+        save_data = self._build_save_data(slot)
         
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
@@ -1073,11 +1123,11 @@ class GameManager:
                 self.espionage = EspionageSystem.from_dict(save_data['espionage'])
             if 'religion' in save_data:
                 self.religion = ReligionSystem.from_dict(save_data['religion'])
-            if 'guilds' in save_data and hasattr(self, 'guilds'):
+            if 'guilds' in save_data:
                 self.guilds.from_dict(save_data['guilds'])
-            if 'history' in save_data and hasattr(self, 'history'):
+            if 'history' in save_data:
                 self.history.from_dict(save_data['history'])
-            if 'achievements' in save_data and hasattr(self, 'achievements'):
+            if 'achievements' in save_data:
                 self.achievements.from_dict(save_data['achievements'])
             if 'divan' in save_data:
                 self.divan = DivanSystem.from_dict(save_data['divan'])

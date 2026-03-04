@@ -367,6 +367,15 @@ class Game:
                 self.running = False
                 return
             
+            # Müzik geçiş event'i (non-blocking fadeout → load)
+            if event.type == pygame.USEREVENT + 10:
+                try:
+                    from audio.music_manager import get_music_manager
+                    get_music_manager().handle_event(event)
+                except Exception:
+                    pass
+                continue
+            
             # Global kısayollar
             if event.type == pygame.KEYDOWN:
                 # Shift + Page Up - Ambiyans sesini artır

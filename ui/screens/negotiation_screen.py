@@ -431,7 +431,12 @@ class NegotiationScreen(BaseScreen):
                     'yearly_gift': self.offer_values.get('yearly_gift', 0),
                     'trade_agreement': self.offer_values.get('trade_agreement', 0)
                 }, current_turn=gm.turn_count)
-                self.audio.announce(f"{self.target}'e evlilik elcisi gonderildi! Cevap bekleniyor...")
+                # Cinsiyete göre mesaj
+                is_female = gm.player and gm.player.gender.value == 'female'
+                if is_female:
+                    self.audio.announce(f"{self.target} beyinin oğluna evlilik teklifi gönderildi! Cevap bekleniyor...")
+                else:
+                    self.audio.announce(f"{self.target}'e evlilik elçisi gönderildi! Cevap bekleniyor...")
                 gm.diplomacy.add_prestige(10, f"{self.target}'e evlilik teklifi")
             else:
                 # Anında sonuç
@@ -445,7 +450,12 @@ class NegotiationScreen(BaseScreen):
                     gm.diplomacy.neighbors[self.target].value += 30
                     gm.diplomacy.neighbors[self.target].update_type()
                     gm.diplomacy.add_prestige(50, f"{self.target} ile evlilik")
-                    self.audio.announce(f"Tebrikler! {self.target} ile evlilik ittifakı kuruldu!")
+                    # Cinsiyete göre mesaj
+                    is_female = gm.player and gm.player.gender.value == 'female'
+                    if is_female:
+                        self.audio.announce(f"Tebrikler! {self.target} beyinin oğlu ile evlilik ittifakı kuruldu! +30 ilişki")
+                    else:
+                        self.audio.announce(f"Tebrikler! {self.target} ile hanedan evliliği kuruldu! +30 ilişki")
                 else:
                     gm.diplomacy.add_prestige(-10, "Evlilik teklifi reddedildi")
                     self.audio.announce(f"{self.target} teklifinizi reddetti.")

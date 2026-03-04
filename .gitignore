@@ -15,3 +15,12 @@ game_settings.json
 # Güvenlik Anahtarları (Kesinlikle gitmemeli)
 secured_keys.json
 mail_kaydet.py
+
+# Veritabanı dosyaları
+*.db
+
+# Test dosyaları
+test_*.py
+
+# IDE / Araç Ayarları
+.gemini/

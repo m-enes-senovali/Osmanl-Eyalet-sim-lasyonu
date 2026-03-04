@@ -353,7 +353,9 @@ class EconomySystem:
         """Ticaret gelirini hesapla"""
         # Temel ticaret geliri artırıldı (1500 altın/seviye - eskiden 1200)
         base_trade = 1500 * self.trade_level
-        return int(base_trade * self.trade_modifier)
+        # Aktif ticaret yollarından bonus
+        route_bonus = self.get_trade_route_bonus()
+        return int(base_trade * (1 + route_bonus) * self.trade_modifier)
     
     def set_tax_rate(self, rate: float) -> bool:
         """

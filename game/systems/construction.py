@@ -5,7 +5,7 @@ Osmanlı Eyalet Yönetim Simülasyonu - İnşaat Sistemi
 
 Bina Kategorileri:
 - Dini: Cami, Medrese, Tabhane
-- Askeri: Ocak, Kale, Topçu Ocağı, Gözetleme Kulesi
+- Askeri: Kışla, Kale, Topçu Ocağı, Gözetleme Kulesi
 - Ekonomi: Çarşı, Kervansaray, Han, Bedesten, Darphane
 - Altyapı: Çiftlik, Maden, Kereste Ocağı, Taş Ocağı, Ambar, Su Kemeri, Tersane, Halat Atölyesi
 - Sosyal: Darüşşifa, Hamam
@@ -34,7 +34,7 @@ class BuildingType(Enum):
     MEDRESE = "medrese"            # Medrese (eğitim)
     TABHANE = "tabhane"            # Tabhane (misafirhane) 🆕
     # Askeri
-    BARRACKS = "barracks"          # Ocak
+    BARRACKS = "barracks"          # Kışla
     FORTRESS = "fortress"          # Kale
     ARTILLERY_FOUNDRY = "artillery_foundry"  # Topçu Ocağı
     WATCHTOWER = "watchtower"      # Gözetleme Kulesi 🆕
@@ -315,8 +315,8 @@ BUILDING_DEFINITIONS = {
     # ═══════════════════════════════════════════════════
     BuildingType.BARRACKS: BuildingStats(
         name="Barracks",
-        name_tr="Ocak",
-        description="Asker yetiştirilir ve barınır (Kapıkulu Ocağı)",
+        name_tr="Kışla",
+        description="Asker yetiştirilir ve barınır (Kapıkulu Kışlası)",
         cost_gold=1500,
         cost_wood=300,
         cost_iron=200,
@@ -405,7 +405,7 @@ BUILDING_DEFINITIONS = {
         category=BuildingCategory.ASKERI,
         military_bonus=50,
         synergy_with=["barracks", "watchtower"],
-        synergy_bonus_desc="Ocak ile: garnizon kapasitesi +%20. Gözetleme Kulesi ile: erken uyarı",
+        synergy_bonus_desc="Kışla ile: garnizon kapasitesi +%20. Gözetleme Kulesi ile: erken uyarı",
         historical_desc="Osmanlı sınır kaleleri (uç kaleleri) düşmana karşı ilk savunma hattıydı. Kale dizdarı tarafından yönetilirdi.",
         level_names=["Palanka", "Hisar", "Kale", "İç Kale", "Citadel"],
         unique_effects={
@@ -474,7 +474,7 @@ BUILDING_DEFINITIONS = {
         military_bonus=50,
         prerequisite="barracks",
         synergy_with=["barracks", "mine", "fortress"],
-        synergy_bonus_desc="Ocak ile: top mürettebatı kalitesi +%15. Maden ile: üretim hızı +%20",
+        synergy_bonus_desc="Kışla ile: top mürettebatı kalitesi +%15. Maden ile: üretim hızı +%20",
         historical_desc="Tophane-i Amire'nin taşra kolu. Osmanlı topçuluğu 1453 İstanbul kuşatmasından beri Avrupa'nın en gelişmişiydi.",
         level_names=["Dökümhane", "Tophane", "Topçu Ocağı", "Büyük Tophane", "Tophane-i Amire"],
         unique_effects={
@@ -1671,7 +1671,7 @@ BUILDING_DEFINITIONS = {
         happiness_bonus=5,
         prerequisite="medrese",
         synergy_with=["medrese", "barracks"],
-        synergy_bonus_desc="Medrese ile: adalet +%20. Ocak ile: asayiş +%15.",
+        synergy_bonus_desc="Medrese ile: adalet +%20. Kışla ile: asayiş +%15.",
         historical_desc="Kadılar hem yargıç hem de belediye başkanıydı. Şer'iye sicilleri burada tutulurdu.",
         level_names=["Mahkeme", "Kadı Konağı", "Büyük Mahkeme"],
         unique_effects={

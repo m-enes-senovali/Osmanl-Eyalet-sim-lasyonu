@@ -701,14 +701,17 @@ class EnemyAI:
 class WarfareSystem:
     """Savaş yönetim sistemi - geliştirilmiş"""
     
-    # Erken oyun koruması - bu turdan önce saldırı yok
-    EARLY_GAME_PROTECTION = 12
+    # Erken oyun koruması - bu turdan önce düşman saldırısı yok
+    EARLY_GAME_PROTECTION = 30
     
     def __init__(self):
         self.active_battles: List[Battle] = []
         self.war_history: List[Dict] = []
         self.war_weariness = 0  # Savaş yorgunluğu
         self.battle_counter = 0
+        
+        # Erken oyun koruması — oyuncu isterse kapatabilir
+        self.protection_disabled = False
         
         # Gelişmiş AI
         self.enemy_ai = EnemyAI()
@@ -729,11 +732,15 @@ class WarfareSystem:
         
         # Bekleyen kuşatma savaşı (BattleScreen için)
         self.pending_siege_battle = None
+        
+        # Bekleyen akın/deniz akını savaşı (BattleScreen için)
+        self.pending_raid_battle = None
     
     def can_start_war(self, turn_count: int) -> Tuple[bool, str]:
         """Savaş başlatılabilir mi?"""
-        if turn_count < self.EARLY_GAME_PROTECTION:
-            return False, f"İlk {self.EARLY_GAME_PROTECTION} tur savaş başlatılamaz ({turn_count}/{self.EARLY_GAME_PROTECTION})"
+        if not self.protection_disabled and turn_count < self.EARLY_GAME_PROTECTION:
+            remaining = self.EARLY_GAME_PROTECTION - turn_count
+            return False, f"Erken oyun koruması aktif. {remaining} gün kaldı. Eyalet Yönetimi ekranından devre dışı bırakabilirsiniz."
         
         if self.war_weariness > 80:
             return False, "Ordu çok yorgun (savaş yorgunluğu > 80)"
@@ -742,6 +749,18 @@ class WarfareSystem:
             return False, "Aynı anda en fazla 2 savaş yönetilebilir"
         
         return True, "Savaş başlatılabilir"
+    
+    def disable_protection(self):
+        """Oyuncu erken oyun korumasını devre dışı bırakır"""
+        self.protection_disabled = True
+        audio = get_audio_manager()
+        audio.announce("Erken oyun koruması kaldırıldı. Artık savaş başlatabilir ve saldırıya uğrayabilirsiniz.")
+    
+    def is_protection_active(self, turn_count: int) -> bool:
+        """Erken oyun koruması hala aktif mi?"""
+        if self.protection_disabled:
+            return False
+        return turn_count < self.EARLY_GAME_PROTECTION
     
     def get_random_terrain(self, target: str) -> TerrainType:
         """Hedef bölgeye göre rastgele arazi"""
@@ -812,12 +831,7 @@ class WarfareSystem:
                 experience=min(100, military_system.experience + bonus_exp),
                 commander=military_system.assigned_commander
             ),
-            defender_army=Army(
-                infantry=random.randint(50, 200),
-                cavalry=random.randint(20, 80),
-                artillery=random.randint(0, 10),
-                morale=random.randint(60, 90)
-            ),
+            defender_army=self._generate_scaled_enemy(turn_count, 'raid'),
             phase=BattlePhase.MARCH,
             turns_remaining=march_turns,
             terrain=terrain,
@@ -881,12 +895,7 @@ class WarfareSystem:
                 ammo=100,
                 commander=military_system.assigned_commander
             ),
-            defender_army=Army(
-                infantry=random.randint(200, 500),
-                cavalry=random.randint(30, 100),
-                artillery=random.randint(10, 30),
-                morale=random.randint(70, 95)
-            ),
+            defender_army=self._generate_scaled_enemy(turn_count, 'siege'),
             phase=BattlePhase.MARCH,
             turns_remaining=march_turns,
             terrain=terrain,
@@ -992,16 +1001,17 @@ class WarfareSystem:
             if battle.turns_remaining <= 0:
                 if battle.phase == BattlePhase.MARCH:
                     battle.phase = BattlePhase.COMBAT
-                    battle.turns_remaining = 1 if battle.battle_type in (BattleType.RAID, BattleType.NAVAL_RAID) else 5
                     
                     audio = get_audio_manager()
                     
                     # Kuşatma savaşları için interaktif savaş ekranını aç
                     if battle.battle_type == BattleType.SIEGE:
+                        battle.turns_remaining = 5
                         audio.announce(f"{battle.defender_name} kuşatması başladı! Savaş ekranı açılıyor...")
                         battle.combat_ready = True
                         self.pending_siege_battle = {
                             'battle_id': battle.battle_id,
+                            'battle_type': 'siege',
                             'target': battle.defender_name,
                             'terrain': battle.terrain.value,
                             'weather': battle.weather.value,
@@ -1021,13 +1031,43 @@ class WarfareSystem:
                                 'morale': battle.defender_army.morale
                             }
                         }
+                    
+                    # Akın ve Deniz Akını için de interaktif savaş ekranını aç
+                    elif battle.battle_type in (BattleType.RAID, BattleType.NAVAL_RAID):
+                        battle.turns_remaining = 3  # Akınlar kısa: 3 tur
+                        battle_mode = 'naval' if battle.battle_type == BattleType.NAVAL_RAID else 'raid'
+                        mode_text = "Deniz akını" if battle_mode == 'naval' else "Akın"
+                        audio.announce(f"{battle.defender_name} {mode_text} çatışması başladı! Savaş ekranı açılıyor...")
+                        battle.combat_ready = True
+                        self.pending_raid_battle = {
+                            'battle_id': battle.battle_id,
+                            'battle_type': battle_mode,
+                            'target': battle.defender_name,
+                            'terrain': battle.terrain.value,
+                            'weather': battle.weather.value,
+                            'attacker_army': {
+                                'infantry': battle.attacker_army.infantry,
+                                'cavalry': battle.attacker_army.cavalry,
+                                'artillery': battle.attacker_army.artillery,
+                                'morale': battle.attacker_army.morale,
+                            },
+                            'defender_army': {
+                                'infantry': battle.defender_army.infantry,
+                                'cavalry': battle.defender_army.cavalry,
+                                'artillery': battle.defender_army.artillery,
+                                'morale': battle.defender_army.morale
+                            }
+                        }
                     else:
+                        battle.turns_remaining = 1
                         audio.announce(f"{battle.defender_name} ile çatışma başladı!")
                     
                 elif battle.phase == BattlePhase.COMBAT:
-                    result = self._resolve_battle(battle, military_system, naval_system)
-                    results.append(result)
-                    completed.append(battle)
+                    # Sadece BattleScreen'e yönlendirilmemiş savaşlar otomatik çözülür
+                    if not getattr(battle, 'combat_ready', False):
+                        result = self._resolve_battle(battle, military_system, naval_system)
+                        results.append(result)
+                        completed.append(battle)
         
         # Tamamlanan savaşları kaldır
         for battle in completed:
@@ -1100,13 +1140,19 @@ class WarfareSystem:
         # Sonuç
         victory = final_attacker > final_defender
         
-        # Kayıplar hesapla
+        # Kayıplar hesapla — ordu boyutuna orantılı
+        attacker_total = max(1, battle.attacker_army.get_total_soldiers())
+        defender_total = max(1, battle.defender_army.get_total_soldiers())
+        
         if victory:
-            attacker_casualties = random.randint(20, 80)
-            defender_casualties = random.randint(100, 300)
+            att_rate = random.uniform(0.03, 0.10)  # Zafer: %3-10 kayıp
+            def_rate = random.uniform(0.15, 0.35)  # Yenilen: %15-35 kayıp
         else:
-            attacker_casualties = random.randint(80, 200)
-            defender_casualties = random.randint(30, 100)
+            att_rate = random.uniform(0.10, 0.25)  # Yenilen: %10-25 kayıp
+            def_rate = random.uniform(0.03, 0.12)  # Zafer: %3-12 kayıp
+        
+        attacker_casualties = max(5, int(attacker_total * att_rate))
+        defender_casualties = max(5, int(defender_total * def_rate))
         
         # Kayıpları uygula
         from game.systems.military import UnitType as MilitaryUnitType
@@ -1191,44 +1237,8 @@ class WarfareSystem:
         )
         self.battle_reports.append(report)
         
-        # Akın raporu için pending_raid_report'u ayarla (RaidReportScreen için)
-        if battle.battle_type in (BattleType.RAID, BattleType.NAVAL_RAID):
-            # RaidStory formatına uygun veri
-            encounter_types = ['resistance', 'ambush', 'surrender', 'fortified', 'chase']
-            if battle.battle_type == BattleType.NAVAL_RAID:
-                encounter_types = ['patrol', 'ambush', 'surrender', 'none']
-            
-            # Eyalet ölçeğine uygun, gerçekçi jenerik yerel düşman komutanları
-            commanders = [
-                # İsyancılar ve Eşkıyalar
-                'Kızılca Ali', 'Deli Hasan', 'Kör Hüseyin', 'Softa Halil', 'Softa Mustafa',
-                # Balkan/Macar/Hırvat sınır beyleri
-                'István Kaptan', 'Farkas Vayvoda', 'Petar Hırvat', 'Mihail Voyvoda', 'Nikolas Kaptan',
-                # Venedik/İtalyan/Şövalye denizcileri veya paralı askerleri
-                'Capitano Marco', 'Conte Giovanni', 'Sir Pietro', 'Kaptan Andrea',
-                # Safevi/İran sınır komutanları
-                'Şahkulu Han', 'Hüseyin Mirza', 'Ali Kuli Han', 'Rıza Bey', 'Mahmud Han',
-                # Memlük/Arap yerel emirleri
-                'Emir Seyfeddin', 'Şeyh Mahmud', 'Mansur Bey', 'Emir Tarık'
-            ]
-            
-            is_naval = battle.battle_type == BattleType.NAVAL_RAID
-            
-            self.pending_raid_report = {
-                'target_name': battle.defender_name,
-                'raid_size': max(1, battle.attacker_army.get_total_soldiers()) if not is_naval else max(1, int(battle.attacker_army.artillery / 20)),
-                'villages_raided': random.randint(2, 8),
-                'encounter_type': random.choice(encounter_types),
-                'loot_gold': loot_gold,
-                'loot_food': loot_food,
-                'prisoners_taken': random.randint(10, 100) if victory else 0,
-                'enemy_killed': defender_casualties,
-                'our_casualties': attacker_casualties,
-                'victory': victory,
-                'enemy_commander': random.choice(commanders),
-                'special_event': random.choice([None, None, 'hidden_treasure', 'ambush_survived', 'local_guide']),
-                'is_naval': is_naval
-            }
+        # Akın raporu artık oluşturulmaz — interaktif savaş ekranı (BattleScreen) yeterli
+        # Eski hikayeli akın raporu (RaidReportScreen) devre dışı bırakıldı
         
         # Audio bildirimi
         audio = get_audio_manager()
@@ -1251,32 +1261,34 @@ class WarfareSystem:
     
     def handle_enemy_attack(self, attacker: str, military_system, turn_count: int) -> Optional[Battle]:
         """Düşman saldırısını işle"""
-        if turn_count < self.EARLY_GAME_PROTECTION:
+        # Erken oyun koruması (oyuncu kapatmadıysa)
+        if self.is_protection_active(turn_count):
             return None
         
+        # Koruma süresi bittiyse tur sayısını koruma bitiş noktasından hesapla
+        effective_turns = turn_count - (0 if self.protection_disabled else self.EARLY_GAME_PROTECTION)
+        effective_turns = max(0, effective_turns)
+        
         # Saldırı şansı
-        attack_chance = 0.05 + (turn_count - self.EARLY_GAME_PROTECTION) * 0.005
+        attack_chance = 0.05 + effective_turns * 0.005
         attack_chance = min(0.15, attack_chance)
         
         if random.random() > attack_chance:
             return None
         
-        # Saldırı oluştur
+        # Saldırı oluştur — düşman gücü tur sayısına göre ölçeklenir
         self.battle_counter += 1
         terrain = self.get_random_terrain(attacker)
         weather = self.get_random_weather()
+        
+        enemy_army = self._generate_scaled_enemy(turn_count, 'defense')
         
         battle = Battle(
             battle_id=f"defense_{self.battle_counter}",
             battle_type=BattleType.DEFENSE,
             attacker_name=attacker,
             defender_name="Eyaletimiz",
-            attacker_army=Army(
-                infantry=random.randint(100, 400),
-                cavalry=random.randint(50, 150),
-                artillery=random.randint(5, 20),
-                morale=random.randint(70, 95)
-            ),
+            attacker_army=enemy_army,
             defender_army=Army(
                 infantry=military_system.infantry,
                 cavalry=military_system.cavalry,
@@ -1317,13 +1329,44 @@ class WarfareSystem:
             result.append((ability, can_use, reason))
         return result
     
+    def _generate_scaled_enemy(self, turn_count: int, battle_type: str) -> Army:
+        """
+        Tur sayısına göre ölçeklendirilmiş düşman ordusu oluştur.
+        Oyun ilerledikçe düşmanlar güçlenir.
+        """
+        # Ölçeklendirme faktörü: her 30 turda ~%50 güçlenme
+        scale = 1.0 + (turn_count / 60)
+        
+        if battle_type == 'raid':
+            return Army(
+                infantry=int(random.randint(50, 150) * scale),
+                cavalry=int(random.randint(20, 60) * scale),
+                artillery=int(random.randint(0, 8) * scale),
+                morale=min(100, random.randint(55, 80) + turn_count // 20)
+            )
+        elif battle_type == 'siege':
+            return Army(
+                infantry=int(random.randint(200, 400) * scale),
+                cavalry=int(random.randint(30, 80) * scale),
+                artillery=int(random.randint(10, 25) * scale),
+                morale=min(100, random.randint(65, 85) + turn_count // 15)
+            )
+        else:  # defense
+            return Army(
+                infantry=int(random.randint(80, 300) * scale),
+                cavalry=int(random.randint(40, 120) * scale),
+                artillery=int(random.randint(5, 15) * scale),
+                morale=min(100, random.randint(65, 90) + turn_count // 20)
+            )
+    
     def to_dict(self) -> Dict:
         """Kayıt için dictionary'e dönüştür"""
         return {
             'war_weariness': self.war_weariness,
             'battle_counter': self.battle_counter,
             'war_history': self.war_history,
-            'player_tactic_history': self.enemy_ai.player_tactic_history
+            'player_tactic_history': self.enemy_ai.player_tactic_history,
+            'protection_disabled': self.protection_disabled,
         }
     
     @classmethod
@@ -1334,4 +1377,5 @@ class WarfareSystem:
         system.battle_counter = data.get('battle_counter', 0)
         system.war_history = data.get('war_history', [])
         system.enemy_ai.player_tactic_history = data.get('player_tactic_history', [])
+        system.protection_disabled = data.get('protection_disabled', False)
         return system
