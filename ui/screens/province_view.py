@@ -144,12 +144,21 @@ class ProvinceViewScreen(BaseScreen):
         
         # Donanma sadece kıyı eyaletlerinde
         gm = self.screen_manager.game_manager
-        if gm and gm.province.is_coastal:
-            # Zaten eklenmemişse ekle
+        if gm:
             has_naval = any(item[0] == "Donanma" for item in self.side_menu.items)
-            if not has_naval:
-                # Ordu'dan sonra (index 2) Donanma ekle
-                self.side_menu.items.insert(2, ("Donanma", lambda: self._open_screen(ScreenType.NAVAL), "n"))
+            
+            if gm.province.is_coastal:
+                # Kıyı eyaleti ve henüz eklenmemişse ekle
+                if not has_naval:
+                    # Ordu'dan sonra (index 2) Donanma ekle
+                    self.side_menu.items.insert(2, ("Donanma", lambda: self._open_screen(ScreenType.NAVAL), "n"))
+            else:
+                # Kara eyaleti ve donanma menüsü varsa kaldır
+                if has_naval:
+                    self.side_menu.items = [item for item in self.side_menu.items if item[0] != "Donanma"]
+                    # Eğer seçili öğe silindiyse indeksi düzelt
+                    if self.side_menu.selected_index >= len(self.side_menu.items):
+                        self.side_menu.selected_index = max(0, len(self.side_menu.items) - 1)
         
         # İlk giriş rehberi
         gm = self.screen_manager.game_manager

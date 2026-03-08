@@ -9,7 +9,7 @@ SCREEN_HEIGHT = 720
 FPS = 60
 
 # Sürüm ve GitHub
-VERSION = "v1.0.0" # Kod tabanlı sürüm numaramız (github etiketleriyle uyumlu olsun diye v kalabilir, ama oyunda v görünecek)
+VERSION = "v1.0.1" # Kod tabanlı sürüm numaramız (github etiketleriyle uyumlu olsun diye v kalabilir, ama oyunda v görünecek)
 SAVE_FORMAT_VERSION = "1.2" # Kayıt dosyası altyapısının sürümü (veri yapısı değiştikçe artar)
 GITHUB_REPO = "m-enes-senovali/Osmanl-Eyalet-sim-lasyonu"
 

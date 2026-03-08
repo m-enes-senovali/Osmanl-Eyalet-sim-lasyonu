@@ -2,6 +2,7 @@
 
 Sürüm: 1.0.0 (Genişletilmiş Sürüm)
 Geliştirici: Muhammet Enes Şenovalı
+Lisans: Tüm Hakları Saklıdır (All Rights Reserved)
 Dil: Türkçe
 Erişilebilirlik: Tam NVDA ve SAPI5 Ekran Okuyucu Desteği
 

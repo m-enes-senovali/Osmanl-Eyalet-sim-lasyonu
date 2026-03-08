@@ -42,6 +42,10 @@ class Game:
     """Ana oyun sınıfı"""
     
     def __init__(self):
+        # Ses motorunu Pygame'den önce ideal buffer ve format ayarlarıyla başlat
+        # Bu, yüksek kaliteli (320kbps vs) müziklerde kasmayı/cızırtıyı engeller.
+        pygame.mixer.pre_init(frequency=44100, size=-16, channels=2, buffer=4096)
+        
         # Pygame başlat
         pygame.init()
         pygame.font.init()

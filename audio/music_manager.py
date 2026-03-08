@@ -30,6 +30,7 @@ class MusicContext(Enum):
     RELIGION = "religion"
     ECONOMY = "economy"
     DIVAN = "divan"
+    SUPPORT = "support"
 
 # Müzik dosya eşlemeleri
 MUSIC_FILES = {
@@ -48,6 +49,7 @@ MUSIC_FILES = {
     MusicContext.RELIGION: "religion.ogg",
     MusicContext.ECONOMY: "economy.ogg",
     MusicContext.DIVAN: "divan.ogg",
+    MusicContext.SUPPORT: "support.ogg",
 }
 
 # Ekran -> Müzik bağlamı eşlemesi
@@ -86,6 +88,7 @@ SCREEN_MUSIC_MAP = {
     'PROVINCE_SELECT': MusicContext.MENU,
     'MULTIPLAYER': MusicContext.MENU,
     'MULTIPLAYER_GAME': MusicContext.AMBIENT,
+    'SUPPORT': MusicContext.SUPPORT,
 }
 
 
