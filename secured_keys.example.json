@@ -1,0 +1,17 @@
+{
+  "_aciklama": "Bu dosyayı 'secured_keys.json' olarak kopyalayın ve gerçek değerleri girin. secured_keys.json asla git'e eklenmez (.gitignore).",
+
+  "_format_1_duz_metin": "Yerel geliştirme için en kolay yöntem — değerleri doğrudan yazın:",
+  "github_token": "ghp_BURAYA_GITHUB_TOKEN_YAZIN",
+  "email_address": "ornek@gmail.com",
+  "email_pass": "uygulama-sifresi-buraya",
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 465,
+
+  "_format_2_sifrelenmis": "Üretim derlemesi / CI/CD için — tools/generate_secured_keys.py ile oluşturun:",
+  "github_token_encrypted": "",
+  "email_address_encrypted": "",
+  "email_pass_encrypted": "",
+  "smtp_server_encrypted": "",
+  "smtp_port_encrypted": ""
+}
