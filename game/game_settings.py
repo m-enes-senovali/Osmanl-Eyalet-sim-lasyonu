@@ -45,6 +45,7 @@ class GameSettings:
             # Erişilebilirlik
             'announce_hover': True,
             'high_contrast': False,
+            'tts_engine': 'auto',  # 'auto', 'nvda', 'sapi'
         }
         
         self.settings: Dict[str, Any] = {}
@@ -125,6 +126,16 @@ TRANSLATIONS = {
         
         'back': 'Geri',
         'save_settings': 'Kaydet',
+        
+        # Erişilebilirlik / TTS
+        'accessibility': 'Erişilebilirlik',
+        'tts_engine': 'Ses Motoru',
+        'tts_auto': 'Otomatik',
+        'tts_nvda': 'NVDA',
+        'tts_sapi': 'SAPI5',
+        'tts_active': 'Aktif Motor',
+        'tts_reinit': 'Yeniden Tespit Et',
+        'tts_reinit_done': 'Ses motoru yeniden başlatıldı',
         
         # Genel
         'gold': 'Altın',
@@ -213,6 +224,16 @@ TRANSLATIONS = {
         
         'back': 'Back',
         'save_settings': 'Save',
+        
+        # Accessibility / TTS
+        'accessibility': 'Accessibility',
+        'tts_engine': 'Speech Engine',
+        'tts_auto': 'Auto',
+        'tts_nvda': 'NVDA',
+        'tts_sapi': 'SAPI5',
+        'tts_active': 'Active Engine',
+        'tts_reinit': 'Re-detect',
+        'tts_reinit_done': 'Speech engine re-initialized',
         
         # General
         'gold': 'Gold',
