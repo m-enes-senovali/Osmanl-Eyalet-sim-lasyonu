@@ -5,6 +5,7 @@ NVDA ve diğer ekran okuyucu desteği ile.
 """
 
 import os
+import time
 import pygame
 from config import AUDIO, ACCESSIBILITY
 from game.game_settings import get_settings
@@ -12,6 +13,8 @@ from game.game_settings import get_settings
 # Erişilebilirlik için accessible_output2
 try:
     import accessible_output2.outputs.auto as ao2
+    import accessible_output2.outputs.nvda as ao2_nvda
+    import accessible_output2.outputs.sapi5 as ao2_sapi5
     SCREEN_READER_AVAILABLE = True
 except ImportError:
     SCREEN_READER_AVAILABLE = False
@@ -52,11 +55,9 @@ class AudioManager:
         
         # Erişilebilirlik
         self.screen_reader = None
+        self._screen_reader_name = "Yok"
         if SCREEN_READER_AVAILABLE and ACCESSIBILITY['screen_reader_enabled']:
-            try:
-                self.screen_reader = ao2.Auto()
-            except Exception as e:
-                print(f"Ekran okuyucu başlatılamadı: {e}")
+            self.screen_reader, self._screen_reader_name = self._detect_screen_reader()
         
         # Pygame mixer başlat
         try:
@@ -87,6 +88,102 @@ class AudioManager:
         for cat in categories:
             dir_path = os.path.join(base_path, 'audio', 'sounds', cat)
             os.makedirs(dir_path, exist_ok=True)
+
+    def _detect_screen_reader(self, retries: int = 3, retry_delay: float = 0.5):
+        """
+        Ekran okuyucuyu tespit eder.
+
+        Önce kullanıcının seçtiği TTS motorunu (tts_engine ayarı) dener.
+        'auto' modunda NVDA'yı önce doğrudan dener; NVDA controller DLL'i yüklenebilirse
+        ancak NVDA henüz hazır değilse (başlatma yarış durumu) belirtilen tekrar sayısı
+        kadar kısa bekleme ile yeniden dener. Her başarısız denemeden sonra
+        accessible_output2 Auto() ile diğer okuyuculara düşer.
+
+        Returns:
+            tuple[output_object | None, str]: (okuyucu nesnesi, isim)
+        """
+        if not SCREEN_READER_AVAILABLE:
+            return None, "Yok"
+
+        settings = get_settings()
+        engine_pref = settings.get('tts_engine', 'auto')
+
+        # --- Kullanıcı NVDA'yı zorunlu olarak seçmişse ---
+        if engine_pref == 'nvda':
+            try:
+                nvda = ao2_nvda.NVDA()
+                for attempt in range(retries):
+                    if nvda.is_active():
+                        print("Ekran okuyucu: NVDA (zorunlu seçim)")
+                        return nvda, "NVDA"
+                    if attempt < retries - 1:
+                        time.sleep(retry_delay)
+                print("NVDA seçildi ancak aktif değil, SAPI5'e düşülüyor.")
+            except Exception as e:
+                print(f"NVDA DLL yüklenemedi, SAPI5'e düşülüyor: {e}")
+            # NVDA seçildi ama başlatılamadı → SAPI5
+            try:
+                reader = ao2_sapi5.SAPI5()
+                print("Ekran okuyucu: SAPI5 (NVDA bulunamadı)")
+                return reader, "SAPI5"
+            except Exception as e:
+                print(f"SAPI5 de başlatılamadı: {e}")
+            return None, "Yok"
+
+        # --- Kullanıcı SAPI5'i zorunlu olarak seçmişse ---
+        if engine_pref == 'sapi':
+            try:
+                reader = ao2_sapi5.SAPI5()
+                print("Ekran okuyucu: SAPI5 (zorunlu seçim)")
+                return reader, "SAPI5"
+            except Exception as e:
+                print(f"SAPI5 başlatılamadı: {e}")
+            return None, "Yok"
+
+        # --- 'auto' modu: NVDA öncelikli, retry ile ---
+        # NVDA controller DLL'i yüklenebiliyorsa NVDA'nın aktif olmasını bekle
+        try:
+            nvda = ao2_nvda.NVDA()
+            for attempt in range(retries):
+                if nvda.is_active():
+                    print(f"Ekran okuyucu: NVDA (deneme {attempt + 1})")
+                    return nvda, "NVDA"
+                if attempt < retries - 1:
+                    time.sleep(retry_delay)
+            # DLL yüklendi ama NVDA aktif değil → Auto()'ya düş
+        except Exception:
+            # NVDA DLL yüklenemedi → Auto()'ya düş
+            pass
+
+        # NVDA bulunamadı → accessible_output2 Auto() ile diğer okuyucular
+        try:
+            reader = ao2.Auto()
+            # Hangi motorun seçildiğini belirle
+            active = reader.get_first_available_output()
+            if active is not None:
+                name = getattr(active, 'name', type(active).__name__)
+            else:
+                name = "Auto"
+            print(f"Ekran okuyucu: {name} (Auto tespiti)")
+            return reader, name
+        except Exception as e:
+            print(f"Ekran okuyucu başlatılamadı: {e}")
+        return None, "Yok"
+
+    def reinitialize_screen_reader(self):
+        """
+        Ekran okuyucuyu yeniden başlatır.
+        Oyun açıkken NVDA yeniden başlatıldıysa veya yanlış motor
+        seçildiyse bu metot çağrılarak yeniden tespit yapılır.
+        """
+        if not SCREEN_READER_AVAILABLE:
+            return
+        self.screen_reader, self._screen_reader_name = self._detect_screen_reader()
+        print(f"Ekran okuyucu yeniden başlatıldı: {self._screen_reader_name}")
+
+    def get_screen_reader_name(self) -> str:
+        """Aktif ekran okuyucunun adını döndürür."""
+        return self._screen_reader_name
     
     def load_sound(self, name: str, path: str) -> bool:
         """Ses dosyası yükle"""

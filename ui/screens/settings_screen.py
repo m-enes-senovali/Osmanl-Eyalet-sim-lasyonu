@@ -11,6 +11,9 @@ from config import COLORS, FONTS, SCREEN_WIDTH, SCREEN_HEIGHT, VERSION, get_font
 from updater import get_updater
 from audio.music_manager import get_music_manager
 
+# TTS motor seçenekleri - tek kaynak
+TTS_ENGINES = ['auto', 'nvda', 'sapi']
+
 
 class SettingsScreen(BaseScreen):
     """Ayarlar ekranı"""
@@ -27,6 +30,7 @@ class SettingsScreen(BaseScreen):
         self.auto_save_panel = Panel(20, 300, 400, 150, t('auto_save'))
         self.language_panel = Panel(440, 80, 350, 150, t('language'))
         self.update_panel = Panel(440, 250, 350, 200, "Güncelleme")
+        self.accessibility_panel = Panel(440, 470, 350, 120, t('accessibility'))
         
         # Ayarlar menüsü
         self.settings_menu = MenuList(
@@ -71,6 +75,17 @@ class SettingsScreen(BaseScreen):
             self.audio.announce_screen_change("Settings")
         else:
             self.audio.announce_screen_change("Ayarlar")
+    
+    def _get_tts_labels(self) -> dict:
+        """TTS motor adlarını dil bazlı etiket sözlüğü olarak döndürür."""
+        return {'auto': t('tts_auto'), 'nvda': t('tts_nvda'), 'sapi': t('tts_sapi')}
+    
+    def _rebuild_menu_preserving_selection(self):
+        """Menü seçimini koruyarak menüyü ve panelleri yeniden oluşturur."""
+        saved_index = self.settings_menu.selected_index
+        self._setup_settings_menu()
+        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
+        self._update_panels()
     
     def _setup_settings_menu(self):
         """Ayarlar menüsünü oluştur"""
@@ -139,6 +154,30 @@ class SettingsScreen(BaseScreen):
         
         self.settings_menu.add_item("", None, "")  # Ayırıcı
         
+        # Ses Motoru (TTS) Seçimi
+        tts_pref = self.settings.get('tts_engine', 'auto')
+        tts_labels = self._get_tts_labels()
+        tts_display = tts_labels.get(tts_pref, t('tts_auto'))
+        active_reader = self.audio.get_screen_reader_name()
+        
+        self.settings_menu.add_item(
+            f"{t('tts_engine')}: {tts_display}",
+            self._cycle_tts_engine,
+            "t"
+        )
+        self.settings_menu.add_item(
+            f"{t('tts_active')}: {active_reader}",
+            None,
+            ""
+        )
+        self.settings_menu.add_item(
+            t('tts_reinit'),
+            self._reinit_screen_reader,
+            "r"
+        )
+        
+        self.settings_menu.add_item("", None, "")  # Ayırıcı
+        
         # Güncelleme Seçenekleri
         if self.update_checking:
             self.settings_menu.add_item("Kontrol ediliyor...", None, "")
@@ -190,6 +229,15 @@ class SettingsScreen(BaseScreen):
         current_lang = self.settings.get('language')
         lang_display = t('turkish') if current_lang == 'tr' else t('english')
         self.language_panel.add_item(t('language'), lang_display)
+        
+        # Erişilebilirlik paneli
+        self.accessibility_panel.clear()
+        tts_pref = self.settings.get('tts_engine', 'auto')
+        tts_labels = self._get_tts_labels()
+        tts_display = tts_labels.get(tts_pref, t('tts_auto'))
+        active_reader = self.audio.get_screen_reader_name()
+        self.accessibility_panel.add_item(t('tts_engine'), tts_display)
+        self.accessibility_panel.add_item(t('tts_active'), active_reader)
     
     def _change_volume(self, volume_key: str):
         """Ses seviyesini değiştir (10'ar artır/azalt, 0-100 arası döngüsel)"""
@@ -211,11 +259,7 @@ class SettingsScreen(BaseScreen):
         
         name = t('music_volume') if 'music' in volume_key else t('sfx_volume')
         self.audio.speak(f"{name}: {new_value} yüzde", interrupt=True)
-        
-        saved_index = self.settings_menu.selected_index
-        self._setup_settings_menu()
-        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
-        self._update_panels()
+        self._rebuild_menu_preserving_selection()
     
     def _toggle_setting(self, setting_key: str):
         """Boolean ayarı değiştir"""
@@ -228,11 +272,7 @@ class SettingsScreen(BaseScreen):
         
         status = t('enabled') if not current else t('disabled')
         self.audio.speak(f"{status}", interrupt=True)
-        
-        saved_index = self.settings_menu.selected_index
-        self._setup_settings_menu()
-        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
-        self._update_panels()
+        self._rebuild_menu_preserving_selection()
     
     def _change_interval(self):
         """Otomatik kayıt aralığını değiştir"""
@@ -247,11 +287,7 @@ class SettingsScreen(BaseScreen):
         
         self.settings.set('auto_save_interval', new_interval)
         self.audio.speak(f"Her {new_interval} turda kaydet", interrupt=True)
-        
-        saved_index = self.settings_menu.selected_index
-        self._setup_settings_menu()
-        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
-        self._update_panels()
+        self._rebuild_menu_preserving_selection()
     
     def _toggle_language(self):
         """Dil değiştir"""
@@ -265,10 +301,32 @@ class SettingsScreen(BaseScreen):
             self.audio.speak("Dil Türkçe olarak değiştirildi", interrupt=True)
         
         # Menüyü ve panelleri güncelle (yeni dilde)
-        saved_index = self.settings_menu.selected_index
-        self._setup_settings_menu()
-        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
-        self._update_panels()
+        self._rebuild_menu_preserving_selection()
+    
+    def _cycle_tts_engine(self):
+        """TTS motorunu döngüsel olarak değiştir: auto → nvda → sapi → auto"""
+        current = self.settings.get('tts_engine', 'auto')
+        try:
+            idx = TTS_ENGINES.index(current)
+        except ValueError:
+            idx = 0
+        new_engine = TTS_ENGINES[(idx + 1) % len(TTS_ENGINES)]
+        self.settings.set('tts_engine', new_engine)
+        
+        # Ekran okuyucuyu hemen yeniden başlat
+        self.audio.reinitialize_screen_reader()
+        active = self.audio.get_screen_reader_name()
+        
+        label = self._get_tts_labels().get(new_engine, new_engine)
+        self.audio.speak(f"{t('tts_engine')}: {label}. {t('tts_active')}: {active}", interrupt=True)
+        self._rebuild_menu_preserving_selection()
+    
+    def _reinit_screen_reader(self):
+        """Ekran okuyucuyu yeniden tespit et ve duyur"""
+        self.audio.reinitialize_screen_reader()
+        active = self.audio.get_screen_reader_name()
+        self.audio.speak(f"{t('tts_reinit_done')}: {active}", interrupt=True)
+        self._rebuild_menu_preserving_selection()
     
     def _check_updates(self):
         """Güncelleme kontrolü başlat"""
@@ -400,11 +458,7 @@ class SettingsScreen(BaseScreen):
         
         name = t('music_volume') if 'music' in key else t('sfx_volume')
         self.audio.speak(f"{new_value}", interrupt=True)
-        
-        saved_index = self.settings_menu.selected_index
-        self._setup_settings_menu()
-        self.settings_menu.selected_index = min(saved_index, len(self.settings_menu.items) - 1)
-        self._update_panels()
+        self._rebuild_menu_preserving_selection()
     
     def _announce_settings(self):
         """Tüm ayarları oku"""
@@ -414,12 +468,21 @@ class SettingsScreen(BaseScreen):
         sfx = self.settings.get('sfx_volume')
         auto_save = "açık" if self.settings.get('auto_save_enabled') else "kapalı"
         interval = self.settings.get('auto_save_interval')
+        active_reader = self.audio.get_screen_reader_name()
         
         if lang == 'en':
             auto_save = "on" if self.settings.get('auto_save_enabled') else "off"
-            message = f"Music: {music}%, Effects: {sfx}%, Auto save: {auto_save}, every {interval} turns"
+            message = (
+                f"Music: {music}%, Effects: {sfx}%, "
+                f"Auto save: {auto_save}, every {interval} turns. "
+                f"Speech engine: {active_reader}"
+            )
         else:
-            message = f"Müzik: yüzde {music}, Efektler: yüzde {sfx}, Otomatik kayıt: {auto_save}, her {interval} turda"
+            message = (
+                f"Müzik: yüzde {music}, Efektler: yüzde {sfx}, "
+                f"Otomatik kayıt: {auto_save}, her {interval} turda. "
+                f"Ses motoru: {active_reader}"
+            )
         
         self.audio.speak(message, interrupt=True)
     
@@ -437,6 +500,7 @@ class SettingsScreen(BaseScreen):
         self.sound_panel.draw(surface)
         self.auto_save_panel.draw(surface)
         self.language_panel.draw(surface)
+        self.accessibility_panel.draw(surface)
         
         # Menü
         self.settings_menu.draw(surface)
