@@ -9,9 +9,10 @@
   "smtp_port": 465,
 
   "_format_2_sifrelenmis": "Üretim derlemesi / CI/CD için — tools/generate_secured_keys.py ile oluşturun:",
-  "github_token_encrypted": "",
-  "email_address_encrypted": "",
-  "email_pass_encrypted": "",
-  "smtp_server_encrypted": "",
-  "smtp_port_encrypted": ""
+  "github_token_encrypted": "HB1UbUEefNGb+lXZ9x2cypVQE5hYfB3Xs9kRoF2cfhFXSMxc/lmfIZmXTA1GYM0asNXGApVGON0fmBWdchGWDNRah12Rz13XasGcyhWZ/t2GbUnXLpVdI9lQeNUT",
+      "email_address_encrypted": "==AWeRwRFlEBD1kRDhERD5lRLpWQP5VWP5EBZ9UR",
+      "email_pass_encrypted": "nhWWP4VZCwRSYgnb",
+      "smtp_server_encrypted": "==AWeRwRFlEBD1kRDhERD5lRLRgRDt0R",
+      "smtp_port_encrypted": "fwhH"
+
 }
