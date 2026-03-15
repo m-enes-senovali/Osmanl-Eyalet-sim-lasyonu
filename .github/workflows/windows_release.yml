@@ -1,0 +1,71 @@
+name: Windows EXE Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release etiketi (örn. v1.1.1)'
+        required: false
+        default: 'v1.1.1'
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Kodlari Cek
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Gereksinimleri Yukle
+        run: pip install pyinstaller pygame accessible_output2
+
+      - name: EXE Olustur
+        run: |
+          pyinstaller --onefile --noconsole --name OsmanliEyaletSimulasyonu `
+            --add-data "audio/sounds;audio/sounds" `
+            --add-data "config.py;." `
+            --hidden-import pygame `
+            --hidden-import pygame.mixer `
+            --hidden-import accessible_output2 `
+            --hidden-import accessible_output2.outputs.auto `
+            main.py
+
+      - name: Release Etiketini Belirle
+        id: release_tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: GitHub Release Olustur ve EXE Yukle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: "Osmanlı Eyalet Simülasyonu ${{ steps.release_tag.outputs.tag }}"
+          body: |
+            ## Osmanlı Eyalet Simülasyonu ${{ steps.release_tag.outputs.tag }}
+
+            ### Kurulum
+            1. `OsmanliEyaletSimulasyonu.exe` dosyasını indirin.
+            2. Çift tıklayarak çalıştırın — ek kurulum gerekmez.
+
+            ### Gereksinimler
+            - Windows 10 / 11 (64-bit)
+          files: dist/OsmanliEyaletSimulasyonu.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
