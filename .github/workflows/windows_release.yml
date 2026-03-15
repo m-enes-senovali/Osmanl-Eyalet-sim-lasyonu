@@ -55,10 +55,34 @@ jobs:
       - name: Gereksinimleri Yukle
         run: pip install -r requirements.txt pyinstaller
 
+      - name: secured_keys.json Olustur
+        shell: python
+        env:
+          GITHUB_TOKEN_ENCRYPTED: ${{ secrets.GITHUB_TOKEN_ENCRYPTED }}
+          EMAIL_ADDRESS_ENCRYPTED: ${{ secrets.EMAIL_ADDRESS_ENCRYPTED }}
+          EMAIL_PASS_ENCRYPTED: ${{ secrets.EMAIL_PASS_ENCRYPTED }}
+          SMTP_SERVER_ENCRYPTED: ${{ secrets.SMTP_SERVER_ENCRYPTED }}
+          SMTP_PORT_ENCRYPTED: ${{ secrets.SMTP_PORT_ENCRYPTED }}
+        run: |
+          import json, os
+          keys = {
+              "github_token_encrypted":  os.environ.get("GITHUB_TOKEN_ENCRYPTED", ""),
+              "email_address_encrypted": os.environ.get("EMAIL_ADDRESS_ENCRYPTED", ""),
+              "email_pass_encrypted":    os.environ.get("EMAIL_PASS_ENCRYPTED", ""),
+              "smtp_server_encrypted":   os.environ.get("SMTP_SERVER_ENCRYPTED", ""),
+              "smtp_port_encrypted":     os.environ.get("SMTP_PORT_ENCRYPTED", ""),
+          }
+          # Bos deger tasiyan anahtarlari kaldir
+          keys = {k: v for k, v in keys.items() if v}
+          with open("secured_keys.json", "w", encoding="utf-8") as f:
+              json.dump(keys, f)
+          print(f"secured_keys.json olusturuldu. Anahtar sayisi: {len(keys)}")
+
       - name: EXE Olustur
         run: |
           pyinstaller --onefile --noconsole --name OsmanliEyaletSimulasyonu `
             --add-data "audio/sounds;audio/sounds" `
+            --add-data "secured_keys.json;." `
             --collect-all pygame `
             --collect-all accessible_output2 `
             --collect-all requests `
