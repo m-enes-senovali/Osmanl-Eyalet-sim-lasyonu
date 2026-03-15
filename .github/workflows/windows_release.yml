@@ -29,7 +29,7 @@ jobs:
           python-version: '3.11'
 
       - name: Gereksinimleri Yukle
-        run: pip install pyinstaller pygame accessible_output2
+        run: pip install -r requirements.txt pyinstaller
 
       - name: EXE Olustur
         run: |
@@ -37,7 +37,15 @@ jobs:
             --add-data "audio/sounds;audio/sounds" `
             --collect-all pygame `
             --collect-all accessible_output2 `
+            --collect-all requests `
             --hidden-import accessible_output2.outputs.auto `
+            --hidden-import accessible_output2.outputs.nvda `
+            --hidden-import accessible_output2.outputs.sapi5 `
+            --hidden-import requests `
+            --hidden-import urllib3 `
+            --hidden-import charset_normalizer `
+            --hidden-import certifi `
+            --hidden-import idna `
             main.py
 
       - name: Release Etiketini Belirle

@@ -6,6 +6,7 @@ Tüm oyun sistemlerini ve mekanikleri kapsayan kapsamlı interaktif eğitim.
 
 import json
 import os
+import sys
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Callable
 from enum import Enum
@@ -867,7 +868,11 @@ class TutorialSystem:
     
     def _get_save_path(self) -> str:
         """Kayıt dosyası yolunu al"""
-        save_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'save')
+        if getattr(sys, 'frozen', False):
+            base = os.path.dirname(sys.executable)
+        else:
+            base = os.path.dirname(os.path.dirname(__file__))
+        save_dir = os.path.join(base, 'save')
         os.makedirs(save_dir, exist_ok=True)
         return os.path.join(save_dir, self.SAVE_FILE)
     

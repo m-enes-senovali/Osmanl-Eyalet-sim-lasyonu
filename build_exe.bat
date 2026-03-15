@@ -12,6 +12,10 @@ if errorlevel 1 (
 )
 
 echo.
+echo Tum bagimliliklar yukleniyor (requirements.txt)...
+pip install -r requirements.txt
+
+echo.
 echo EXE dosyasi olusturuluyor...
 echo Bu islem birkaç dakika surebilir...
 echo.
@@ -19,12 +23,17 @@ echo.
 REM Tek dosya EXE olustur
 pyinstaller --onefile --noconsole --name OsmanliEyaletSimulasyonu ^
     --add-data "audio/sounds;audio/sounds" ^
-    --add-data "config.py;." ^
-    --add-data "secured_keys.json;." ^
-    --hidden-import pygame ^
-    --hidden-import pygame.mixer ^
-    --hidden-import accessible_output2 ^
+    --collect-all pygame ^
+    --collect-all accessible_output2 ^
+    --collect-all requests ^
     --hidden-import accessible_output2.outputs.auto ^
+    --hidden-import accessible_output2.outputs.nvda ^
+    --hidden-import accessible_output2.outputs.sapi5 ^
+    --hidden-import requests ^
+    --hidden-import urllib3 ^
+    --hidden-import charset_normalizer ^
+    --hidden-import certifi ^
+    --hidden-import idna ^
     main.py
 
 echo.
