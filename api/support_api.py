@@ -53,7 +53,15 @@ class SupportAPI:
         self._load_keys()
 
     def _load_keys(self):
-        """secured_keys.json dosyasından obfuscate edilmiş anahtarları yükler."""
+        """secured_keys.json dosyasından anahtarları yükler.
+        
+        İki format desteklenir:
+        - Şifreli (üretim): "github_token_encrypted", "email_address_encrypted", ...
+        - Düz metin (geliştirici): "github_token", "email_address", ...
+        
+        Düz metin format yerel geliştirme için uygundur; secured_keys.json
+        kesinlikle .gitignore'da kalmalı, asla git'e eklenmemelidir.
+        """
         if getattr(sys, 'frozen', False):
             # PyInstaller ile derlenmişse (.exe içinden)
             base_dir = sys._MEIPASS
@@ -67,14 +75,21 @@ class SupportAPI:
             try:
                 with open(key_file, "r", encoding="utf-8") as f:
                     secrets = json.load(f)
-                    
-                self.github_token = _deobfuscat(secrets.get("github_token_encrypted", ""))
-                self.email_address = _deobfuscat(secrets.get("email_address_encrypted", ""))
-                self.email_pass = _deobfuscat(secrets.get("email_pass_encrypted", ""))
-                
+
+                # Önce şifreli formatı dene, boşsa düz metin formatına bak
+                self.github_token = _deobfuscat(secrets.get("github_token_encrypted", "")) \
+                    or secrets.get("github_token", "")
+                self.email_address = _deobfuscat(secrets.get("email_address_encrypted", "")) \
+                    or secrets.get("email_address", "")
+                self.email_pass = _deobfuscat(secrets.get("email_pass_encrypted", "")) \
+                    or secrets.get("email_pass", "")
+
                 # Custom SMTP Server support
-                server_val = _deobfuscat(secrets.get("smtp_server_encrypted", ""))
-                port_val = _deobfuscat(secrets.get("smtp_port_encrypted", ""))
+                server_val = _deobfuscat(secrets.get("smtp_server_encrypted", "")) \
+                    or secrets.get("smtp_server", "")
+                port_raw = _deobfuscat(secrets.get("smtp_port_encrypted", "")) \
+                    or secrets.get("smtp_port", "")
+                port_val = str(port_raw) if port_raw else ""
                 if server_val: self.smtp_server = server_val
                 if port_val and port_val.isdigit(): self.smtp_port = int(port_val)
                 
