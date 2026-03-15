@@ -19,8 +19,23 @@ import os
 import sys
 
 # Çalışma dizinini ayarla
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# PyInstaller --onefile modunda __file__ geçici dizini (sys._MEIPASS) gösterir.
+# Kullanıcıya ait dosyalar (kayıt, log, ayar) exe'nin yanına yazılmalıdır.
+if getattr(sys, 'frozen', False):
+    # EXE olarak çalışıyor: kullanıcı dosyaları exe'nin dizinine gitsin
+    _APP_DIR = os.path.dirname(sys.executable)
+    # Paketlenmiş veri dosyaları (ses, config) geçici çıkarma dizinindedir
+    _BUNDLE_DIR = sys._MEIPASS
+else:
+    # Normal Python betiği
+    _APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    _BUNDLE_DIR = _APP_DIR
+
+os.chdir(_APP_DIR)
+# Dondurulmamış modda paket dizinini yol listesine ekle;
+# dondurulmuş modda PyInstaller önyükleyicisi sys._MEIPASS'ı zaten ekler.
+if not getattr(sys, 'frozen', False):
+    sys.path.insert(0, _BUNDLE_DIR)
 
 import pygame
 from config import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, GAME_TITLE, COLORS
@@ -311,7 +326,9 @@ class Game:
     
     def _load_sounds(self):
         """Ses dosyalarını yükle"""
-        base_path = os.path.dirname(os.path.abspath(__file__))
+        # EXE modunda ses dosyaları sys._MEIPASS altında (geçici çıkarma dizini),
+        # normal modda script'in yanındadır.
+        base_path = _BUNDLE_DIR
         
         # UI sesleri
         ui_path = os.path.join(base_path, 'audio', 'sounds', 'ui')
@@ -467,7 +484,8 @@ def main():
         # Hata durumunda dosyaya yaz (noconsole'da input Crash ettirir)
         try:
             import datetime
-            with open("crash_log.txt", "w", encoding="utf-8") as f:
+            crash_log_path = os.path.join(_APP_DIR, "crash_log.txt")
+            with open(crash_log_path, "w", encoding="utf-8") as f:
                 f.write(f"Tarih: {datetime.datetime.now()}\n")
                 f.write(f"Kritik Hata: {e}\n\n")
                 f.write(traceback.format_exc())
