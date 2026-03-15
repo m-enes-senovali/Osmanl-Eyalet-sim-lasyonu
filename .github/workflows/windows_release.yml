@@ -28,6 +28,30 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Release Etiketini Belirle
+        id: release_tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: config.py Surum Numarasini Guncelle
+        shell: python
+        run: |
+          import re, pathlib, sys
+          config_path = pathlib.Path("config.py")
+          content = config_path.read_text(encoding="utf-8")
+          new_version = "${{ steps.release_tag.outputs.tag }}"
+          updated = re.sub(r'^VERSION\s*=\s*["\'][^"\']*["\']', f'VERSION = "{new_version}"', content, flags=re.MULTILINE)
+          if updated == content:
+              print("HATA: config.py icinde VERSION satiri bulunamadi veya degistirilemedi!", file=sys.stderr)
+              sys.exit(1)
+          config_path.write_text(updated, encoding="utf-8")
+          print(f"VERSION guncellendi: {new_version}")
+
       - name: Gereksinimleri Yukle
         run: pip install -r requirements.txt pyinstaller
 
@@ -47,16 +71,6 @@ jobs:
             --hidden-import certifi `
             --hidden-import idna `
             main.py
-
-      - name: Release Etiketini Belirle
-        id: release_tag
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: GitHub Release Olustur ve EXE Yukle
         uses: softprops/action-gh-release@v2
