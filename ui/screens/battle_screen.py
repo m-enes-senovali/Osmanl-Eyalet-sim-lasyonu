@@ -750,6 +750,12 @@ class BattleScreen(BaseScreen):
             self.battle_ended = True
             self.audio.play_game_sound('military', 'defeat')
             self.audio.speak("YENİLGİ! Ordumuz dağıldı! Geri çekilmek zorundayız.", interrupt=False)
+        # Zafer kontrolü - düşman morali sıfıra indiğinde
+        elif self.enemy_morale <= 0:
+            self.victory = True
+            self.battle_ended = True
+            self.audio.play_game_sound('military', 'victory')
+            self.audio.speak("ZAFER! Düşman morali çöktü ve dağıldı!", interrupt=False)
         elif self.current_round >= self.max_rounds:
             # Son tur - sonucu belirle
             if self.enemy_morale < self.player_morale:
