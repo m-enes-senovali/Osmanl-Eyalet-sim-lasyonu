@@ -19,12 +19,36 @@ jobs:
         # accessible_output2 kütüphanesini buraya ekledik, yoksa oyun konusamaz
         run: pip install pyinstaller pygame accessible_output2
 
+      - name: secured_keys.json Olustur
+        env:
+          GITHUB_TOKEN_ENCRYPTED: ${{ secrets.GITHUB_TOKEN_ENCRYPTED }}
+          EMAIL_ADDRESS_ENCRYPTED: ${{ secrets.EMAIL_ADDRESS_ENCRYPTED }}
+          EMAIL_PASS_ENCRYPTED: ${{ secrets.EMAIL_PASS_ENCRYPTED }}
+          SMTP_SERVER_ENCRYPTED: ${{ secrets.SMTP_SERVER_ENCRYPTED }}
+          SMTP_PORT_ENCRYPTED: ${{ secrets.SMTP_PORT_ENCRYPTED }}
+        run: |
+          python - <<'EOF'
+          import json, os
+          keys = {
+              "github_token_encrypted":  os.environ.get("GITHUB_TOKEN_ENCRYPTED", ""),
+              "email_address_encrypted": os.environ.get("EMAIL_ADDRESS_ENCRYPTED", ""),
+              "email_pass_encrypted":    os.environ.get("EMAIL_PASS_ENCRYPTED", ""),
+              "smtp_server_encrypted":   os.environ.get("SMTP_SERVER_ENCRYPTED", ""),
+              "smtp_port_encrypted":     os.environ.get("SMTP_PORT_ENCRYPTED", ""),
+          }
+          keys = {k: v for k, v in keys.items() if v}  # Bos deger tasiyan anahtarlari kaldir
+          with open("secured_keys.json", "w", encoding="utf-8") as f:
+              json.dump(keys, f)
+          print(f"secured_keys.json olusturuldu. Anahtar sayisi: {len(keys)}")
+          EOF
+
       - name: Uygulamayi Derle
         # Mac icin dosya ayiraci (:) kullandik. Windows'taki (;) ile karistirma.
         run: |
           pyinstaller --onefile --windowed --name OsmanliEyaletSimulasyonu \
             --add-data "audio/sounds:audio/sounds" \
             --add-data "config.py:." \
+            --add-data "secured_keys.json:." \
             --hidden-import pygame \
             --hidden-import accessible_output2 \
             --hidden-import accessible_output2.outputs.auto \
