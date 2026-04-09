@@ -1,0 +1,41 @@
+name: WindowsBuild
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Kodlari Cek
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Gereksinimleri Yukle
+        run: pip install pyinstaller pygame accessible_output2
+
+      - name: Uygulamayi Derle
+        # Windows icin dosya ayiraci (;) kullandik. Mac'teki (:) ile karistirma.
+        run: |
+          pyinstaller --onefile --noconsole --name OsmanliEyaletSimulasyonu `
+            --add-data "audio/sounds;audio/sounds" `
+            --add-data "config.py;." `
+            --hidden-import pygame `
+            --hidden-import pygame.mixer `
+            --hidden-import accessible_output2 `
+            --hidden-import accessible_output2.outputs.auto `
+            main.py
+
+      - name: Sonucu Yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: WindowsOyunu
+          # Sadece olusan uygulamayi alir, gereksizleri almaz
+          path: dist/
+          compression-level: 0
+          retention-days: 7
